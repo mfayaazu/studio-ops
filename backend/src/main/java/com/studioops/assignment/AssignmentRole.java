@@ -1,0 +1,13 @@
+package com.studioops.assignment;
+
+public enum AssignmentRole {
+    TRADITIONAL_PHOTOGRAPHER,
+    TRADITIONAL_VIDEOGRAPHER,
+    CANDID_PHOTOGRAPHER,
+    CINEMATOGRAPHER,
+    DRONE_OPERATOR,
+    LIGHTING_ASSISTANT,
+    ASSISTANT,
+    EDITOR,
+    OTHER
+}
