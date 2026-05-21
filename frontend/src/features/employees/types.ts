@@ -1,6 +1,6 @@
 export type EmployeeStatus = 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE';
 
-export interface EmployeeResponse {
+export interface Employee {
   id: string;
   userId?: string;
   fullName: string;
@@ -12,6 +12,9 @@ export interface EmployeeResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+// Keep EmployeeResponse as a type alias for compatibility
+export type EmployeeResponse = Employee;
 
 export interface EmployeeCreateRequest {
   userId?: string;
