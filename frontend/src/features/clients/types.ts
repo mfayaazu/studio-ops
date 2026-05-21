@@ -1,4 +1,4 @@
-export interface ClientResponse {
+export interface Client {
   id: string;
   fullName: string;
   phone: string;
@@ -7,6 +7,9 @@ export interface ClientResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+// Keep ClientResponse as a type alias for compatibility if needed elsewhere
+export type ClientResponse = Client;
 
 export interface ClientCreateRequest {
   fullName: string;

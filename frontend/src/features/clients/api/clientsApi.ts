@@ -1,25 +1,30 @@
 import { ApiClient } from '../../../lib/api-client';
-import type { ClientResponse, ClientCreateRequest, ClientUpdateRequest } from '../types';
+import type { Client, ClientCreateRequest, ClientUpdateRequest } from '../types';
 
+export const fetchClients = (search?: string): Promise<Client[]> => {
+  const query = search ? `?search=${encodeURIComponent(search)}` : '';
+  return ApiClient.get<Client[]>(`/api/clients${query}`);
+};
+
+export const createClient = (data: ClientCreateRequest): Promise<Client> => {
+  return ApiClient.post<Client>('/api/clients', data);
+};
+
+export const updateClient = (id: string, data: ClientUpdateRequest): Promise<Client> => {
+  return ApiClient.put<Client>(`/api/clients/${id}`, data);
+};
+
+export const deleteClient = (id: string): Promise<void> => {
+  return ApiClient.delete<void>(`/api/clients/${id}`);
+};
+
+// Backward compatible object wrapper if referenced elsewhere
 export const clientsApi = {
-  list: (search?: string): Promise<ClientResponse[]> => {
-    const query = search ? `?search=${encodeURIComponent(search)}` : '';
-    return ApiClient.get<ClientResponse[]>(`/api/clients${query}`);
+  list: fetchClients,
+  getById: (id: string): Promise<Client> => {
+    return ApiClient.get<Client>(`/api/clients/${id}`);
   },
-  
-  getById: (id: string): Promise<ClientResponse> => {
-    return ApiClient.get<ClientResponse>(`/api/clients/${id}`);
-  },
-  
-  create: (data: ClientCreateRequest): Promise<ClientResponse> => {
-    return ApiClient.post<ClientResponse>('/api/clients', data);
-  },
-  
-  update: (id: string, data: ClientUpdateRequest): Promise<ClientResponse> => {
-    return ApiClient.put<ClientResponse>(`/api/clients/${id}`, data);
-  },
-  
-  delete: (id: string): Promise<void> => {
-    return ApiClient.delete<void>(`/api/clients/${id}`);
-  },
+  create: createClient,
+  update: updateClient,
+  delete: deleteClient,
 };
