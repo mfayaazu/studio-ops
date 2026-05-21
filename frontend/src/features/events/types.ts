@@ -57,3 +57,6 @@ export interface EventUpdateRequest {
   status: EventStatus;
   notes?: string;
 }
+
+export type Event = EventResponse;
+
