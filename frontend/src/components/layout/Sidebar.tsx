@@ -25,6 +25,7 @@ export const Sidebar: React.FC = () => {
     { id: 'employees' as AppRoute, label: 'Employees', icon: ClipboardList },
     { id: 'events' as AppRoute, label: 'Events Calendar', icon: Calendar },
     { id: 'availability' as AppRoute, label: 'Availability', icon: Clock },
+    { id: 'deliverables' as AppRoute, label: 'Deliverables', icon: Layers },
     { id: 'backups' as AppRoute, label: 'Backup Center', icon: Database },
   ];
 

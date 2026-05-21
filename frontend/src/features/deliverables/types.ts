@@ -29,3 +29,21 @@ export interface DeliverableResponse {
 }
 
 export type Deliverable = DeliverableResponse;
+
+export interface DeliverableCreateRequest {
+  projectId: string;
+  name: string;
+  deliverableType: DeliverableType;
+  status: DeliverableStatus;
+  referenceUrl?: string;
+  dueDate?: string; // LocalDate as YYYY-MM-DD
+}
+
+export interface DeliverableUpdateRequest {
+  projectId: string;
+  name: string;
+  deliverableType: DeliverableType;
+  status: DeliverableStatus;
+  referenceUrl?: string;
+  dueDate?: string; // LocalDate as YYYY-MM-DD
+}

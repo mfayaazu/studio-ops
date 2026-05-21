@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type AppRoute = 'dashboard' | 'clients' | 'projects' | 'employees' | 'events' | 'availability' | 'backups';
+export type AppRoute = 'dashboard' | 'clients' | 'projects' | 'employees' | 'events' | 'availability' | 'backups' | 'deliverables';
 
 interface RouterContextType {
   currentRoute: AppRoute;
@@ -16,7 +16,7 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#/', '') as AppRoute;
-      const validRoutes: AppRoute[] = ['dashboard', 'clients', 'projects', 'employees', 'events', 'availability', 'backups'];
+      const validRoutes: AppRoute[] = ['dashboard', 'clients', 'projects', 'employees', 'events', 'availability', 'backups', 'deliverables'];
       if (validRoutes.includes(hash)) {
         setCurrentRoute(hash);
       }
