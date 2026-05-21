@@ -35,7 +35,7 @@ export const BackupRiskPanel: React.FC<BackupRiskPanelProps> = ({ backups, proje
   const totalRisks = failedCount + needsAttentionCount + missingCloudProjects.length + singleLocationProjects.length;
 
   return (
-    <div className="bg-[#0d1424] border border-slate-800/80 rounded-xl p-6 flex flex-col h-full shadow-lg">
+    <div className="bg-[#0d1424] border border-slate-800/80 rounded-xl p-6 flex flex-col shadow-lg">
       <div className="mb-4">
         <h3 className="text-white font-semibold text-base flex items-center gap-2">
           <Database className="h-5 w-5 text-fuchsia-400" />

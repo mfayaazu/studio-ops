@@ -152,7 +152,7 @@ export const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <main className="space-y-8">
       {/* Header and Welcome Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-slate-900/60 to-indigo-950/20 border border-slate-800/60 rounded-2xl p-6 shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 h-full w-1/3 bg-radial-gradient from-indigo-500/5 to-transparent pointer-events-none" />
@@ -197,7 +197,7 @@ export const DashboardPage: React.FC = () => {
       />
 
       {/* Schedule & Ops Split Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <div className="space-y-6">
           <TodayEventsPanel
             events={todayEvents}
@@ -209,13 +209,13 @@ export const DashboardPage: React.FC = () => {
           <DeliverablesOverview deliverables={deliverables} />
           <BackupRiskPanel backups={backups} projects={projects} />
         </div>
-      </div>
+      </section>
 
       {/* Warnings & Conflicts Panel */}
       <ConflictWarningsPanel warnings={summary.warnings} />
 
       {/* Quick Action Navigation Grid */}
       <QuickActionsPanel onNavigate={navigateTo} />
-    </div>
+    </main>
   );
 };

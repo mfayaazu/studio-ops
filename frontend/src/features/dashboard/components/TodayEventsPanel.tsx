@@ -26,7 +26,7 @@ export const TodayEventsPanel: React.FC<TodayEventsPanelProps> = ({
   };
 
   return (
-    <div className="bg-[#0d1424] border border-slate-800/80 rounded-xl p-6 flex flex-col h-full shadow-lg">
+    <div className="bg-[#0d1424] border border-slate-800/80 rounded-xl p-6 flex flex-col shadow-lg">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-white font-semibold text-base flex items-center gap-2">
