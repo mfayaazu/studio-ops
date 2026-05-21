@@ -1,8 +1,9 @@
 import React from 'react';
 import type { EventResponse, EventStatus, EventType } from '../types';
 import type { ProjectResponse } from '../../projects/types';
-import { X, Calendar, Clock, MapPin, AlignLeft, Shield, Trash2, Edit3, Briefcase } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, AlignLeft, Trash2, Edit3, Briefcase } from 'lucide-react';
 import { formatDate } from '../../../lib/utils';
+import { EventAssignmentsPanel } from '../../assignments/components/EventAssignmentsPanel';
 
 interface EventDetailDrawerProps {
   isOpen: boolean;
@@ -172,16 +173,8 @@ export const EventDetailDrawer: React.FC<EventDetailDrawerProps> = ({
             </div>
           </div>
 
-          {/* Assignments Notice (MVP Phase 1 constraint) */}
-          <div className="bg-slate-900/40 border border-slate-850/80 rounded-xl p-4 flex items-start gap-3">
-            <Shield className="h-4 w-4 text-slate-550 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <div className="text-xs font-bold text-slate-400">Team Allocation Assignment</div>
-              <p className="text-[11px] text-slate-550 leading-relaxed">
-                Team assignment and crew availability scheduling will be unlocked in Phase 2.
-              </p>
-            </div>
-          </div>
+          {/* Crew / Assignments Panel */}
+          <EventAssignmentsPanel eventId={event.id} />
 
         </div>
 
