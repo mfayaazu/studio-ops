@@ -38,6 +38,8 @@ export interface ProjectResponse {
   updatedAt: string;
 }
 
+export type Project = ProjectResponse;
+
 export interface ProjectCreateRequest {
   clientId: string;
   assignedProjectManagerId?: string;
