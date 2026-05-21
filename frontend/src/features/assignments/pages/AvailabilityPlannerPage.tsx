@@ -31,6 +31,10 @@ export const AvailabilityPlannerPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Drag and Drop reassignment feedback states
+  const [reassignError, setReassignError] = useState<string | null>(null);
+  const [reassignConflict, setReassignConflict] = useState<string | null>(null);
+
   const fetchData = async (date: string) => {
     setLoading(true);
     setError(null);
@@ -53,8 +57,51 @@ export const AvailabilityPlannerPage: React.FC = () => {
   };
 
   useEffect(() => {
+    setReassignError(null);
+    setReassignConflict(null);
     fetchData(selectedDate);
   }, [selectedDate]);
+
+  const handleReassign = async (assignment: EventAssignment, targetEmployee: Employee) => {
+    setReassignError(null);
+    setReassignConflict(null);
+    try {
+      // 1. Create new assignment with target employeeId
+      const newAssignment = await assignmentsApi.create({
+        eventId: assignment.eventId,
+        employeeId: targetEmployee.id,
+        assignmentRole: assignment.assignmentRole,
+        assignmentStatus: assignment.assignmentStatus,
+        callTime: assignment.callTime,
+        notes: assignment.notes,
+      });
+
+      // If response has conflict warning, store it in state to show amber banner
+      if (newAssignment.conflictWarning) {
+        const warningMsg = newAssignment.conflictReason || 
+                           newAssignment.conflictMessage || 
+                           `Employee ${targetEmployee.fullName} has a scheduling conflict.`;
+        setReassignConflict(warningMsg);
+      }
+
+      // 2. Delete the old assignment
+      try {
+        await assignmentsApi.delete(assignment.id);
+      } catch (deleteErr: any) {
+        const delErrorMsg = deleteErr.message || 'Network error.';
+        setReassignError(
+          `Reassignment partially succeeded: The new assignment was created, but the old assignment for ${assignment.id} could not be removed. Please resolve this duplicate manually. Error: ${delErrorMsg}`
+        );
+      }
+
+      // 3. Refresh data
+      await fetchData(selectedDate);
+    } catch (err: any) {
+      const errorMsg = err.message || 'An unknown network error occurred during reassignment.';
+      setReassignError(errorMsg);
+      throw err;
+    }
+  };
 
   // Date Navigation Helpers
   const handlePrevDay = () => {
@@ -219,6 +266,46 @@ export const AvailabilityPlannerPage: React.FC = () => {
       {/* Legend Block */}
       <AvailabilityLegend />
 
+      {/* Reassignment Error Alert */}
+      {reassignError && (
+        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl flex items-center justify-between gap-3 animate-fade-in mb-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 flex-shrink-0 text-rose-450" />
+            <div className="text-sm">
+              <span className="font-bold block text-rose-300">Reassignment Failed</span>
+              <p className="text-rose-400/90 text-xs mt-0.5">{reassignError}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReassignError(null)}
+            className="text-xs bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-semibold px-3 py-1.5 rounded-lg border border-rose-500/30 transition-all cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Reassignment Conflict Alert */}
+      {reassignConflict && (
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-4 rounded-xl flex items-center justify-between gap-3 animate-fade-in mb-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-400 animate-pulse" />
+            <div className="text-sm">
+              <span className="font-bold block text-amber-300">Scheduling Conflict Detected</span>
+              <p className="text-amber-450/90 text-xs mt-0.5">{reassignConflict}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReassignConflict(null)}
+            className="text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-semibold px-3 py-1.5 rounded-lg border border-amber-500/30 transition-all cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Error Panel */}
       {error && (
         <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl flex items-center justify-between gap-3">
@@ -255,6 +342,8 @@ export const AvailabilityPlannerPage: React.FC = () => {
           employees={filteredEmployees}
           assignments={filteredAssignments}
           events={events}
+          onReassign={handleReassign}
+          onReassignError={(msg) => setReassignError(msg)}
         />
       )}
     </div>

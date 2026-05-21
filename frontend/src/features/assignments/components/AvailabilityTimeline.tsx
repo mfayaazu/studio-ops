@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import type { EventAssignment } from '../types';
 import type { Employee } from '../../employees/types';
 import type { EventResponse } from '../../events/types';
-import { AlertTriangle, Clock, MapPin, Briefcase, User } from 'lucide-react';
+import { AlertTriangle, Clock, MapPin, Briefcase, User, RefreshCw } from 'lucide-react';
 
 interface AvailabilityTimelineProps {
   employees: Employee[];
   assignments: EventAssignment[];
   events: EventResponse[];
+  onReassign: (assignment: EventAssignment, targetEmployee: Employee) => Promise<void>;
+  onReassignError: (msg: string | null) => void;
 }
 
 const MIN_LIMIT = 6 * 60; // 06:00 in minutes
@@ -34,6 +36,8 @@ export const AvailabilityTimeline: React.FC<AvailabilityTimelineProps> = ({
   employees,
   assignments,
   events,
+  onReassign,
+  onReassignError,
 }) => {
   const [selectedBlock, setSelectedBlock] = useState<{
     assignment: EventAssignment;
@@ -42,12 +46,76 @@ export const AvailabilityTimeline: React.FC<AvailabilityTimelineProps> = ({
     hasConflict: boolean;
   } | null>(null);
 
+  // Drag and Drop state variables
+  const [draggedAssignment, setDraggedAssignment] = useState<EventAssignment | null>(null);
+  const [draggedEmployee, setDraggedEmployee] = useState<Employee | null>(null);
+  const [hoveredEmployeeId, setHoveredEmployeeId] = useState<string | null>(null);
+  const [pendingReassign, setPendingReassign] = useState<{
+    assignment: EventAssignment;
+    oldEmployee: Employee;
+    newEmployee: Employee;
+  } | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleDragStart = (e: React.DragEvent, assignment: EventAssignment, employee: Employee) => {
+    setDraggedAssignment(assignment);
+    setDraggedEmployee(employee);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', assignment.id);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedAssignment(null);
+    setDraggedEmployee(null);
+    setHoveredEmployeeId(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetEmployee: Employee) => {
+    e.preventDefault();
+    if (hoveredEmployeeId !== targetEmployee.id) {
+      setHoveredEmployeeId(targetEmployee.id);
+    }
+    const isInactive = targetEmployee.status === 'INACTIVE' || targetEmployee.status === 'ON_LEAVE';
+    const isSameEmployee = draggedEmployee?.id === targetEmployee.id;
+    if (isInactive || isSameEmployee) {
+      e.dataTransfer.dropEffect = 'none';
+    } else {
+      e.dataTransfer.dropEffect = 'move';
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetEmployee: Employee) => {
+    e.preventDefault();
+    setHoveredEmployeeId(null);
+
+    if (!draggedAssignment || !draggedEmployee) return;
+
+    if (draggedEmployee.id === targetEmployee.id) {
+      return;
+    }
+
+    if (targetEmployee.status === 'INACTIVE' || targetEmployee.status === 'ON_LEAVE') {
+      const statusText = targetEmployee.status === 'ON_LEAVE' ? 'ON LEAVE' : 'INACTIVE';
+      onReassignError(`Cannot reassign assignment: Target employee ${targetEmployee.fullName} is currently ${statusText}.`);
+      return;
+    }
+
+    setPendingReassign({
+      assignment: draggedAssignment,
+      oldEmployee: draggedEmployee,
+      newEmployee: targetEmployee,
+    });
+  };
+
   // 17 Hourly slots: 6 to 22 (representing 6-7, 7-8, ..., 22-23)
   const hourSlots = Array.from({ length: 17 }, (_, i) => 6 + i);
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto border border-slate-800/80 rounded-xl bg-[#0d1424] shadow-lg">
+      <div 
+        className="overflow-x-auto border border-slate-800/80 rounded-xl bg-[#0d1424] shadow-lg"
+        onDragLeave={() => setHoveredEmployeeId(null)}
+      >
         <div className="min-w-[1000px] divide-y divide-slate-800/60">
           
           {/* Header Row */}
@@ -104,12 +172,27 @@ export const AvailabilityTimeline: React.FC<AvailabilityTimelineProps> = ({
               }
             }
 
+            const isHovered = hoveredEmployeeId === employee.id;
+            const isSameEmployee = draggedEmployee?.id === employee.id;
+            const isInvalidDrop = isInactive || isSameEmployee;
+
+            let dragHoverClass = '';
+            if (draggedAssignment && isHovered) {
+              if (isInvalidDrop) {
+                dragHoverClass = 'bg-rose-950/20 outline outline-2 outline-dashed outline-rose-500/40 cursor-not-allowed';
+              } else {
+                dragHoverClass = 'bg-indigo-950/25 outline outline-2 outline-dashed outline-indigo-500/60';
+              }
+            }
+
             return (
               <div
                 key={employee.id}
-                className={`flex hover:bg-slate-900/10 transition-colors ${
+                onDragOver={(e) => handleDragOver(e, employee)}
+                onDrop={(e) => handleDrop(e, employee)}
+                className={`flex hover:bg-slate-900/10 transition-all ${
                   isInactive ? 'bg-slate-950/20' : ''
-                }`}
+                } ${dragHoverClass}`}
               >
                 {/* Employee card cell */}
                 <div className="w-56 p-4 flex-shrink-0 border-r border-slate-800/80 flex flex-col justify-center space-y-1 bg-[#0d1424] z-[2]">
@@ -167,11 +250,15 @@ export const AvailabilityTimeline: React.FC<AvailabilityTimelineProps> = ({
                       const widthPercent = (duration / TOTAL_MINUTES) * 100;
 
                       const isConflictBlock = hasConflict || assignment.conflictWarning;
+                      const isBeingDragged = draggedAssignment?.id === assignment.id;
 
                       return (
                         <button
                           key={assignment.id}
                           type="button"
+                          draggable={true}
+                          onDragStart={(e) => handleDragStart(e, assignment, employee)}
+                          onDragEnd={handleDragEnd}
                           onClick={() =>
                             setSelectedBlock({
                               assignment,
@@ -184,11 +271,11 @@ export const AvailabilityTimeline: React.FC<AvailabilityTimelineProps> = ({
                             left: `${leftPercent}%`,
                             width: `${widthPercent}%`,
                           }}
-                          className={`absolute h-9 py-1 px-2.5 rounded-lg border text-left flex flex-col justify-center gap-0.5 select-none transition-all hover:scale-[1.01] hover:shadow-lg cursor-pointer ${
+                          className={`absolute h-9 py-1 px-2.5 rounded-lg border text-left flex flex-col justify-center gap-0.5 select-none transition-all hover:scale-[1.01] hover:shadow-lg cursor-grab active:cursor-grabbing ${
                             isConflictBlock
                               ? 'bg-rose-950/40 border-rose-500/50 text-rose-200 hover:bg-rose-900/50 shadow-rose-950/20'
                               : 'bg-violet-950/30 border-violet-500/30 text-violet-200 hover:bg-violet-900/30 shadow-violet-950/25'
-                          }`}
+                          } ${isBeingDragged ? 'opacity-30 border-dashed border-violet-500 shadow-none scale-100' : ''}`}
                         >
                           <div className="flex items-center gap-1 min-w-0">
                             {isConflictBlock && (
@@ -313,6 +400,85 @@ export const AvailabilityTimeline: React.FC<AvailabilityTimelineProps> = ({
                 className="w-full bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 text-xs font-semibold py-2 rounded-lg transition-colors cursor-pointer"
               >
                 Close Details
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog for Drag and Drop Reassignment */}
+      {pendingReassign && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in"
+          onClick={() => {
+            if (!isProcessing) setPendingReassign(null);
+          }}
+        >
+          <div 
+            className="bg-[#0d1424] border border-slate-800 w-full max-w-sm rounded-2xl shadow-2xl p-5 space-y-4 animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Popover Header */}
+            <div className="flex justify-between items-start gap-4 border-b border-slate-850 pb-3">
+              <div className="min-w-0 space-y-0.5">
+                <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-bold uppercase tracking-wider">
+                  Reassign Crew Member
+                </span>
+                <h4 className="text-white font-bold text-base leading-snug truncate mt-1">
+                  Confirm Crew Swap
+                </h4>
+              </div>
+              <button 
+                onClick={() => {
+                  if (!isProcessing) setPendingReassign(null);
+                }}
+                disabled={isProcessing}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-850 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Description */}
+            <p className="text-sm text-slate-350 leading-relaxed">
+              Reassign this crew assignment from <strong className="text-white font-semibold">{pendingReassign.oldEmployee.fullName}</strong> to <strong className="text-white font-semibold">{pendingReassign.newEmployee.fullName}</strong>?
+            </p>
+
+            {/* Actions */}
+            <div className="pt-3 border-t border-slate-850 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingReassign(null)}
+                disabled={isProcessing}
+                className="w-1/2 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-350 hover:text-white text-xs font-semibold py-2.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsProcessing(true);
+                  try {
+                    await onReassign(pendingReassign.assignment, pendingReassign.newEmployee);
+                    setPendingReassign(null);
+                  } catch (err) {
+                    // error handled in parent
+                  } finally {
+                    setIsProcessing(false);
+                  }
+                }}
+                disabled={isProcessing}
+                className="w-1/2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isProcessing ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <span>Confirm Swap</span>
+                )}
               </button>
             </div>
 
