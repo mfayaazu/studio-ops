@@ -8,7 +8,8 @@ import {
   Calendar,
   Layers,
   Sparkles,
-  ClipboardList
+  ClipboardList,
+  Clock
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { APP_VERSION } from '../../lib/constants';
@@ -22,6 +23,7 @@ export const Sidebar: React.FC = () => {
     { id: 'projects' as AppRoute, label: 'Projects', icon: Briefcase },
     { id: 'employees' as AppRoute, label: 'Employees', icon: ClipboardList },
     { id: 'events' as AppRoute, label: 'Events Calendar', icon: Calendar },
+    { id: 'availability' as AppRoute, label: 'Availability', icon: Clock },
   ];
 
   return (

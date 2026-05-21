@@ -54,7 +54,16 @@ public class EventService {
     @Transactional(readOnly = true)
     public List<EventResponse> listEvents(String search, LocalDate fromDate, LocalDate toDate) {
         String trimmedSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
-        List<Event> events = eventRepository.searchEvents(trimmedSearch, fromDate, toDate);
+        List<Event> events;
+        if (fromDate != null && toDate != null) {
+            events = eventRepository.searchEventsWithDateRange(trimmedSearch, fromDate, toDate);
+        } else if (fromDate != null) {
+            events = eventRepository.searchEventsWithFromDate(trimmedSearch, fromDate);
+        } else if (toDate != null) {
+            events = eventRepository.searchEventsWithToDate(trimmedSearch, toDate);
+        } else {
+            events = eventRepository.searchEventsWithoutDates(trimmedSearch);
+        }
         return events.stream()
                 .map(EventMapper::toResponse)
                 .toList();

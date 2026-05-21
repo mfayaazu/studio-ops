@@ -251,17 +251,88 @@ class EventServiceTest {
     }
 
     @Test
-    void listEvents_Success() {
+    void listEvents_NoDateFilters() {
         Event e1 = new Event();
         e1.setTitle("Wedding 1");
         e1.setEventDate(LocalDate.of(2026, 6, 5));
 
-        when(eventRepository.searchEvents("Wedding", LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 10)))
+        when(eventRepository.searchEventsWithoutDates("Wedding"))
                 .thenReturn(List.of(e1));
 
-        List<EventResponse> responses = eventService.listEvents("Wedding", LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 10));
+        List<EventResponse> responses = eventService.listEvents("Wedding", null, null);
 
         assertEquals(1, responses.size());
         assertEquals("Wedding 1", responses.get(0).getTitle());
+        verify(eventRepository, times(1)).searchEventsWithoutDates("Wedding");
+    }
+
+    @Test
+    void listEvents_FromDateOnly() {
+        Event e1 = new Event();
+        e1.setTitle("Wedding 1");
+        e1.setEventDate(LocalDate.of(2026, 6, 5));
+        LocalDate fromDate = LocalDate.of(2026, 6, 1);
+
+        when(eventRepository.searchEventsWithFromDate("Wedding", fromDate))
+                .thenReturn(List.of(e1));
+
+        List<EventResponse> responses = eventService.listEvents("Wedding", fromDate, null);
+
+        assertEquals(1, responses.size());
+        assertEquals("Wedding 1", responses.get(0).getTitle());
+        verify(eventRepository, times(1)).searchEventsWithFromDate("Wedding", fromDate);
+    }
+
+    @Test
+    void listEvents_ToDateOnly() {
+        Event e1 = new Event();
+        e1.setTitle("Wedding 1");
+        e1.setEventDate(LocalDate.of(2026, 6, 5));
+        LocalDate toDate = LocalDate.of(2026, 6, 10);
+
+        when(eventRepository.searchEventsWithToDate("Wedding", toDate))
+                .thenReturn(List.of(e1));
+
+        List<EventResponse> responses = eventService.listEvents("Wedding", null, toDate);
+
+        assertEquals(1, responses.size());
+        assertEquals("Wedding 1", responses.get(0).getTitle());
+        verify(eventRepository, times(1)).searchEventsWithToDate("Wedding", toDate);
+    }
+
+    @Test
+    void listEvents_BothDates() {
+        Event e1 = new Event();
+        e1.setTitle("Wedding 1");
+        e1.setEventDate(LocalDate.of(2026, 6, 5));
+        LocalDate fromDate = LocalDate.of(2026, 6, 1);
+        LocalDate toDate = LocalDate.of(2026, 6, 10);
+
+        when(eventRepository.searchEventsWithDateRange("Wedding", fromDate, toDate))
+                .thenReturn(List.of(e1));
+
+        List<EventResponse> responses = eventService.listEvents("Wedding", fromDate, toDate);
+
+        assertEquals(1, responses.size());
+        assertEquals("Wedding 1", responses.get(0).getTitle());
+        verify(eventRepository, times(1)).searchEventsWithDateRange("Wedding", fromDate, toDate);
+    }
+
+    @Test
+    void listEvents_SearchAndDateRange() {
+        Event e1 = new Event();
+        e1.setTitle("Engagement 1");
+        e1.setEventDate(LocalDate.of(2026, 6, 5));
+        LocalDate fromDate = LocalDate.of(2026, 6, 1);
+        LocalDate toDate = LocalDate.of(2026, 6, 10);
+
+        when(eventRepository.searchEventsWithDateRange("Engagement", fromDate, toDate))
+                .thenReturn(List.of(e1));
+
+        List<EventResponse> responses = eventService.listEvents("Engagement", fromDate, toDate);
+
+        assertEquals(1, responses.size());
+        assertEquals("Engagement 1", responses.get(0).getTitle());
+        verify(eventRepository, times(1)).searchEventsWithDateRange("Engagement", fromDate, toDate);
     }
 }
