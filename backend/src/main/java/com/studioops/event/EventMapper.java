@@ -1,4 +1,5 @@
 package com.studioops.event;
+import com.studioops.event.dto.EventResponse;
 
 public class EventMapper {
 

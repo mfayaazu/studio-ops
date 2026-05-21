@@ -1,4 +1,6 @@
-package com.studioops.assignment;
+package com.studioops.assignment.dto;
+import com.studioops.assignment.AssignmentRole;
+import com.studioops.assignment.AssignmentStatus;
 
 import java.time.Instant;
 import java.time.LocalTime;

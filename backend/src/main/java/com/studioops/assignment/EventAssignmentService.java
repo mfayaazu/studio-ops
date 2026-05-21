@@ -11,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
+import com.studioops.assignment.dto.EventAssignmentCreateRequest;
+import com.studioops.assignment.dto.EventAssignmentResponse;
+import com.studioops.assignment.dto.EventAssignmentUpdateRequest;
 
 @Service
 @Transactional

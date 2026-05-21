@@ -31,6 +31,9 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import com.studioops.dashboard.dto.DashboardBackupChecklist;
+import com.studioops.dashboard.dto.DashboardSummaryResponse;
+import com.studioops.dashboard.dto.DashboardWarning;
 
 class DashboardServiceTest {
 

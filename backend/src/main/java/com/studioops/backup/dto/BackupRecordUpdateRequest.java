@@ -1,4 +1,7 @@
-package com.studioops.backup;
+package com.studioops.backup.dto;
+import com.studioops.backup.BackupLocationType;
+import com.studioops.backup.BackupStatus;
+import com.studioops.backup.BackupType;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

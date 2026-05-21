@@ -17,6 +17,9 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import com.studioops.backup.dto.BackupRecordCreateRequest;
+import com.studioops.backup.dto.BackupRecordResponse;
+import com.studioops.backup.dto.BackupRecordUpdateRequest;
 
 class BackupRecordServiceTest {
 

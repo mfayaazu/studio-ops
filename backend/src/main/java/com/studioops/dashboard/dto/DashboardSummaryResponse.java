@@ -1,4 +1,4 @@
-package com.studioops.dashboard;
+package com.studioops.dashboard.dto;
 
 import java.util.List;
 

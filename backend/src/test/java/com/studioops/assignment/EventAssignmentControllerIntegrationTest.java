@@ -21,6 +21,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.studioops.assignment.dto.EventAssignmentCreateRequest;
+import com.studioops.assignment.dto.EventAssignmentResponse;
+import com.studioops.assignment.dto.EventAssignmentUpdateRequest;
 
 @WebMvcTest(EventAssignmentController.class)
 @Import(SecurityConfig.class)

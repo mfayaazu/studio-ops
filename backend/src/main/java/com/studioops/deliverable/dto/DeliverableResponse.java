@@ -1,36 +1,40 @@
-package com.studioops.deliverable;
+package com.studioops.deliverable.dto;
+import com.studioops.deliverable.DeliverableStatus;
+import com.studioops.deliverable.DeliverableType;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
-public class DeliverableUpdateRequest {
+public class DeliverableResponse {
 
-    @NotBlank(message = "name is required")
-    @Size(max = 255, message = "name must not exceed 255 characters")
+    private UUID id;
+    private UUID projectId;
     private String name;
-
-    @NotNull(message = "deliverableType is required")
     private DeliverableType deliverableType;
-
-    @NotNull(message = "status is required")
     private DeliverableStatus status;
-
-    @Size(max = 1000, message = "referenceUrl must not exceed 1000 characters")
     private String referenceUrl;
-
     private LocalDate dueDate;
+    private Instant createdAt;
+    private Instant updatedAt;
 
-    public DeliverableUpdateRequest() {
+    public DeliverableResponse() {
     }
 
-    public DeliverableUpdateRequest(String name, DeliverableType deliverableType, DeliverableStatus status, String referenceUrl, LocalDate dueDate) {
-        this.name = name;
-        this.deliverableType = deliverableType;
-        this.status = status;
-        this.referenceUrl = referenceUrl;
-        this.dueDate = dueDate;
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public UUID getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(UUID projectId) {
+        this.projectId = projectId;
     }
 
     public String getName() {
@@ -71,5 +75,21 @@ public class DeliverableUpdateRequest {
 
     public void setDueDate(LocalDate dueDate) {
         this.dueDate = dueDate;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

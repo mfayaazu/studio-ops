@@ -6,6 +6,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
+import com.studioops.deliverable.dto.DeliverableCreateRequest;
+import com.studioops.deliverable.dto.DeliverableResponse;
+import com.studioops.deliverable.dto.DeliverableUpdateRequest;
 
 @RestController
 @RequestMapping("/api/deliverables")

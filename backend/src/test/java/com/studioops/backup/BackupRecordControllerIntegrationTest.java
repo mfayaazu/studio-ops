@@ -19,6 +19,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.studioops.backup.dto.BackupRecordCreateRequest;
+import com.studioops.backup.dto.BackupRecordResponse;
+import com.studioops.backup.dto.BackupRecordUpdateRequest;
 
 @WebMvcTest(BackupRecordController.class)
 @Import(SecurityConfig.class)

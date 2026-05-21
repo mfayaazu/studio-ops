@@ -1,34 +1,58 @@
-package com.studioops.event;
+package com.studioops.event.dto;
+import com.studioops.event.EventStatus;
+import com.studioops.event.EventType;
 
-import java.time.Instant;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
 
-public class EventResponse {
+public class EventUpdateRequest {
 
-    private UUID id;
+    @NotNull(message = "projectId is required")
     private UUID projectId;
-    private String title;
-    private EventType type;
-    private LocalDate eventDate;
-    private LocalTime startTime;
-    private LocalTime endTime;
-    private String venueName;
-    private String city;
-    private String address;
-    private EventStatus status;
-    private String notes;
-    private Instant createdAt;
-    private Instant updatedAt;
 
-    public EventResponse() {
+    @NotBlank(message = "title is required")
+    @Size(max = 255, message = "title must not exceed 255 characters")
+    private String title;
+
+    @NotNull(message = "type is required")
+    private EventType type;
+
+    @NotNull(message = "eventDate is required")
+    private LocalDate eventDate;
+
+    @NotNull(message = "startTime is required")
+    private LocalTime startTime;
+
+    @NotNull(message = "endTime is required")
+    private LocalTime endTime;
+
+    @NotBlank(message = "venueName is required")
+    @Size(max = 255, message = "venueName must not exceed 255 characters")
+    private String venueName;
+
+    @NotBlank(message = "city is required")
+    @Size(max = 100, message = "city must not exceed 100 characters")
+    private String city;
+
+    @NotBlank(message = "address is required")
+    @Size(max = 500, message = "address must not exceed 500 characters")
+    private String address;
+
+    @NotNull(message = "status is required")
+    private EventStatus status;
+
+    private String notes;
+
+    public EventUpdateRequest() {
     }
 
-    public EventResponse(UUID id, UUID projectId, String title, EventType type, LocalDate eventDate,
-                         LocalTime startTime, LocalTime endTime, String venueName, String city,
-                         String address, EventStatus status, String notes, Instant createdAt, Instant updatedAt) {
-        this.id = id;
+    public EventUpdateRequest(UUID projectId, String title, EventType type, LocalDate eventDate,
+                              LocalTime startTime, LocalTime endTime, String venueName, String city,
+                              String address, EventStatus status, String notes) {
         this.projectId = projectId;
         this.title = title;
         this.type = type;
@@ -40,16 +64,6 @@ public class EventResponse {
         this.address = address;
         this.status = status;
         this.notes = notes;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
     }
 
     public UUID getProjectId() {
@@ -138,21 +152,5 @@ public class EventResponse {
 
     public void setNotes(String notes) {
         this.notes = notes;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }

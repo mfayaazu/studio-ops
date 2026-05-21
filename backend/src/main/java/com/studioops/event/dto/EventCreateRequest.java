@@ -1,4 +1,6 @@
-package com.studioops.event;
+package com.studioops.event.dto;
+import com.studioops.event.EventStatus;
+import com.studioops.event.EventType;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

@@ -16,6 +16,10 @@ import java.util.UUID;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.studioops.dashboard.dto.DashboardBackupChecklist;
+import com.studioops.dashboard.dto.DashboardStats;
+import com.studioops.dashboard.dto.DashboardSummaryResponse;
+import com.studioops.dashboard.dto.DashboardWarning;
 
 @WebMvcTest(DashboardController.class)
 @Import(SecurityConfig.class)

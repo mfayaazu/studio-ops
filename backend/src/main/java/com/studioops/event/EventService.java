@@ -7,6 +7,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import com.studioops.event.dto.EventCreateRequest;
+import com.studioops.event.dto.EventResponse;
+import com.studioops.event.dto.EventUpdateRequest;
 
 @Service
 @Transactional

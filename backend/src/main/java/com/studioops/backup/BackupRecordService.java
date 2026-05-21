@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
+import com.studioops.backup.dto.BackupRecordCreateRequest;
+import com.studioops.backup.dto.BackupRecordResponse;
+import com.studioops.backup.dto.BackupRecordUpdateRequest;
 
 @Service
 @Transactional

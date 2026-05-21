@@ -16,6 +16,9 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import com.studioops.event.dto.EventCreateRequest;
+import com.studioops.event.dto.EventResponse;
+import com.studioops.event.dto.EventUpdateRequest;
 
 class EventServiceTest {
 

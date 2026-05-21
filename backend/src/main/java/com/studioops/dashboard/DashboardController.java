@@ -3,6 +3,7 @@ package com.studioops.dashboard;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.studioops.dashboard.dto.DashboardSummaryResponse;
 
 @RestController
 @RequestMapping("/api/dashboard")

@@ -38,19 +38,37 @@ Retrieves all client records.
     "fullName": "Alice Smith",
     "email": "alice@example.com",
     "phone": "+46701234567",
-    "notes": "Prefers email contact."
+    "notes": "Prefers email contact.",
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
   }
 ]
 ```
 
+### GET `/api/clients/{id}`
+Retrieves a specific client record by its ID.
+**Response (200 OK):**
+```json
+{
+  "id": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "fullName": "Alice Smith",
+  "email": "alice@example.com",
+  "phone": "+46701234567",
+  "notes": "Prefers email contact.",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
 ### POST `/api/clients`
-Creates a client.
+Creates a client. Returns the full created resource representation.
 **Request:**
 ```json
 {
   "fullName": "Alice Smith",
   "email": "alice@example.com",
-  "phone": "+46701234567"
+  "phone": "+46701234567",
+  "notes": "Prefers email contact."
 }
 ```
 **Response (201 Created):**
@@ -58,7 +76,35 @@ Creates a client.
 {
   "id": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
   "fullName": "Alice Smith",
-  "email": "alice@example.com"
+  "email": "alice@example.com",
+  "phone": "+46701234567",
+  "notes": "Prefers email contact.",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
+### PUT `/api/clients/{id}`
+Updates an existing client. Returns the updated resource representation.
+**Request:**
+```json
+{
+  "fullName": "Alice Smith Updated",
+  "email": "alice.updated@example.com",
+  "phone": "+46701234567",
+  "notes": "Updated notes."
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "fullName": "Alice Smith Updated",
+  "email": "alice.updated@example.com",
+  "phone": "+46701234567",
+  "notes": "Updated notes.",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
 }
 ```
 
@@ -77,21 +123,43 @@ Retrieves all employee profiles.
 [
   {
     "id": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+    "userId": null,
     "fullName": "John Doe",
     "email": "john.doe@studioops.se",
     "phone": "+46701112233",
     "primaryRole": "Lead Photographer",
     "skills": "Colorist, Lighting",
-    "status": "ACTIVE"
+    "status": "ACTIVE",
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
   }
 ]
 ```
 
+### GET `/api/employees/{id}`
+Retrieves a specific employee profile by its ID.
+**Response (200 OK):**
+```json
+{
+  "id": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "userId": null,
+  "fullName": "John Doe",
+  "email": "john.doe@studioops.se",
+  "phone": "+46701112233",
+  "primaryRole": "Lead Photographer",
+  "skills": "Colorist, Lighting",
+  "status": "ACTIVE",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
 ### POST `/api/employees`
-Creates a new profile.
+Creates a new profile. Returns the full profile.
 **Request:**
 ```json
 {
+  "userId": null,
   "fullName": "John Doe",
   "email": "john.doe@studioops.se",
   "phone": "+46701112233",
@@ -104,10 +172,51 @@ Creates a new profile.
 ```json
 {
   "id": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "userId": null,
   "fullName": "John Doe",
-  "email": "john.doe@studioops.se"
+  "email": "john.doe@studioops.se",
+  "phone": "+46701112233",
+  "primaryRole": "Lead Photographer",
+  "skills": "Colorist, Lighting",
+  "status": "ACTIVE",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
 }
 ```
+
+### PUT `/api/employees/{id}`
+Updates an employee's profile. Returns the updated profile.
+**Request:**
+```json
+{
+  "userId": null,
+  "fullName": "John Doe Updated",
+  "email": "john.doe@studioops.se",
+  "phone": "+46701112233",
+  "primaryRole": "Lead Photographer",
+  "skills": "Colorist, Lighting, Editing",
+  "status": "ON_LEAVE"
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "userId": null,
+  "fullName": "John Doe Updated",
+  "email": "john.doe@studioops.se",
+  "phone": "+46701112233",
+  "primaryRole": "Lead Photographer",
+  "skills": "Colorist, Lighting, Editing",
+  "status": "ON_LEAVE",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
+}
+```
+
+### DELETE `/api/employees/{id}`
+Removes an employee profile.
+**Response (204 No Content)**
 
 ---
 
@@ -129,13 +238,38 @@ Retrieves all projects.
     "paymentStatus": "PARTIALLY_PAID",
     "status": "SCHEDULED",
     "startDate": "2026-06-01",
-    "endDate": "2026-06-15"
+    "endDate": "2026-06-15",
+    "notes": "Bring special backdrops.",
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
   }
 ]
 ```
 
+### GET `/api/projects/{id}`
+Retrieves a project by its ID.
+**Response (200 OK):**
+```json
+{
+  "id": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "clientId": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "assignedProjectManagerId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+  "projectCode": "RSA-2026-0001",
+  "title": "Corporate Portrait Shoot 2026",
+  "projectType": "Corporate",
+  "bookingStatus": "CONTRACT_SIGNED",
+  "paymentStatus": "PARTIALLY_PAID",
+  "status": "SCHEDULED",
+  "startDate": "2026-06-01",
+  "endDate": "2026-06-15",
+  "notes": "Bring special backdrops.",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
 ### POST `/api/projects`
-Creates a project.
+Creates a project. Returns the full created project object.
 **Request:**
 ```json
 {
@@ -148,17 +282,71 @@ Creates a project.
   "paymentStatus": "UNPAID",
   "status": "LEAD",
   "startDate": "2026-06-01",
-  "endDate": "2026-06-15"
+  "endDate": "2026-06-15",
+  "notes": "Bring special backdrops."
 }
 ```
 **Response (201 Created):**
 ```json
 {
   "id": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "clientId": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "assignedProjectManagerId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
   "projectCode": "RSA-2026-0001",
-  "title": "Corporate Portrait Shoot 2026"
+  "title": "Corporate Portrait Shoot 2026",
+  "projectType": "Corporate",
+  "bookingStatus": "INQUIRY",
+  "paymentStatus": "UNPAID",
+  "status": "LEAD",
+  "startDate": "2026-06-01",
+  "endDate": "2026-06-15",
+  "notes": "Bring special backdrops.",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
 }
 ```
+
+### PUT `/api/projects/{id}`
+Updates a project. Returns the full updated project.
+**Request:**
+```json
+{
+  "clientId": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "assignedProjectManagerId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+  "projectCode": "RSA-2026-0001",
+  "title": "Corporate Shoot 2026 - CONFIRMED",
+  "projectType": "Corporate",
+  "bookingStatus": "CONTRACT_SIGNED",
+  "paymentStatus": "PAID",
+  "status": "COMPLETED",
+  "startDate": "2026-06-01",
+  "endDate": "2026-06-15",
+  "notes": "Updated notes."
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "clientId": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "assignedProjectManagerId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+  "projectCode": "RSA-2026-0001",
+  "title": "Corporate Shoot 2026 - CONFIRMED",
+  "projectType": "Corporate",
+  "bookingStatus": "CONTRACT_SIGNED",
+  "paymentStatus": "PAID",
+  "status": "COMPLETED",
+  "startDate": "2026-06-01",
+  "endDate": "2026-06-15",
+  "notes": "Updated notes.",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
+}
+```
+
+### DELETE `/api/projects/{id}`
+Removes a project.
+**Response (204 No Content)**
 
 ---
 
@@ -180,13 +368,62 @@ Retrieves all events.
     "venueName": "Main Studio Room A",
     "city": "Gothenburg",
     "address": "Vasagatan 16",
-    "status": "SCHEDULED"
+    "status": "SCHEDULED",
+    "notes": "Notes on events.",
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
+  }
+]
+```
+
+### GET `/api/events/{id}`
+Retrieves a specific calendar event by ID.
+**Response (200 OK):**
+```json
+{
+  "id": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "title": "Studio Portraits Day 1",
+  "type": "CORPORATE",
+  "eventDate": "2026-06-05",
+  "startTime": "09:00:00",
+  "endTime": "17:00:00",
+  "venueName": "Main Studio Room A",
+  "city": "Gothenburg",
+  "address": "Vasagatan 16",
+  "status": "SCHEDULED",
+  "notes": "Notes on events.",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
+### GET `/api/projects/{projectId}/events`
+Retrieves all events assigned to a project.
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
+    "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+    "title": "Studio Portraits Day 1",
+    "type": "CORPORATE",
+    "eventDate": "2026-06-05",
+    "startTime": "09:00:00",
+    "endTime": "17:00:00",
+    "venueName": "Main Studio Room A",
+    "city": "Gothenburg",
+    "address": "Vasagatan 16",
+    "status": "SCHEDULED",
+    "notes": "Notes on events.",
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
   }
 ]
 ```
 
 ### POST `/api/events`
-Creates a new calendar event.
+Creates a new calendar event. Returns the full created event object.
 **Request:**
 ```json
 {
@@ -199,23 +436,79 @@ Creates a new calendar event.
   "venueName": "Main Studio Room A",
   "city": "Gothenburg",
   "address": "Vasagatan 16",
-  "status": "SCHEDULED"
+  "status": "SCHEDULED",
+  "notes": "Notes on events."
 }
 ```
 **Response (201 Created):**
 ```json
 {
   "id": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
-  "title": "Studio Portraits Day 1"
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "title": "Studio Portraits Day 1",
+  "type": "CORPORATE",
+  "eventDate": "2026-06-05",
+  "startTime": "09:00:00",
+  "endTime": "17:00:00",
+  "venueName": "Main Studio Room A",
+  "city": "Gothenburg",
+  "address": "Vasagatan 16",
+  "status": "SCHEDULED",
+  "notes": "Notes on events.",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
 }
 ```
+
+### PUT `/api/events/{id}`
+Updates an event. Returns the updated event representation.
+**Request:**
+```json
+{
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "title": "Studio Portraits Day 1 - Updated",
+  "type": "CORPORATE",
+  "eventDate": "2026-06-05",
+  "startTime": "10:00:00",
+  "endTime": "18:00:00",
+  "venueName": "Main Studio Room B",
+  "city": "Gothenburg",
+  "address": "Vasagatan 16",
+  "status": "SCHEDULED",
+  "notes": "Updated event notes."
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "title": "Studio Portraits Day 1 - Updated",
+  "type": "CORPORATE",
+  "eventDate": "2026-06-05",
+  "startTime": "10:00:00",
+  "endTime": "18:00:00",
+  "venueName": "Main Studio Room B",
+  "city": "Gothenburg",
+  "address": "Vasagatan 16",
+  "status": "SCHEDULED",
+  "notes": "Updated event notes.",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
+}
+```
+
+### DELETE `/api/events/{id}`
+Removes a calendar event.
+**Response (204 No Content)**
 
 ---
 
 ## 6. Event Assignments
 
 ### GET `/api/assignments`
-Retrieves all assignments.
+Retrieves all assignments, optionally filtered by `eventId` or `employeeId`.
+**Request:** `GET /api/assignments?eventId=cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9`
 **Response (200 OK):**
 ```json
 [
@@ -225,14 +518,38 @@ Retrieves all assignments.
     "employeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
     "assignmentRole": "CANDID_PHOTOGRAPHER",
     "assignmentStatus": "ACCEPTED",
-    "callTime": "2026-06-05T08:30:00Z",
-    "notes": "Bring secondary backup camera body."
+    "callTime": "08:30:00",
+    "notes": "Bring secondary backup camera body.",
+    "conflictWarning": false,
+    "conflictReason": null,
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
   }
 ]
 ```
 
+### GET `/api/assignments/{id}`
+Retrieves a specific assignment by ID.
+**Response (200 OK):**
+```json
+{
+  "id": "11d87cfc-20f5-4ad9-a78b-d5a23fbf71a1",
+  "eventId": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
+  "employeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "assignmentRole": "CANDID_PHOTOGRAPHER",
+  "assignmentStatus": "ACCEPTED",
+  "callTime": "08:30:00",
+  "notes": "Bring secondary backup camera body.",
+  "conflictWarning": false,
+  "conflictReason": null,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
 ### POST `/api/assignments`
-Assigns an employee to an event. If an overlapping conflict is detected, the API successfully processes the assign, but flags a conflict warning.
+Assigns an employee to an event. If an overlapping conflict is detected, the API processes the assignment successfully but flags a conflict warning.
+Returns the full created assignment.
 **Request:**
 ```json
 {
@@ -240,7 +557,7 @@ Assigns an employee to an event. If an overlapping conflict is detected, the API
   "employeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
   "assignmentRole": "CANDID_PHOTOGRAPHER",
   "assignmentStatus": "PROPOSED",
-  "callTime": "2026-06-05T08:30:00Z",
+  "callTime": "08:30:00",
   "notes": "Bring secondary backup camera body."
 }
 ```
@@ -250,10 +567,50 @@ Assigns an employee to an event. If an overlapping conflict is detected, the API
   "id": "11d87cfc-20f5-4ad9-a78b-d5a23fbf71a1",
   "eventId": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
   "employeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "assignmentRole": "CANDID_PHOTOGRAPHER",
+  "assignmentStatus": "PROPOSED",
+  "callTime": "08:30:00",
+  "notes": "Bring secondary backup camera body.",
   "conflictWarning": true,
-  "conflictReason": "Employee John Doe is already assigned to 'Product Promo' from 08:00 to 12:00 on 2026-06-05."
+  "conflictReason": "Employee John Doe is already assigned to 'Product Promo' from 08:00 to 12:00 on 2026-06-05.",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
 }
 ```
+
+### PUT `/api/assignments/{id}`
+Updates an assignment. Returns the full updated assignment.
+**Request:**
+```json
+{
+  "eventId": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
+  "employeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "assignmentRole": "LEAD_PHOTOGRAPHER",
+  "assignmentStatus": "ACCEPTED",
+  "callTime": "08:30:00",
+  "notes": "Updated assignment notes."
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "11d87cfc-20f5-4ad9-a78b-d5a23fbf71a1",
+  "eventId": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
+  "employeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "assignmentRole": "LEAD_PHOTOGRAPHER",
+  "assignmentStatus": "ACCEPTED",
+  "callTime": "08:30:00",
+  "notes": "Updated assignment notes.",
+  "conflictWarning": false,
+  "conflictReason": null,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
+}
+```
+
+### DELETE `/api/assignments/{id}`
+Removes an assignment.
+**Response (204 No Content)**
 
 ---
 
@@ -271,13 +628,32 @@ Retrieves all deliverables.
     "deliverableType": "PHOTOS",
     "status": "READY_FOR_REVIEW",
     "referenceUrl": "s3://studioops-bucket/raw/retouched_jpg.zip",
-    "dueDate": "2026-06-20"
+    "dueDate": "2026-06-20",
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
   }
 ]
 ```
 
+### GET `/api/deliverables/{id}`
+Retrieves a specific deliverable by ID.
+**Response (200 OK):**
+```json
+{
+  "id": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "name": "Edited Retouched Photos",
+  "deliverableType": "PHOTOS",
+  "status": "READY_FOR_REVIEW",
+  "referenceUrl": "s3://studioops-bucket/raw/retouched_jpg.zip",
+  "dueDate": "2026-06-20",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
 ### POST `/api/deliverables`
-Creates a deliverable entity.
+Creates a deliverable entity. Returns the full created deliverable.
 **Request:**
 ```json
 {
@@ -285,6 +661,7 @@ Creates a deliverable entity.
   "name": "Edited Retouched Photos",
   "deliverableType": "PHOTOS",
   "status": "NOT_STARTED",
+  "referenceUrl": null,
   "dueDate": "2026-06-20"
 }
 ```
@@ -292,9 +669,48 @@ Creates a deliverable entity.
 ```json
 {
   "id": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
-  "name": "Edited Retouched Photos"
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "name": "Edited Retouched Photos",
+  "deliverableType": "PHOTOS",
+  "status": "NOT_STARTED",
+  "referenceUrl": null,
+  "dueDate": "2026-06-20",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
 }
 ```
+
+### PUT `/api/deliverables/{id}`
+Updates an existing deliverable. Returns the updated deliverable representation.
+**Request:**
+```json
+{
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "name": "Edited Retouched Photos - Final Selection",
+  "deliverableType": "PHOTOS",
+  "status": "READY_FOR_REVIEW",
+  "referenceUrl": "s3://studioops-bucket/raw/retouched_jpg.zip",
+  "dueDate": "2026-06-22"
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "name": "Edited Retouched Photos - Final Selection",
+  "deliverableType": "PHOTOS",
+  "status": "READY_FOR_REVIEW",
+  "referenceUrl": "s3://studioops-bucket/raw/retouched_jpg.zip",
+  "dueDate": "2026-06-22",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
+}
+```
+
+### DELETE `/api/deliverables/{id}`
+Removes a deliverable entity.
+**Response (204 No Content)**
 
 ---
 
@@ -314,13 +730,34 @@ Retrieves backups log.
     "destinationPath": "NAS_Volume_2/backups/photos.zip",
     "status": "COMPLETED",
     "notes": "Initial backup of RAW photos post-event.",
-    "verifiedAt": "2026-06-06T12:00:00Z"
+    "verifiedAt": "2026-06-06T12:00:00Z",
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
   }
 ]
 ```
 
+### GET `/api/backups/{id}`
+Retrieves a specific backup log record by ID.
+**Response (200 OK):**
+```json
+{
+  "id": "02fdfbc0-c20e-4501-9a7b-dcfcb9f0ee41",
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "deliverableId": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
+  "backupType": "RAW_PHOTOS",
+  "locationType": "LOCAL_NAS",
+  "destinationPath": "NAS_Volume_2/backups/photos.zip",
+  "status": "COMPLETED",
+  "notes": "Initial backup of RAW photos post-event.",
+  "verifiedAt": "2026-06-06T12:00:00Z",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
 ### POST `/api/backups`
-Logs a backup action.
+Logs a backup action. Returns the full created backup record.
 **Request:**
 ```json
 {
@@ -337,16 +774,61 @@ Logs a backup action.
 ```json
 {
   "id": "02fdfbc0-c20e-4501-9a7b-dcfcb9f0ee41",
-  "status": "COMPLETED"
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "deliverableId": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
+  "backupType": "RAW_PHOTOS",
+  "locationType": "LOCAL_NAS",
+  "destinationPath": "NAS_Volume_2/backups/photos.zip",
+  "status": "COMPLETED",
+  "notes": "Initial backup of RAW photos post-event.",
+  "verifiedAt": null,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
 }
 ```
+
+### PUT `/api/backups/{id}`
+Updates an existing backup log record. Returns the updated representation.
+**Request:**
+```json
+{
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "deliverableId": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
+  "backupType": "RAW_PHOTOS",
+  "locationType": "CLOUD_S3",
+  "destinationPath": "s3://studioops-bucket/backups/photos.zip",
+  "status": "COMPLETED",
+  "notes": "Backup moved to S3.",
+  "verifiedAt": "2026-06-07T12:00:00Z"
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "02fdfbc0-c20e-4501-9a7b-dcfcb9f0ee41",
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "deliverableId": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
+  "backupType": "RAW_PHOTOS",
+  "locationType": "CLOUD_S3",
+  "destinationPath": "s3://studioops-bucket/backups/photos.zip",
+  "status": "COMPLETED",
+  "notes": "Backup moved to S3.",
+  "verifiedAt": "2026-06-07T12:00:00Z",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
+}
+```
+
+### DELETE `/api/backups/{id}`
+Removes a backup record log entry.
+**Response (204 No Content)**
 
 ---
 
 ## 9. Dashboard Summary
 
 ### GET `/api/dashboard/summary`
-Retrieves system overview statistics, warning flags, and recent logs.
+Retrieves system overview statistics, warning flags, and recent checklists.
 
 **Request:** `GET /api/dashboard/summary`
 
@@ -383,4 +865,3 @@ Retrieves system overview statistics, warning flags, and recent logs.
   ]
 }
 ```
-

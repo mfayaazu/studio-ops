@@ -1,7 +1,3 @@
-Create a new file named AGENTS.md at the root of the repository.
-
-Content:
-
 # AGENTS.md
 
 ## Project

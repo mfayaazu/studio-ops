@@ -1,15 +1,13 @@
-package com.studioops.deliverable;
+package com.studioops.deliverable.dto;
+import com.studioops.deliverable.DeliverableStatus;
+import com.studioops.deliverable.DeliverableType;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
-import java.util.UUID;
 
-public class DeliverableCreateRequest {
-
-    @NotNull(message = "projectId is required")
-    private UUID projectId;
+public class DeliverableUpdateRequest {
 
     @NotBlank(message = "name is required")
     @Size(max = 255, message = "name must not exceed 255 characters")
@@ -26,24 +24,15 @@ public class DeliverableCreateRequest {
 
     private LocalDate dueDate;
 
-    public DeliverableCreateRequest() {
+    public DeliverableUpdateRequest() {
     }
 
-    public DeliverableCreateRequest(UUID projectId, String name, DeliverableType deliverableType, DeliverableStatus status, String referenceUrl, LocalDate dueDate) {
-        this.projectId = projectId;
+    public DeliverableUpdateRequest(String name, DeliverableType deliverableType, DeliverableStatus status, String referenceUrl, LocalDate dueDate) {
         this.name = name;
         this.deliverableType = deliverableType;
         this.status = status;
         this.referenceUrl = referenceUrl;
         this.dueDate = dueDate;
-    }
-
-    public UUID getProjectId() {
-        return projectId;
-    }
-
-    public void setProjectId(UUID projectId) {
-        this.projectId = projectId;
     }
 
     public String getName() {

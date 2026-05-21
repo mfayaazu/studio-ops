@@ -1,47 +1,34 @@
-package com.studioops.backup;
+package com.studioops.backup.dto;
+import com.studioops.backup.BackupLocationType;
+import com.studioops.backup.BackupStatus;
+import com.studioops.backup.BackupType;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.UUID;
 
-public class BackupRecordCreateRequest {
+public class BackupRecordResponse {
 
-    @NotNull(message = "projectId is required")
+    private UUID id;
     private UUID projectId;
-
     private UUID deliverableId;
-
-    @NotNull(message = "backupType is required")
     private BackupType backupType;
-
-    @NotNull(message = "locationType is required")
     private BackupLocationType locationType;
-
-    @NotBlank(message = "destinationPath is required")
-    @Size(max = 500, message = "destinationPath must not exceed 500 characters")
     private String destinationPath;
-
-    @NotNull(message = "status is required")
     private BackupStatus status;
-
     private String notes;
-
     private Instant verifiedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 
-    public BackupRecordCreateRequest() {
+    public BackupRecordResponse() {
     }
 
-    public BackupRecordCreateRequest(UUID projectId, UUID deliverableId, BackupType backupType, BackupLocationType locationType, String destinationPath, BackupStatus status, String notes, Instant verifiedAt) {
-        this.projectId = projectId;
-        this.deliverableId = deliverableId;
-        this.backupType = backupType;
-        this.locationType = locationType;
-        this.destinationPath = destinationPath;
-        this.status = status;
-        this.notes = notes;
-        this.verifiedAt = verifiedAt;
+    public UUID getId() {
+        return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
     }
 
     public UUID getProjectId() {
@@ -106,5 +93,21 @@ public class BackupRecordCreateRequest {
 
     public void setVerifiedAt(Instant verifiedAt) {
         this.verifiedAt = verifiedAt;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

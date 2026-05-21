@@ -1,4 +1,7 @@
 package com.studioops.backup;
+import com.studioops.backup.dto.BackupRecordCreateRequest;
+import com.studioops.backup.dto.BackupRecordResponse;
+import com.studioops.backup.dto.BackupRecordUpdateRequest;
 
 public class BackupRecordMapper {
 

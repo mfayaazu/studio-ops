@@ -15,6 +15,9 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import com.studioops.deliverable.dto.DeliverableCreateRequest;
+import com.studioops.deliverable.dto.DeliverableResponse;
+import com.studioops.deliverable.dto.DeliverableUpdateRequest;
 
 class DeliverableServiceTest {
 

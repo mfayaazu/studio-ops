@@ -1,4 +1,5 @@
 package com.studioops.assignment;
+import com.studioops.assignment.dto.EventAssignmentResponse;
 
 public class EventAssignmentMapper {
 
