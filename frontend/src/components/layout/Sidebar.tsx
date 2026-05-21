@@ -1,5 +1,6 @@
 import { useRouter } from '../../app/router';
 import type { AppRoute } from '../../app/router';
+import { useAuth } from '../../features/auth/AuthProvider';
 
 import {
   Activity,
@@ -10,13 +11,15 @@ import {
   Sparkles,
   ClipboardList,
   Clock,
-  Database
+  Database,
+  LogOut
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { APP_VERSION } from '../../lib/constants';
 
 export const Sidebar: React.FC = () => {
   const { currentRoute, navigateTo } = useRouter();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { id: 'dashboard' as AppRoute, label: 'Dashboard', icon: Activity },
@@ -74,14 +77,36 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Sidebar Footer */}
-      <div className="p-4 border-t border-slate-800/80 text-[11px] text-slate-500 space-y-1.5">
-        <div className="flex items-center gap-1 text-slate-400 font-medium">
-          <Sparkles className="h-3 w-3 text-fuchsia-400" />
-          <span>Internal Admin Console</span>
-        </div>
-        <div className="flex justify-between font-mono text-[10px]">
-          <span>Version:</span>
-          <span>{APP_VERSION}</span>
+      <div className="p-4 border-t border-slate-800/80 space-y-3">
+        {user && (
+          <div className="flex items-center justify-between bg-slate-900/40 border border-slate-800/50 rounded-xl p-3 gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-slate-200 truncate">
+                {user.displayName || user.email}
+              </p>
+              <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                {user.role} • {user.email}
+              </p>
+            </div>
+            <button
+              onClick={logout}
+              title="Sign Out"
+              className="p-2 text-slate-450 hover:text-rose-455 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer flex-shrink-0"
+            >
+              <LogOut className="h-4.5 w-4.5" />
+            </button>
+          </div>
+        )}
+
+        <div className="text-[11px] text-slate-500 space-y-1.5 px-1">
+          <div className="flex items-center gap-1 text-slate-400 font-medium">
+            <Sparkles className="h-3 w-3 text-fuchsia-400" />
+            <span>Internal Admin Console</span>
+          </div>
+          <div className="flex justify-between font-mono text-[10px]">
+            <span>Version:</span>
+            <span>{APP_VERSION}</span>
+          </div>
         </div>
       </div>
     </aside>

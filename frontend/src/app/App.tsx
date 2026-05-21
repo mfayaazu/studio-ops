@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Providers } from './providers';
 import { useRouter } from './router';
 import { MainLayout } from '../components/layout/MainLayout';
+import { useAuth } from '../features/auth/AuthProvider';
+import { LoginPage } from '../features/auth/pages/LoginPage';
+import { Loader2 } from 'lucide-react';
 
 // Page components
 import { DashboardPage } from '../features/dashboard/pages/DashboardPage';
@@ -24,6 +27,7 @@ interface HealthResponse {
 
 const AppContent: React.FC = () => {
   const { currentRoute } = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
   
   const [health, setHealth] = useState<{
     status: 'connecting' | 'online' | 'offline';
@@ -93,6 +97,19 @@ const AppContent: React.FC = () => {
         return <DashboardPage />;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#090d16] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="h-8 w-8 text-violet-500 animate-spin" />
+        <span className="text-slate-400 text-xs font-medium tracking-wide">Initializing workspace...</span>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   return (
     <MainLayout
