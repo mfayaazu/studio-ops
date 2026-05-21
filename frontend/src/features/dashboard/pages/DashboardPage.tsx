@@ -1,169 +1,221 @@
 import React, { useEffect, useState } from 'react';
 import { dashboardApi } from '../api/dashboardApi';
+import { eventsApi } from '../../events/api/eventsApi';
+import { projectsApi } from '../../projects/api/projectsApi';
+import { deliverablesApi } from '../../deliverables/api/deliverablesApi';
+import { backupsApi } from '../../backups/api/backupsApi';
+import { employeesApi } from '../../employees/api/employeesApi';
+import { assignmentsApi } from '../../assignments/api/assignmentsApi';
+import { useRouter } from '../../../app/router';
+
 import type { DashboardSummaryResponse } from '../types';
-import { Activity, Users, Briefcase, Database, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { formatConflictTime } from '../../../lib/utils';
+import type { EventResponse } from '../../events/types';
+import type { Project } from '../../projects/types';
+import type { Deliverable } from '../../deliverables/types';
+import type { BackupRecord } from '../../backups/types';
+
+import { DashboardStatsCards } from '../components/DashboardStatsCards';
+import { TodayEventsPanel } from '../components/TodayEventsPanel';
+import { UpcomingEventsPanel } from '../components/UpcomingEventsPanel';
+import { DeliverablesOverview } from '../components/DeliverablesOverview';
+import { BackupRiskPanel } from '../components/BackupRiskPanel';
+import { ConflictWarningsPanel } from '../components/ConflictWarningsPanel';
+import { QuickActionsPanel } from '../components/QuickActionsPanel';
+
+import { ShieldAlert, Sparkles } from 'lucide-react';
+
+const defaultSummary: DashboardSummaryResponse = {
+  stats: {
+    totalClients: 0,
+    activeProjects: 0,
+    upcomingEventsCount: 0,
+    successfulBackupsCount: 0,
+  },
+  warnings: [],
+  backupChecklists: [],
+};
+
+const fetchWithFallback = async <T,>(promise: Promise<T>, fallback: T): Promise<T> => {
+  try {
+    return await promise;
+  } catch (err) {
+    console.error('API load failed:', err);
+    return fallback;
+  }
+};
 
 export const DashboardPage: React.FC = () => {
-  const [data, setData] = useState<DashboardSummaryResponse | null>(null);
+  const { navigateTo } = useRouter();
+  
+  const [summary, setSummary] = useState<DashboardSummaryResponse>(defaultSummary);
+  const [events, setEvents] = useState<EventResponse[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
+  const [backups, setBackups] = useState<BackupRecord[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    dashboardApi.getSummary()
-      .then((res) => {
-        setData(res);
+    setLoading(true);
+    setError(null);
+
+    Promise.all([
+      fetchWithFallback(dashboardApi.getSummary(), defaultSummary),
+      fetchWithFallback(eventsApi.list(), []),
+      fetchWithFallback(projectsApi.list(), []),
+      fetchWithFallback(deliverablesApi.list(), []),
+      fetchWithFallback(backupsApi.list(), []),
+      fetchWithFallback(employeesApi.list(), []),
+      fetchWithFallback(assignmentsApi.list(), []),
+    ])
+      .then(([resSummary, resEvents, resProjects, resDeliverables, resBackups]) => {
+        setSummary(resSummary);
+        setEvents(resEvents);
+        setProjects(resProjects);
+        setDeliverables(resDeliverables);
+        setBackups(resBackups);
         setLoading(false);
       })
       .catch((err) => {
-        setError(err.message || 'Failed to load dashboard data');
+        console.error('Unexpected error loading dashboard:', err);
+        setError('An unexpected error occurred while compiling operational stats.');
         setLoading(false);
       });
   }, []);
 
-  if (loading) {
-    return <div className="text-slate-400 font-mono animate-pulse">Loading dashboard operations...</div>;
-  }
+  const todayStr = new Date().toISOString().split('T')[0];
 
-  if (error) {
+  const todayEvents = events.filter((e) => e.eventDate === todayStr);
+  const upcomingEvents = events
+    .filter((e) => e.eventDate > todayStr)
+    .sort((a, b) => a.eventDate.localeCompare(b.eventDate) || a.startTime.localeCompare(b.startTime));
+  
+  // Calculate dynamic stats
+  const activeProjectsCount = projects.filter(
+    (p) => p.status !== 'CANCELLED' && p.status !== 'ARCHIVED'
+  ).length;
+
+  const totalUpcomingEvents = events.filter(
+    (e) => e.eventDate >= todayStr && e.status === 'SCHEDULED'
+  ).length;
+
+  const pendingDeliverablesCount = deliverables.filter(
+    (d) => d.status !== 'COMPLETED' && d.status !== 'DELIVERED'
+  ).length;
+
+  // Backup issues calculations
+  const failedBackups = backups.filter((b) => b.status === 'FAILED').length;
+  const needsAttention = backups.filter((b) => b.status === 'NEEDS_ATTENTION').length;
+  const activeProjectsList = projects.filter((p) => p.status !== 'CANCELLED' && p.status !== 'ARCHIVED');
+  const missingCloud = activeProjectsList.filter(
+    (p) => !backups.some((b) => b.projectId === p.id && b.locationType === 'CLOUD_S3' && b.status === 'COMPLETED')
+  ).length;
+  const singleLocation = activeProjectsList.filter((p) => {
+    const projectBackups = backups.filter((b) => b.projectId === p.id && b.status === 'COMPLETED');
+    const locations = new Set(projectBackups.map((b) => b.locationType));
+    return locations.size === 1;
+  }).length;
+  const backupIssuesCount = failedBackups + needsAttention + missingCloud + singleLocation;
+
+  const conflictWarningsCount = summary.warnings.length;
+
+  const formattedToday = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  if (loading) {
     return (
-      <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl flex items-center gap-3">
-        <AlertTriangle className="h-5 w-5 flex-shrink-0" />
-        <span>{error}</span>
+      <div className="space-y-8 animate-pulse">
+        <div className="space-y-2">
+          <div className="h-8 bg-slate-800 rounded-lg w-1/4"></div>
+          <div className="h-4 bg-slate-800 rounded-lg w-1/3"></div>
+        </div>
+
+        {/* Stats Row Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-28 bg-[#0d1424] border border-slate-800/80 rounded-xl p-5"></div>
+          ))}
+        </div>
+
+        {/* Mid Row Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-80 bg-[#0d1424] border border-slate-800/80 rounded-xl p-6"></div>
+          <div className="h-80 bg-[#0d1424] border border-slate-800/80 rounded-xl p-6"></div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-heading font-bold text-white tracking-wide">Operations Hub</h2>
-        <p className="text-slate-400 text-xs mt-1">Real-time status overview of clients, shoots, and media backups</p>
-      </div>
-
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-[#0d1424] border border-slate-800/80 rounded-xl p-5 flex items-center justify-between shadow-lg">
-          <div className="space-y-1">
-            <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Total Clients</span>
-            <h3 className="text-2xl font-heading font-extrabold text-white">{data?.stats.totalClients ?? 0}</h3>
+      {/* Header and Welcome Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-slate-900/60 to-indigo-950/20 border border-slate-800/60 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+        <div className="absolute right-0 top-0 h-full w-1/3 bg-radial-gradient from-indigo-500/5 to-transparent pointer-events-none" />
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-heading font-extrabold text-white tracking-wide">
+              Operations Command Center
+            </h2>
+            <Sparkles className="h-5 w-5 text-indigo-400 animate-bounce" />
           </div>
-          <div className="p-3 rounded-lg bg-violet-500/10 text-violet-400 border border-violet-500/20">
-            <Users className="h-5 w-5" />
-          </div>
+          <p className="text-slate-400 text-xs font-mono">{formattedToday}</p>
         </div>
-
-        <div className="bg-[#0d1424] border border-slate-800/80 rounded-xl p-5 flex items-center justify-between shadow-lg">
-          <div className="space-y-1">
-            <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Active Projects</span>
-            <h3 className="text-2xl font-heading font-extrabold text-white">{data?.stats.activeProjects ?? 0}</h3>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[11px] font-bold text-emerald-400">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+            Live Sync
           </div>
-          <div className="p-3 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
-            <Briefcase className="h-5 w-5" />
-          </div>
-        </div>
-
-        <div className="bg-[#0d1424] border border-slate-800/80 rounded-xl p-5 flex items-center justify-between shadow-lg">
-          <div className="space-y-1">
-            <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Upcoming Shoots</span>
-            <h3 className="text-2xl font-heading font-extrabold text-white">{data?.stats.upcomingEventsCount ?? 0}</h3>
-          </div>
-          <div className="p-3 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <Activity className="h-5 w-5" />
-          </div>
-        </div>
-
-        <div className="bg-[#0d1424] border border-slate-800/80 rounded-xl p-5 flex items-center justify-between shadow-lg">
-          <div className="space-y-1">
-            <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Safe Backups</span>
-            <h3 className="text-2xl font-heading font-extrabold text-white">{data?.stats.successfulBackupsCount ?? 0}</h3>
-          </div>
-          <div className="p-3 rounded-lg bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20">
-            <Database className="h-5 w-5" />
-          </div>
+          {backupIssuesCount + conflictWarningsCount > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 rounded-full text-[11px] font-bold text-rose-400">
+              <ShieldAlert className="h-3.5 w-3.5" />
+              {backupIssuesCount + conflictWarningsCount} Risk Alert{backupIssuesCount + conflictWarningsCount > 1 ? 's' : ''}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Warnings & Checklists Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Double Booking Alerts */}
-        <section className="bg-[#0d1424] border border-slate-800/80 rounded-xl p-6 space-y-4 shadow-lg">
-          <div>
-            <h3 className="text-white font-medium text-base">Scheduling Conflicts</h3>
-            <p className="text-slate-500 text-xs mt-0.5">Crew double-bookings requiring reallocation</p>
-          </div>
+      {error && (
+        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl flex items-center gap-3">
+          <ShieldAlert className="h-5 w-5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
-          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-            {!data?.warnings.length ? (
-              <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-4 text-emerald-400 text-xs flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" />
-                <span>All employee schedules are clear. No double-bookings detected.</span>
-              </div>
-            ) : (
-              data.warnings.map((warn, index) => (
-                <div key={index} className="bg-amber-500/5 border border-amber-500/10 rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">{warn.type}</span>
-                    <span className="text-[10px] text-slate-500 font-mono">{formatConflictTime(warn.conflictTime)}</span>
-                  </div>
-                  <p className="text-xs text-slate-300">
-                    Crew <strong className="text-white">{warn.employeeName}</strong> is assigned to both{' '}
-                    <strong className="text-white">'{warn.eventTitle}'</strong> and{' '}
-                    <strong className="text-white">'{warn.overlappingEventTitle}'</strong>.
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
+      {/* KPI Cards Row */}
+      <DashboardStatsCards
+        totalProjects={activeProjectsCount}
+        upcomingEventsCount={totalUpcomingEvents}
+        pendingDeliverablesCount={pendingDeliverablesCount}
+        backupIssuesCount={backupIssuesCount}
+        conflictWarningsCount={conflictWarningsCount}
+        onNavigate={navigateTo}
+      />
 
-        {/* Backup Integrity Checklists */}
-        <section className="bg-[#0d1424] border border-slate-800/80 rounded-xl p-6 space-y-4 shadow-lg">
-          <div>
-            <h3 className="text-white font-medium text-base">Redundancy Warnings</h3>
-            <p className="text-slate-500 text-xs mt-0.5">Deliverables logged with less than 2 independent backups</p>
-          </div>
-
-          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-            {!data?.backupChecklists.length ? (
-              <div className="bg-slate-900/60 rounded-lg p-4 text-slate-500 text-xs">
-                No deliverables registered yet.
-              </div>
-            ) : (
-              data.backupChecklists.map((check, index) => {
-                const isLow = check.status === 'WARNING_LOW_REDUNDANCY';
-                return (
-                  <div
-                    key={index}
-                    className={`rounded-lg p-4 border flex items-center justify-between gap-4 ${
-                      isLow
-                        ? 'bg-rose-500/5 border-rose-500/10 text-rose-400'
-                        : 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400'
-                    }`}
-                  >
-                    <div className="space-y-1">
-                      <h4 className="text-white font-semibold text-xs">{check.deliverableName}</h4>
-                      <p className="text-[10px] text-slate-500 font-medium">
-                        Project: {check.projectName} | Backups: {check.redundantBackupCount}
-                      </p>
-                      <p className="text-[11px] text-slate-350">{check.details}</p>
-                    </div>
-                    <span
-                      className={`text-[9px] uppercase font-extrabold px-2.5 py-0.5 rounded-full border ${
-                        isLow
-                          ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                          : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                      }`}
-                    >
-                      {check.status === 'WARNING_LOW_REDUNDANCY' ? 'Low Redundancy' : 'Safe'}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </section>
+      {/* Schedule & Ops Split Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          <TodayEventsPanel
+            events={todayEvents}
+            onNavigateToEvents={() => navigateTo('events')}
+          />
+          <UpcomingEventsPanel events={upcomingEvents.slice(0, 5)} />
+        </div>
+        <div className="space-y-6">
+          <DeliverablesOverview deliverables={deliverables} />
+          <BackupRiskPanel backups={backups} projects={projects} />
+        </div>
       </div>
+
+      {/* Warnings & Conflicts Panel */}
+      <ConflictWarningsPanel warnings={summary.warnings} />
+
+      {/* Quick Action Navigation Grid */}
+      <QuickActionsPanel onNavigate={navigateTo} />
     </div>
   );
 };
