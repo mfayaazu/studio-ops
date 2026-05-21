@@ -18,6 +18,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Service;
+import jakarta.servlet.http.HttpSession;
 
 @Service
 public class AuthService {
@@ -31,7 +32,8 @@ public class AuthService {
         this.userService = userService;
     }
 
-    public LoginResponse login(LoginRequest request, HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+    public LoginResponse login(LoginRequest request, HttpServletRequest servletRequest,
+            HttpServletResponse servletResponse) {
         User user;
         try {
             user = userService.findUserByEmail(request.getEmail());
@@ -44,8 +46,7 @@ public class AuthService {
         }
 
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
@@ -58,9 +59,17 @@ public class AuthService {
         return new LoginResponse("SUCCESS", UserResponse.fromUser(updatedUser));
     }
 
+    public void logout(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        SecurityContextHolder.clearContext();
+    }
+
     public CurrentUserResponse getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() || 
+        if (authentication == null || !authentication.isAuthenticated() ||
                 "anonymousUser".equals(authentication.getPrincipal())) {
             return new CurrentUserResponse(false, null);
         }
