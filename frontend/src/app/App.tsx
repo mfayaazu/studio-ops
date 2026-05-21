@@ -10,6 +10,7 @@ import { ProjectsPage } from '../features/projects/pages/ProjectsPage';
 import { EmployeesPage } from '../features/employees/pages/EmployeesPage';
 import { EventsPage } from '../features/events/pages/EventsPage';
 import { AvailabilityPlannerPage } from '../features/assignments/pages/AvailabilityPlannerPage';
+import { BackupCenterPage } from '../features/backups/pages/BackupCenterPage';
 
 interface HealthResponse {
   status: string;
@@ -83,6 +84,8 @@ const AppContent: React.FC = () => {
         return <EventsPage />;
       case 'availability':
         return <AvailabilityPlannerPage />;
+      case 'backups':
+        return <BackupCenterPage />;
       default:
         return <DashboardPage />;
     }
