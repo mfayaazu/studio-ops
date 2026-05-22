@@ -16,9 +16,9 @@ export async function getCurrentUser(): Promise<CurrentUserResponse> {
 }
 
 /**
- * Attempts to log out by calling Spring Security's default logout endpoint (POST /logout)
- * with credentials included. If it fails (e.g. due to proxy path mappings or missing endpoint),
- * catches the error and falls back to clearing local frontend authentication state.
+ * Attempts to log out by calling the backend custom logout endpoint (POST /api/auth/logout)
+ * with credentials included. If it fails, catches the error and allows the frontend to fallback
+ * gracefully to clearing local frontend authentication state.
  */
 export async function logout(): Promise<void> {
   try {
@@ -28,15 +28,15 @@ export async function logout(): Promise<void> {
     });
     if (!response.ok) {
       console.warn(
-        `Spring Security default logout endpoint /logout returned status ${response.status}. ` +
+        `Custom logout endpoint /api/auth/logout returned status ${response.status}. ` +
         `Falling back to clearing local frontend authentication state.`
       );
     } else {
-      console.log('Successfully logged out from Spring Security session.');
+      console.log('Successfully logged out from backend session.');
     }
   } catch (error) {
     console.warn(
-      'Spring Security default logout endpoint /logout call failed or is unreachable. ' +
+      'Custom logout endpoint /api/auth/logout call failed or is unreachable. ' +
       'Falling back to clearing local frontend authentication state.',
       error
     );

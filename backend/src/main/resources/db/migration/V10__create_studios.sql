@@ -1,0 +1,14 @@
+CREATE TABLE studio (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(200) NOT NULL,
+    slug VARCHAR(100) NOT NULL UNIQUE,
+    business_email VARCHAR(255),
+    phone VARCHAR(50),
+    country VARCHAR(100),
+    timezone VARCHAR(100) DEFAULT 'Europe/Stockholm' NOT NULL,
+    status VARCHAR(50) DEFAULT 'ACTIVE' NOT NULL,
+    subscription_plan VARCHAR(50) DEFAULT 'STARTER' NOT NULL,
+    subscription_status VARCHAR(50) DEFAULT 'TRIAL' NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);

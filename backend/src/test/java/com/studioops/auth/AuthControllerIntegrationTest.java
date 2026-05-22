@@ -117,4 +117,37 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(get("/api/auth/me"))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void logout_Success_InvalidatesSession() throws Exception {
+        LoginRequest request = new LoginRequest("owner@studioops.local", "ChangeMe123!");
+
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) result.getRequest().getSession();
+        org.junit.jupiter.api.Assertions.assertNotNull(session, "Session should be created and returned");
+
+        // Verify me works initially
+        mockMvc.perform(get("/api/auth/me").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.authenticated").value(true));
+
+        // Logout
+        mockMvc.perform(post("/api/auth/logout").session(session))
+                .andExpect(status().isNoContent());
+
+        // Verify me now returns forbidden/unauthorized
+        mockMvc.perform(get("/api/auth/me").session(session))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void logout_SafeWithoutSession() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
+                .andExpect(status().isNoContent());
+    }
 }
