@@ -1,6 +1,8 @@
 package com.studioops.employee;
 
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
+import com.studioops.studio.StudioRepository;
 import com.studioops.employee.dto.EmployeeCreateRequest;
 import com.studioops.employee.dto.EmployeeResponse;
 import com.studioops.employee.dto.EmployeeUpdateRequest;
@@ -15,18 +17,26 @@ import java.util.UUID;
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final StudioRepository studioRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository, StudioRepository studioRepository) {
         this.employeeRepository = employeeRepository;
+        this.studioRepository = studioRepository;
     }
 
     public EmployeeResponse createEmployee(EmployeeCreateRequest request) {
+        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        if (!studioRepository.existsById(studioId)) {
+            throw new IllegalArgumentException("Studio not found with id: " + studioId);
+        }
+
         String trimmedEmail = request.getEmail().trim().toLowerCase();
         if (employeeRepository.findByEmail(trimmedEmail).isPresent()) {
             throw new IllegalArgumentException("Email is already in use");
         }
 
         Employee employee = new Employee();
+        employee.setStudioId(studioId);
         employee.setUserId(request.getUserId());
         employee.setFullName(request.getFullName().trim());
         employee.setEmail(trimmedEmail);
@@ -46,11 +56,16 @@ public class EmployeeService {
 
     @Transactional(readOnly = true)
     public List<EmployeeResponse> listEmployees(String search) {
+        return listEmployeesForStudio(TenantConstants.DEFAULT_STUDIO_ID, search);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EmployeeResponse> listEmployeesForStudio(UUID studioId, String search) {
         List<Employee> employees;
         if (search == null || search.trim().isEmpty()) {
-            employees = employeeRepository.findAll();
+            employees = employeeRepository.findAllByStudioId(studioId);
         } else {
-            employees = employeeRepository.searchEmployees(search.trim());
+            employees = employeeRepository.searchEmployeesByStudio(studioId, search.trim());
         }
         return employees.stream()
                 .map(EmployeeMapper::toResponse)
@@ -59,13 +74,13 @@ public class EmployeeService {
 
     @Transactional(readOnly = true)
     public EmployeeResponse getEmployeeById(UUID id) {
-        Employee employee = employeeRepository.findById(id)
+        Employee employee = employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
         return EmployeeMapper.toResponse(employee);
     }
 
     public EmployeeResponse updateEmployee(UUID id, EmployeeUpdateRequest request) {
-        Employee employee = employeeRepository.findById(id)
+        Employee employee = employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
 
         String trimmedEmail = request.getEmail().trim().toLowerCase();
@@ -92,7 +107,7 @@ public class EmployeeService {
     }
 
     public void deleteEmployee(UUID id) {
-        Employee employee = employeeRepository.findById(id)
+        Employee employee = employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
         employeeRepository.delete(employee);
     }

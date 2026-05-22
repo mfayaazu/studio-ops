@@ -3,6 +3,7 @@ package com.studioops.employee;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.studioops.config.SecurityConfig;
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
 import com.studioops.employee.dto.EmployeeCreateRequest;
 import com.studioops.employee.dto.EmployeeResponse;
 import com.studioops.employee.dto.EmployeeUpdateRequest;
@@ -42,7 +43,7 @@ class EmployeeControllerIntegrationTest {
                 null, "John Doe", "john.doe@studioops.se", "+46701112233", "Lead Photographer", "Colorist", EmployeeStatus.ACTIVE
         );
         EmployeeResponse response = new EmployeeResponse(
-                UUID.randomUUID(), null, "John Doe", "john.doe@studioops.se", "+46701112233", "Lead Photographer", "Colorist", EmployeeStatus.ACTIVE, Instant.now(), Instant.now()
+                UUID.randomUUID(), null, "John Doe", "john.doe@studioops.se", "+46701112233", "Lead Photographer", "Colorist", EmployeeStatus.ACTIVE, Instant.now(), Instant.now(), TenantConstants.DEFAULT_STUDIO_ID
         );
 
         when(employeeService.createEmployee(any(EmployeeCreateRequest.class))).thenReturn(response);
@@ -52,6 +53,7 @@ class EmployeeControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(response.getId().toString()))
+                .andExpect(jsonPath("$.studioId").value(TenantConstants.DEFAULT_STUDIO_ID.toString()))
                 .andExpect(jsonPath("$.fullName").value("John Doe"))
                 .andExpect(jsonPath("$.email").value("john.doe@studioops.se"));
     }
@@ -78,7 +80,7 @@ class EmployeeControllerIntegrationTest {
     void getEmployeeById_Success() throws Exception {
         UUID id = UUID.randomUUID();
         EmployeeResponse response = new EmployeeResponse(
-                id, null, "John Doe", "john.doe@studioops.se", "+46701112233", "Lead Photographer", "Colorist", EmployeeStatus.ACTIVE, Instant.now(), Instant.now()
+                id, null, "John Doe", "john.doe@studioops.se", "+46701112233", "Lead Photographer", "Colorist", EmployeeStatus.ACTIVE, Instant.now(), Instant.now(), TenantConstants.DEFAULT_STUDIO_ID
         );
 
         when(employeeService.getEmployeeById(id)).thenReturn(response);
@@ -86,6 +88,7 @@ class EmployeeControllerIntegrationTest {
         mockMvc.perform(get("/api/employees/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.studioId").value(TenantConstants.DEFAULT_STUDIO_ID.toString()))
                 .andExpect(jsonPath("$.fullName").value("John Doe"));
     }
 
@@ -106,7 +109,7 @@ class EmployeeControllerIntegrationTest {
                 null, "John Updated", "john.doe@studioops.se", "+46701112233", "Lead Photographer", "Colorist", EmployeeStatus.ACTIVE
         );
         EmployeeResponse response = new EmployeeResponse(
-                id, null, "John Updated", "john.doe@studioops.se", "+46701112233", "Lead Photographer", "Colorist", EmployeeStatus.ACTIVE, Instant.now(), Instant.now()
+                id, null, "John Updated", "john.doe@studioops.se", "+46701112233", "Lead Photographer", "Colorist", EmployeeStatus.ACTIVE, Instant.now(), Instant.now(), TenantConstants.DEFAULT_STUDIO_ID
         );
 
         when(employeeService.updateEmployee(eq(id), any(EmployeeUpdateRequest.class))).thenReturn(response);
@@ -115,6 +118,7 @@ class EmployeeControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.studioId").value(TenantConstants.DEFAULT_STUDIO_ID.toString()))
                 .andExpect(jsonPath("$.fullName").value("John Updated"));
     }
 

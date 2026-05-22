@@ -16,6 +16,7 @@ public class EmployeeResponse {
     private EmployeeStatus status;
     private Instant createdAt;
     private Instant updatedAt;
+    private UUID studioId;
 
     public EmployeeResponse() {
     }
@@ -31,6 +32,28 @@ public class EmployeeResponse {
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+    }
+
+    public EmployeeResponse(UUID id, UUID userId, String fullName, String email, String phone, String primaryRole, String skills, EmployeeStatus status, Instant createdAt, Instant updatedAt, UUID studioId) {
+        this.id = id;
+        this.userId = userId;
+        this.fullName = fullName;
+        this.email = email;
+        this.phone = phone;
+        this.primaryRole = primaryRole;
+        this.skills = skills;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.studioId = studioId;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 
     public UUID getId() {

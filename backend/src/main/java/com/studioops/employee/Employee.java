@@ -16,6 +16,9 @@ public class Employee {
     @Column(name = "user_id")
     private UUID userId;
 
+    @Column(name = "studio_id", nullable = false)
+    private UUID studioId;
+
     @Column(name = "full_name", nullable = false, length = 200)
     private String fullName;
 
@@ -138,5 +141,13 @@ public class Employee {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 }

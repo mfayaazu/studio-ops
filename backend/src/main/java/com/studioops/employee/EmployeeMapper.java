@@ -19,6 +19,7 @@ public class EmployeeMapper {
         response.setStatus(employee.getStatus());
         response.setCreatedAt(employee.getCreatedAt());
         response.setUpdatedAt(employee.getUpdatedAt());
+        response.setStudioId(employee.getStudioId());
         return response;
     }
 }

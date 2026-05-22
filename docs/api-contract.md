@@ -143,6 +143,7 @@ Retrieves all employee profiles.
   {
     "id": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
     "userId": null,
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
     "fullName": "John Doe",
     "email": "john.doe@studioops.se",
     "phone": "+46701112233",
@@ -162,6 +163,7 @@ Retrieves a specific employee profile by its ID.
 {
   "id": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
   "userId": null,
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
   "fullName": "John Doe",
   "email": "john.doe@studioops.se",
   "phone": "+46701112233",
@@ -179,6 +181,7 @@ Creates a new profile. Returns the full profile.
 ```json
 {
   "userId": null,
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
   "fullName": "John Doe",
   "email": "john.doe@studioops.se",
   "phone": "+46701112233",
@@ -192,6 +195,7 @@ Creates a new profile. Returns the full profile.
 {
   "id": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
   "userId": null,
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
   "fullName": "John Doe",
   "email": "john.doe@studioops.se",
   "phone": "+46701112233",
@@ -222,6 +226,7 @@ Updates an employee's profile. Returns the updated profile.
 {
   "id": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
   "userId": null,
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
   "fullName": "John Doe Updated",
   "email": "john.doe@studioops.se",
   "phone": "+46701112233",

@@ -30,6 +30,8 @@ public class EmployeeCreateRequest {
 
     private EmployeeStatus status;
 
+    private UUID studioId;
+
     public EmployeeCreateRequest() {
     }
 
@@ -41,6 +43,25 @@ public class EmployeeCreateRequest {
         this.primaryRole = primaryRole;
         this.skills = skills;
         this.status = status;
+    }
+
+    public EmployeeCreateRequest(UUID userId, String fullName, String email, String phone, String primaryRole, String skills, EmployeeStatus status, UUID studioId) {
+        this.userId = userId;
+        this.fullName = fullName;
+        this.email = email;
+        this.phone = phone;
+        this.primaryRole = primaryRole;
+        this.skills = skills;
+        this.status = status;
+        this.studioId = studioId;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 
     public UUID getUserId() {
