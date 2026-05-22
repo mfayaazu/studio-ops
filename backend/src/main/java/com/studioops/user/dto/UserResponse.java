@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public class UserResponse {
     private UUID id;
+    private UUID studioId;
     private String email;
     private UserRole role;
     private UserStatus status;
@@ -25,6 +26,7 @@ public class UserResponse {
         }
         UserResponse response = new UserResponse();
         response.setId(user.getId());
+        response.setStudioId(user.getStudioId());
         response.setEmail(user.getEmail());
         response.setRole(user.getRole());
         response.setStatus(user.getStatus());
@@ -99,5 +101,13 @@ public class UserResponse {
 
     public void setLastLoginAt(Instant lastLoginAt) {
         this.lastLoginAt = lastLoginAt;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 }

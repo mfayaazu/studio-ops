@@ -2,6 +2,11 @@ package com.studioops.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.studioops.auth.dto.LoginRequest;
+import com.studioops.studio.Studio;
+import com.studioops.studio.StudioRepository;
+import com.studioops.studio.StudioStatus;
+import com.studioops.studio.SubscriptionPlan;
+import com.studioops.studio.SubscriptionStatus;
 import com.studioops.user.User;
 import com.studioops.user.UserRepository;
 import com.studioops.user.UserRole;
@@ -38,14 +43,27 @@ class AuthControllerIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private StudioRepository studioRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
+    private Studio testStudio;
     private User disabledUser;
 
     @BeforeEach
     void setUp() {
+        testStudio = new Studio();
+        testStudio.setName("Test Auth Studio");
+        testStudio.setSlug("test-auth-studio");
+        testStudio.setStatus(StudioStatus.ACTIVE);
+        testStudio.setSubscriptionPlan(SubscriptionPlan.STARTER);
+        testStudio.setSubscriptionStatus(SubscriptionStatus.TRIAL);
+        testStudio = studioRepository.save(testStudio);
+
         // Create a disabled user to test disabled user login block
         disabledUser = new User();
+        disabledUser.setStudioId(testStudio.getId());
         disabledUser.setEmail("disabled@studioops.local");
         disabledUser.setPasswordHash(passwordEncoder.encode("Password123!"));
         disabledUser.setRole(UserRole.EMPLOYEE);
@@ -58,6 +76,9 @@ class AuthControllerIntegrationTest {
     void tearDown() {
         if (disabledUser != null && disabledUser.getId() != null) {
             userRepository.findById(disabledUser.getId()).ifPresent(user -> userRepository.delete(user));
+        }
+        if (testStudio != null && testStudio.getId() != null) {
+            studioRepository.findById(testStudio.getId()).ifPresent(studio -> studioRepository.delete(studio));
         }
     }
 
@@ -73,6 +94,7 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.user.email").value("owner@studioops.local"))
                 .andExpect(jsonPath("$.user.role").value("OWNER"))
                 .andExpect(jsonPath("$.user.displayName").value("Studio Owner"))
+                .andExpect(jsonPath("$.user.studioId").value("d3b07384-d113-4952-b1cf-9a993710787e"))
                 .andExpect(jsonPath("$.user.passwordHash").doesNotExist()) // Verify response safety
                 .andReturn();
 
@@ -85,6 +107,7 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.authenticated").value(true))
                 .andExpect(jsonPath("$.user.email").value("owner@studioops.local"))
                 .andExpect(jsonPath("$.user.role").value("OWNER"))
+                .andExpect(jsonPath("$.user.studioId").value("d3b07384-d113-4952-b1cf-9a993710787e"))
                 .andExpect(jsonPath("$.user.passwordHash").doesNotExist());
     }
 

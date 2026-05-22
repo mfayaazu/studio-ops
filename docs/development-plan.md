@@ -78,3 +78,9 @@ gantt
 * **Tasks**:
   * Support login configurations identifying the studio workspace (e.g. workspace subdomain routing or login matching).
   * Align the user profile panel to show the active Studio name.
+
+---
+
+## Technical Debt & Cleanup Notes
+- **Lombok Adoption**: Adoption of Project Lombok to reduce Java boilerplate (getters, setters, builders, constructors) can be considered as a separate future cleanup task.
+
