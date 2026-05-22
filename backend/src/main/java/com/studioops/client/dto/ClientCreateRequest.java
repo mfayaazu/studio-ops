@@ -3,6 +3,7 @@ package com.studioops.client.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.util.UUID;
 
 public class ClientCreateRequest {
 
@@ -20,6 +21,8 @@ public class ClientCreateRequest {
 
     private String notes;
 
+    private UUID studioId;
+
     public ClientCreateRequest() {
     }
 
@@ -28,6 +31,14 @@ public class ClientCreateRequest {
         this.phone = phone;
         this.email = email;
         this.notes = notes;
+    }
+
+    public ClientCreateRequest(String fullName, String phone, String email, String notes, UUID studioId) {
+        this.fullName = fullName;
+        this.phone = phone;
+        this.email = email;
+        this.notes = notes;
+        this.studioId = studioId;
     }
 
     public String getFullName() {
@@ -60,5 +71,13 @@ public class ClientCreateRequest {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 }

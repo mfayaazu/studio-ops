@@ -1,6 +1,8 @@
 package com.studioops.client;
 
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
+import com.studioops.studio.StudioRepository;
 import com.studioops.client.dto.ClientCreateRequest;
 import com.studioops.client.dto.ClientResponse;
 import com.studioops.client.dto.ClientUpdateRequest;
@@ -23,12 +25,17 @@ class ClientServiceTest {
     @Mock
     private ClientRepository clientRepository;
 
+    @Mock
+    private StudioRepository studioRepository;
+
     @InjectMocks
     private ClientService clientService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        // By default, assume the studio exists
+        when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
     }
 
     @Test
@@ -37,6 +44,7 @@ class ClientServiceTest {
         
         Client client = new Client();
         client.setId(UUID.randomUUID());
+        client.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         client.setFullName(request.getFullName());
         client.setPhone(request.getPhone());
         client.setEmail(request.getEmail());
@@ -50,12 +58,50 @@ class ClientServiceTest {
 
         assertNotNull(response);
         assertEquals(client.getId(), response.getId());
+        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
         assertEquals(request.getFullName(), response.getFullName());
         assertEquals(request.getPhone(), response.getPhone());
         assertEquals(request.getEmail(), response.getEmail());
         assertEquals(request.getNotes(), response.getNotes());
 
+        verify(studioRepository, times(1)).existsById(TenantConstants.DEFAULT_STUDIO_ID);
         verify(clientRepository, times(1)).save(any(Client.class));
+    }
+
+    @Test
+    void createClient_WithStudioId_Success() {
+        UUID customStudioId = UUID.randomUUID();
+        ClientCreateRequest request = new ClientCreateRequest("Jane Doe", "+46701234567", "jane.doe@example.com", "Notes here", customStudioId);
+        
+        Client client = new Client();
+        client.setId(UUID.randomUUID());
+        client.setStudioId(customStudioId);
+        client.setFullName(request.getFullName());
+        client.setPhone(request.getPhone());
+        client.setEmail(request.getEmail());
+        client.setNotes(request.getNotes());
+
+        when(clientRepository.save(any(Client.class))).thenReturn(client);
+
+        ClientResponse response = clientService.createClient(request);
+
+        assertNotNull(response);
+        assertEquals(customStudioId, response.getStudioId());
+        verify(studioRepository, times(1)).existsById(customStudioId);
+    }
+
+    @Test
+    void createClient_StudioNotFound_ThrowsException() {
+        UUID nonExistentStudioId = UUID.randomUUID();
+        ClientCreateRequest request = new ClientCreateRequest("Jane Doe", "+46701234567", "jane.doe@example.com", "Notes here", nonExistentStudioId);
+
+        when(studioRepository.existsById(nonExistentStudioId)).thenReturn(false);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> 
+            clientService.createClient(request)
+        );
+        assertEquals("Studio not found with id: " + nonExistentStudioId, exception.getMessage());
+        verify(clientRepository, never()).save(any(Client.class));
     }
 
     @Test
@@ -64,6 +110,7 @@ class ClientServiceTest {
         
         Client client = new Client();
         client.setId(UUID.randomUUID());
+        client.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         client.setFullName(request.getFullName());
         client.setPhone(request.getPhone());
         client.setEmail(null);
@@ -72,6 +119,7 @@ class ClientServiceTest {
         when(clientRepository.save(any(Client.class))).thenAnswer(invocation -> {
             Client argument = invocation.getArgument(0);
             assertNull(argument.getEmail());
+            assertEquals(TenantConstants.DEFAULT_STUDIO_ID, argument.getStudioId());
             return client;
         });
 
@@ -85,22 +133,24 @@ class ClientServiceTest {
         UUID id = UUID.randomUUID();
         Client client = new Client();
         client.setId(id);
+        client.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         client.setFullName("John Smith");
         client.setPhone("123456");
 
-        when(clientRepository.findById(id)).thenReturn(Optional.of(client));
+        when(clientRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(client));
 
         ClientResponse response = clientService.getClientById(id);
 
         assertNotNull(response);
         assertEquals(id, response.getId());
+        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
         assertEquals("John Smith", response.getFullName());
     }
 
     @Test
     void getClientById_NotFound_ThrowsException() {
         UUID id = UUID.randomUUID();
-        when(clientRepository.findById(id)).thenReturn(Optional.empty());
+        when(clientRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> clientService.getClientById(id));
     }
@@ -110,12 +160,13 @@ class ClientServiceTest {
         UUID id = UUID.randomUUID();
         Client client = new Client();
         client.setId(id);
+        client.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         client.setFullName("John Smith");
         client.setPhone("123456");
 
         ClientUpdateRequest request = new ClientUpdateRequest("John Updated", "654321", "updated@example.com", "Updated Notes");
 
-        when(clientRepository.findById(id)).thenReturn(Optional.of(client));
+        when(clientRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(client));
         when(clientRepository.save(any(Client.class))).thenReturn(client);
 
         ClientResponse response = clientService.updateClient(id, request);
@@ -124,6 +175,7 @@ class ClientServiceTest {
         assertEquals("John Updated", response.getFullName());
         assertEquals("654321", response.getPhone());
         assertEquals("updated@example.com", response.getEmail());
+        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
     }
 
     @Test
@@ -131,7 +183,7 @@ class ClientServiceTest {
         UUID id = UUID.randomUUID();
         ClientUpdateRequest request = new ClientUpdateRequest("John Updated", "654321", "updated@example.com", "Updated Notes");
 
-        when(clientRepository.findById(id)).thenReturn(Optional.empty());
+        when(clientRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> clientService.updateClient(id, request));
     }
@@ -141,8 +193,9 @@ class ClientServiceTest {
         UUID id = UUID.randomUUID();
         Client client = new Client();
         client.setId(id);
+        client.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(clientRepository.findById(id)).thenReturn(Optional.of(client));
+        when(clientRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(client));
         doNothing().when(clientRepository).delete(client);
 
         assertDoesNotThrow(() -> clientService.deleteClient(id));
@@ -153,37 +206,58 @@ class ClientServiceTest {
     @Test
     void deleteClient_NotFound_ThrowsException() {
         UUID id = UUID.randomUUID();
-        when(clientRepository.findById(id)).thenReturn(Optional.empty());
+        when(clientRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> clientService.deleteClient(id));
     }
 
     @Test
-    void listClients_NoSearch_ReturnsAll() {
+    void listClients_NoSearch_ReturnsAllForDefaultStudio() {
         Client c1 = new Client();
         c1.setFullName("Client One");
+        c1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         Client c2 = new Client();
         c2.setFullName("Client Two");
+        c2.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(clientRepository.findAll()).thenReturn(List.of(c1, c2));
+        when(clientRepository.findAllByStudioId(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(List.of(c1, c2));
 
         List<ClientResponse> responses = clientService.listClients(null);
 
         assertEquals(2, responses.size());
-        verify(clientRepository, times(1)).findAll();
+        verify(clientRepository, times(1)).findAllByStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        verify(clientRepository, never()).findAll();
     }
 
     @Test
-    void listClients_WithSearch_ReturnsMatching() {
+    void listClients_WithSearch_ReturnsMatchingForDefaultStudio() {
         Client c1 = new Client();
         c1.setFullName("Client One");
+        c1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(clientRepository.searchClients("Client")).thenReturn(List.of(c1));
+        when(clientRepository.searchClientsByStudio(TenantConstants.DEFAULT_STUDIO_ID, "Client")).thenReturn(List.of(c1));
 
         List<ClientResponse> responses = clientService.listClients("Client");
 
         assertEquals(1, responses.size());
         assertEquals("Client One", responses.get(0).getFullName());
-        verify(clientRepository, times(1)).searchClients("Client");
+        verify(clientRepository, times(1)).searchClientsByStudio(TenantConstants.DEFAULT_STUDIO_ID, "Client");
+    }
+
+    @Test
+    void listClientsForStudio_CustomStudio_ReturnsMatching() {
+        UUID customStudioId = UUID.randomUUID();
+        Client c1 = new Client();
+        c1.setFullName("Client One");
+        c1.setStudioId(customStudioId);
+
+        when(clientRepository.findAllByStudioId(customStudioId)).thenReturn(List.of(c1));
+
+        List<ClientResponse> responses = clientService.listClientsForStudio(customStudioId, null);
+
+        assertEquals(1, responses.size());
+        assertEquals("Client One", responses.get(0).getFullName());
+        assertEquals(customStudioId, responses.get(0).getStudioId());
+        verify(clientRepository, times(1)).findAllByStudioId(customStudioId);
     }
 }

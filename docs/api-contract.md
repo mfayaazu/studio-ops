@@ -49,6 +49,7 @@ Retrieves all client records.
 [
   {
     "id": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
     "fullName": "Alice Smith",
     "email": "alice@example.com",
     "phone": "+46701234567",
@@ -65,6 +66,7 @@ Retrieves a specific client record by its ID.
 ```json
 {
   "id": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
   "fullName": "Alice Smith",
   "email": "alice@example.com",
   "phone": "+46701234567",
@@ -82,13 +84,15 @@ Creates a client. Returns the full created resource representation.
   "fullName": "Alice Smith",
   "email": "alice@example.com",
   "phone": "+46701234567",
-  "notes": "Prefers email contact."
+  "notes": "Prefers email contact.",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e"
 }
 ```
 **Response (201 Created):**
 ```json
 {
   "id": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
   "fullName": "Alice Smith",
   "email": "alice@example.com",
   "phone": "+46701234567",
@@ -113,6 +117,7 @@ Updates an existing client. Returns the updated resource representation.
 ```json
 {
   "id": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
   "fullName": "Alice Smith Updated",
   "email": "alice.updated@example.com",
   "phone": "+46701234567",

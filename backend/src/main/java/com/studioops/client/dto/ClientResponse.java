@@ -11,6 +11,7 @@ public class ClientResponse {
     private String notes;
     private Instant createdAt;
     private Instant updatedAt;
+    private UUID studioId;
 
     public ClientResponse() {
     }
@@ -23,6 +24,17 @@ public class ClientResponse {
         this.notes = notes;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+    }
+
+    public ClientResponse(UUID id, String fullName, String phone, String email, String notes, Instant createdAt, Instant updatedAt, UUID studioId) {
+        this.id = id;
+        this.fullName = fullName;
+        this.phone = phone;
+        this.email = email;
+        this.notes = notes;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.studioId = studioId;
     }
 
     public UUID getId() {
@@ -79,5 +91,13 @@ public class ClientResponse {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 }

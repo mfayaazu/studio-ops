@@ -13,6 +13,9 @@ public class Client {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
+    @Column(name = "studio_id", nullable = false)
+    private UUID studioId;
+
     @Column(name = "full_name", nullable = false, length = 200)
     private String fullName;
 
@@ -101,5 +104,13 @@ public class Client {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 }

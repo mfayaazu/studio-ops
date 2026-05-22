@@ -1,6 +1,8 @@
 package com.studioops.client;
 
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
+import com.studioops.studio.StudioRepository;
 import com.studioops.client.dto.ClientCreateRequest;
 import com.studioops.client.dto.ClientResponse;
 import com.studioops.client.dto.ClientUpdateRequest;
@@ -14,13 +16,21 @@ import java.util.UUID;
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final StudioRepository studioRepository;
 
-    public ClientService(ClientRepository clientRepository) {
+    public ClientService(ClientRepository clientRepository, StudioRepository studioRepository) {
         this.clientRepository = clientRepository;
+        this.studioRepository = studioRepository;
     }
 
     public ClientResponse createClient(ClientCreateRequest request) {
+        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        if (!studioRepository.existsById(studioId)) {
+            throw new IllegalArgumentException("Studio not found with id: " + studioId);
+        }
+
         Client client = new Client();
+        client.setStudioId(studioId);
         client.setFullName(request.getFullName().trim());
         client.setPhone(request.getPhone().trim());
         
@@ -39,11 +49,16 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public List<ClientResponse> listClients(String search) {
+        return listClientsForStudio(TenantConstants.DEFAULT_STUDIO_ID, search);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClientResponse> listClientsForStudio(UUID studioId, String search) {
         List<Client> clients;
         if (search == null || search.trim().isEmpty()) {
-            clients = clientRepository.findAll();
+            clients = clientRepository.findAllByStudioId(studioId);
         } else {
-            clients = clientRepository.searchClients(search.trim());
+            clients = clientRepository.searchClientsByStudio(studioId, search.trim());
         }
         return clients.stream()
                 .map(ClientMapper::toResponse)
@@ -52,13 +67,13 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public ClientResponse getClientById(UUID id) {
-        Client client = clientRepository.findById(id)
+        Client client = clientRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + id));
         return ClientMapper.toResponse(client);
     }
 
     public ClientResponse updateClient(UUID id, ClientUpdateRequest request) {
-        Client client = clientRepository.findById(id)
+        Client client = clientRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + id));
         
         client.setFullName(request.getFullName().trim());
@@ -78,7 +93,7 @@ public class ClientService {
     }
 
     public void deleteClient(UUID id) {
-        Client client = clientRepository.findById(id)
+        Client client = clientRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + id));
         clientRepository.delete(client);
     }

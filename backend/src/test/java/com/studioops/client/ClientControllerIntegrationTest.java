@@ -3,6 +3,7 @@ package com.studioops.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.studioops.config.SecurityConfig;
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
 import com.studioops.client.dto.ClientCreateRequest;
 import com.studioops.client.dto.ClientResponse;
 import com.studioops.client.dto.ClientUpdateRequest;
@@ -38,7 +39,10 @@ class ClientControllerIntegrationTest {
     @Test
     void createClient_Success() throws Exception {
         ClientCreateRequest request = new ClientCreateRequest("Jane Doe", "+46701234567", "jane.doe@example.com", "Notes");
-        ClientResponse response = new ClientResponse(UUID.randomUUID(), "Jane Doe", "+46701234567", "jane.doe@example.com", "Notes", Instant.now(), Instant.now());
+        ClientResponse response = new ClientResponse(
+            UUID.randomUUID(), "Jane Doe", "+46701234567", "jane.doe@example.com", "Notes", 
+            Instant.now(), Instant.now(), TenantConstants.DEFAULT_STUDIO_ID
+        );
 
         when(clientService.createClient(any(ClientCreateRequest.class))).thenReturn(response);
 
@@ -47,6 +51,7 @@ class ClientControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(response.getId().toString()))
+                .andExpect(jsonPath("$.studioId").value(TenantConstants.DEFAULT_STUDIO_ID.toString()))
                 .andExpect(jsonPath("$.fullName").value("Jane Doe"))
                 .andExpect(jsonPath("$.phone").value("+46701234567"));
     }
@@ -69,13 +74,17 @@ class ClientControllerIntegrationTest {
     @Test
     void getClientById_Success() throws Exception {
         UUID id = UUID.randomUUID();
-        ClientResponse response = new ClientResponse(id, "John Smith", "123456", "john@example.com", null, Instant.now(), Instant.now());
+        ClientResponse response = new ClientResponse(
+            id, "John Smith", "123456", "john@example.com", null, 
+            Instant.now(), Instant.now(), TenantConstants.DEFAULT_STUDIO_ID
+        );
 
         when(clientService.getClientById(id)).thenReturn(response);
 
         mockMvc.perform(get("/api/clients/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.studioId").value(TenantConstants.DEFAULT_STUDIO_ID.toString()))
                 .andExpect(jsonPath("$.fullName").value("John Smith"));
     }
 
@@ -93,7 +102,10 @@ class ClientControllerIntegrationTest {
     void updateClient_Success() throws Exception {
         UUID id = UUID.randomUUID();
         ClientUpdateRequest request = new ClientUpdateRequest("John Updated", "654321", "updated@example.com", "Updated Notes");
-        ClientResponse response = new ClientResponse(id, "John Updated", "654321", "updated@example.com", "Updated Notes", Instant.now(), Instant.now());
+        ClientResponse response = new ClientResponse(
+            id, "John Updated", "654321", "updated@example.com", "Updated Notes", 
+            Instant.now(), Instant.now(), TenantConstants.DEFAULT_STUDIO_ID
+        );
 
         when(clientService.updateClient(eq(id), any(ClientUpdateRequest.class))).thenReturn(response);
 
@@ -102,7 +114,8 @@ class ClientControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fullName").value("John Updated"))
-                .andExpect(jsonPath("$.phone").value("654321"));
+                .andExpect(jsonPath("$.phone").value("654321"))
+                .andExpect(jsonPath("$.studioId").value(TenantConstants.DEFAULT_STUDIO_ID.toString()));
     }
 
     @Test

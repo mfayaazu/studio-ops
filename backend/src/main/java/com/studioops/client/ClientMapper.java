@@ -16,6 +16,7 @@ public class ClientMapper {
         response.setNotes(client.getNotes());
         response.setCreatedAt(client.getCreatedAt());
         response.setUpdatedAt(client.getUpdatedAt());
+        response.setStudioId(client.getStudioId());
         return response;
     }
 }
