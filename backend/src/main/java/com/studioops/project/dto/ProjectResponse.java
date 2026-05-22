@@ -22,6 +22,7 @@ public class ProjectResponse {
     private String notes;
     private Instant createdAt;
     private Instant updatedAt;
+    private UUID studioId;
 
     public ProjectResponse() {
     }
@@ -44,6 +45,27 @@ public class ProjectResponse {
         this.notes = notes;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+    }
+
+    public ProjectResponse(UUID id, UUID clientId, UUID assignedProjectManagerId, String projectCode, String title,
+                           String projectType, BookingStatus bookingStatus, PaymentStatus paymentStatus,
+                           ProjectStatus status, LocalDate startDate, LocalDate endDate, String notes,
+                           Instant createdAt, Instant updatedAt, UUID studioId) {
+        this.id = id;
+        this.clientId = clientId;
+        this.assignedProjectManagerId = assignedProjectManagerId;
+        this.projectCode = projectCode;
+        this.title = title;
+        this.projectType = projectType;
+        this.bookingStatus = bookingStatus;
+        this.paymentStatus = paymentStatus;
+        this.status = status;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.notes = notes;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.studioId = studioId;
     }
 
     public UUID getId() {
@@ -156,5 +178,13 @@ public class ProjectResponse {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 }

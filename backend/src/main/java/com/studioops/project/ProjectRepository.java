@@ -9,6 +9,19 @@ import java.util.UUID;
 
 public interface ProjectRepository extends JpaRepository<Project, UUID> {
 
+    Optional<Project> findByIdAndStudioId(UUID id, UUID studioId);
+
+    List<Project> findAllByStudioId(UUID studioId);
+
+    @Query("SELECT p FROM Project p WHERE p.studioId = :studioId AND (" +
+           "LOWER(p.projectCode) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(p.projectType) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(STR(p.status)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(STR(p.bookingStatus)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(STR(p.paymentStatus)) LIKE LOWER(CONCAT('%', :search, '%')))")
+    List<Project> searchProjectsByStudio(@Param("studioId") UUID studioId, @Param("search") String search);
+
     Optional<Project> findByProjectCode(String projectCode);
 
     @Query("SELECT p FROM Project p WHERE " +

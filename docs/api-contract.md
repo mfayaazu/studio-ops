@@ -265,7 +265,8 @@ Retrieves all projects.
     "endDate": "2026-06-15",
     "notes": "Bring special backdrops.",
     "createdAt": "2026-05-21T09:51:00Z",
-    "updatedAt": "2026-05-21T09:51:00Z"
+    "updatedAt": "2026-05-21T09:51:00Z",
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e"
   }
 ]
 ```
@@ -288,7 +289,8 @@ Retrieves a project by its ID.
   "endDate": "2026-06-15",
   "notes": "Bring special backdrops.",
   "createdAt": "2026-05-21T09:51:00Z",
-  "updatedAt": "2026-05-21T09:51:00Z"
+  "updatedAt": "2026-05-21T09:51:00Z",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e"
 }
 ```
 
@@ -307,7 +309,8 @@ Creates a project. Returns the full created project object.
   "status": "LEAD",
   "startDate": "2026-06-01",
   "endDate": "2026-06-15",
-  "notes": "Bring special backdrops."
+  "notes": "Bring special backdrops.",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e"
 }
 ```
 **Response (201 Created):**
@@ -326,7 +329,8 @@ Creates a project. Returns the full created project object.
   "endDate": "2026-06-15",
   "notes": "Bring special backdrops.",
   "createdAt": "2026-05-21T09:51:00Z",
-  "updatedAt": "2026-05-21T09:51:00Z"
+  "updatedAt": "2026-05-21T09:51:00Z",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e"
 }
 ```
 
@@ -364,7 +368,8 @@ Updates a project. Returns the full updated project.
   "endDate": "2026-06-15",
   "notes": "Updated notes.",
   "createdAt": "2026-05-21T09:51:00Z",
-  "updatedAt": "2026-05-21T10:00:00Z"
+  "updatedAt": "2026-05-21T10:00:00Z",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e"
 }
 ```
 

@@ -17,6 +17,9 @@ public class Project {
     @Column(name = "client_id", nullable = false)
     private UUID clientId;
 
+    @Column(name = "studio_id", nullable = false)
+    private UUID studioId;
+
     @Column(name = "assigned_project_manager_id")
     private UUID assignedProjectManagerId;
 
@@ -180,5 +183,13 @@ public class Project {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 }

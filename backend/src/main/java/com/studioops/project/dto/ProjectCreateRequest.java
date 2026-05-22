@@ -34,6 +34,7 @@ public class ProjectCreateRequest {
     private LocalDate startDate;
     private LocalDate endDate;
     private String notes;
+    private UUID studioId;
 
     public ProjectCreateRequest() {
     }
@@ -52,6 +53,23 @@ public class ProjectCreateRequest {
         this.startDate = startDate;
         this.endDate = endDate;
         this.notes = notes;
+    }
+
+    public ProjectCreateRequest(UUID clientId, UUID assignedProjectManagerId, String projectCode, String title,
+                                String projectType, BookingStatus bookingStatus, PaymentStatus paymentStatus,
+                                ProjectStatus status, LocalDate startDate, LocalDate endDate, String notes, UUID studioId) {
+        this.clientId = clientId;
+        this.assignedProjectManagerId = assignedProjectManagerId;
+        this.projectCode = projectCode;
+        this.title = title;
+        this.projectType = projectType;
+        this.bookingStatus = bookingStatus;
+        this.paymentStatus = paymentStatus;
+        this.status = status;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.notes = notes;
+        this.studioId = studioId;
     }
 
     public UUID getClientId() {
@@ -140,5 +158,13 @@ public class ProjectCreateRequest {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 }

@@ -3,6 +3,7 @@ package com.studioops.project;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.studioops.config.SecurityConfig;
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
 import com.studioops.project.dto.ProjectCreateRequest;
 import com.studioops.project.dto.ProjectResponse;
 import com.studioops.project.dto.ProjectUpdateRequest;
@@ -49,7 +50,7 @@ class ProjectControllerIntegrationTest {
                 UUID.randomUUID(), clientId, managerId, "RSA-2026-0001", "Corp Portrait", "Corporate",
                 BookingStatus.INQUIRY, PaymentStatus.UNPAID, ProjectStatus.LEAD,
                 LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15), "Notes here",
-                Instant.now(), Instant.now()
+                Instant.now(), Instant.now(), TenantConstants.DEFAULT_STUDIO_ID
         );
 
         when(projectService.createProject(any(ProjectCreateRequest.class))).thenReturn(response);
@@ -60,7 +61,8 @@ class ProjectControllerIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(response.getId().toString()))
                 .andExpect(jsonPath("$.projectCode").value("RSA-2026-0001"))
-                .andExpect(jsonPath("$.title").value("Corp Portrait"));
+                .andExpect(jsonPath("$.title").value("Corp Portrait"))
+                .andExpect(jsonPath("$.studioId").value(TenantConstants.DEFAULT_STUDIO_ID.toString()));
     }
 
     @Test
@@ -89,7 +91,7 @@ class ProjectControllerIntegrationTest {
         ProjectResponse response = new ProjectResponse(
                 id, clientId, null, "RSA-2026-0001", "Corp Portrait", "Corporate",
                 BookingStatus.INQUIRY, PaymentStatus.UNPAID, ProjectStatus.LEAD,
-                null, null, null, Instant.now(), Instant.now()
+                null, null, null, Instant.now(), Instant.now(), TenantConstants.DEFAULT_STUDIO_ID
         );
 
         when(projectService.getProjectById(id)).thenReturn(response);
@@ -97,7 +99,8 @@ class ProjectControllerIntegrationTest {
         mockMvc.perform(get("/api/projects/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
-                .andExpect(jsonPath("$.projectCode").value("RSA-2026-0001"));
+                .andExpect(jsonPath("$.projectCode").value("RSA-2026-0001"))
+                .andExpect(jsonPath("$.studioId").value(TenantConstants.DEFAULT_STUDIO_ID.toString()));
     }
 
     @Test
@@ -122,7 +125,7 @@ class ProjectControllerIntegrationTest {
         ProjectResponse response = new ProjectResponse(
                 id, clientId, null, "RSA-2026-0002", "Corp Portrait Updated", "Corporate",
                 BookingStatus.FULLY_BOOKED, PaymentStatus.FULLY_PAID, ProjectStatus.CONFIRMED,
-                null, null, null, Instant.now(), Instant.now()
+                null, null, null, Instant.now(), Instant.now(), TenantConstants.DEFAULT_STUDIO_ID
         );
 
         when(projectService.updateProject(eq(id), any(ProjectUpdateRequest.class))).thenReturn(response);
@@ -132,7 +135,8 @@ class ProjectControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.projectCode").value("RSA-2026-0002"))
-                .andExpect(jsonPath("$.title").value("Corp Portrait Updated"));
+                .andExpect(jsonPath("$.title").value("Corp Portrait Updated"))
+                .andExpect(jsonPath("$.studioId").value(TenantConstants.DEFAULT_STUDIO_ID.toString()));
     }
 
     @Test

@@ -1,7 +1,10 @@
 package com.studioops.project;
 
+import com.studioops.client.Client;
 import com.studioops.client.ClientRepository;
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
+import com.studioops.studio.StudioRepository;
 import com.studioops.project.dto.ProjectCreateRequest;
 import com.studioops.project.dto.ProjectResponse;
 import com.studioops.project.dto.ProjectUpdateRequest;
@@ -28,6 +31,9 @@ class ProjectServiceTest {
     @Mock
     private ClientRepository clientRepository;
 
+    @Mock
+    private StudioRepository studioRepository;
+
     @InjectMocks
     private ProjectService projectService;
 
@@ -42,19 +48,21 @@ class ProjectServiceTest {
     }
 
     @Test
-    void createProject_Success() {
+    void createProject_Success_DefaultStudio() {
         ProjectCreateRequest request = new ProjectCreateRequest(
                 clientId, managerId, "RSA-2026-0001", "Corp Portrait", "Corporate",
                 BookingStatus.INQUIRY, PaymentStatus.UNPAID, ProjectStatus.LEAD,
                 LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15), "Notes here"
         );
 
-        when(clientRepository.existsById(clientId)).thenReturn(true);
+        when(studioRepository.existsById(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(true);
+        when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(new Client()));
         when(projectRepository.findByProjectCode("RSA-2026-0001")).thenReturn(Optional.empty());
 
         Project project = new Project();
         project.setId(UUID.randomUUID());
         project.setClientId(clientId);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         project.setAssignedProjectManagerId(managerId);
         project.setProjectCode(request.getProjectCode());
         project.setTitle(request.getTitle());
@@ -72,20 +80,78 @@ class ProjectServiceTest {
 
         assertNotNull(response);
         assertEquals(project.getId(), response.getId());
+        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
         assertEquals("RSA-2026-0001", response.getProjectCode());
         assertEquals("Corp Portrait", response.getTitle());
         verify(projectRepository, times(1)).save(any(Project.class));
     }
 
     @Test
-    void createProject_InvalidClientId_ThrowsException() {
+    void createProject_Success_CustomStudio() {
+        UUID customStudioId = UUID.randomUUID();
+        ProjectCreateRequest request = new ProjectCreateRequest(
+                clientId, managerId, "RSA-2026-0001", "Corp Portrait", "Corporate",
+                BookingStatus.INQUIRY, PaymentStatus.UNPAID, ProjectStatus.LEAD,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15), "Notes here",
+                customStudioId
+        );
+
+        when(studioRepository.existsById(customStudioId)).thenReturn(true);
+        when(clientRepository.findByIdAndStudioId(clientId, customStudioId)).thenReturn(Optional.of(new Client()));
+        when(projectRepository.findByProjectCode("RSA-2026-0001")).thenReturn(Optional.empty());
+
+        Project project = new Project();
+        project.setId(UUID.randomUUID());
+        project.setClientId(clientId);
+        project.setStudioId(customStudioId);
+        project.setAssignedProjectManagerId(managerId);
+        project.setProjectCode(request.getProjectCode());
+        project.setTitle(request.getTitle());
+        project.setProjectType(request.getProjectType());
+        project.setBookingStatus(request.getBookingStatus());
+        project.setPaymentStatus(request.getPaymentStatus());
+        project.setStatus(request.getStatus());
+        project.setStartDate(request.getStartDate());
+        project.setEndDate(request.getEndDate());
+        project.setNotes(request.getNotes());
+
+        when(projectRepository.save(any(Project.class))).thenReturn(project);
+
+        ProjectResponse response = projectService.createProject(request);
+
+        assertNotNull(response);
+        assertEquals(project.getId(), response.getId());
+        assertEquals(customStudioId, response.getStudioId());
+        verify(studioRepository, times(1)).existsById(customStudioId);
+        verify(clientRepository, times(1)).findByIdAndStudioId(clientId, customStudioId);
+    }
+
+    @Test
+    void createProject_InvalidStudioId_ThrowsException() {
+        UUID customStudioId = UUID.randomUUID();
+        ProjectCreateRequest request = new ProjectCreateRequest(
+                clientId, managerId, "RSA-2026-0001", "Corp Portrait", "Corporate",
+                BookingStatus.INQUIRY, PaymentStatus.UNPAID, ProjectStatus.LEAD,
+                null, null, null, customStudioId
+        );
+
+        when(studioRepository.existsById(customStudioId)).thenReturn(false);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> projectService.createProject(request));
+        assertTrue(exception.getMessage().contains("Studio not found with id"));
+        verify(projectRepository, never()).save(any(Project.class));
+    }
+
+    @Test
+    void createProject_ClientNotInStudio_ThrowsException() {
         ProjectCreateRequest request = new ProjectCreateRequest(
                 clientId, managerId, "RSA-2026-0001", "Corp Portrait", "Corporate",
                 BookingStatus.INQUIRY, PaymentStatus.UNPAID, ProjectStatus.LEAD,
                 null, null, null
         );
 
-        when(clientRepository.existsById(clientId)).thenReturn(false);
+        when(studioRepository.existsById(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(true);
+        when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
         Exception exception = assertThrows(IllegalArgumentException.class, () -> projectService.createProject(request));
         assertTrue(exception.getMessage().contains("Client not found with id"));
@@ -100,7 +166,8 @@ class ProjectServiceTest {
                 null, null, null
         );
 
-        when(clientRepository.existsById(clientId)).thenReturn(true);
+        when(studioRepository.existsById(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(true);
+        when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(new Client()));
         when(projectRepository.findByProjectCode("RSA-2026-0001")).thenReturn(Optional.of(new Project()));
 
         Exception exception = assertThrows(IllegalArgumentException.class, () -> projectService.createProject(request));
@@ -116,7 +183,8 @@ class ProjectServiceTest {
                 LocalDate.of(2026, 6, 15), LocalDate.of(2026, 6, 1), null
         );
 
-        when(clientRepository.existsById(clientId)).thenReturn(true);
+        when(studioRepository.existsById(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(true);
+        when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(new Client()));
         when(projectRepository.findByProjectCode("RSA-2026-0001")).thenReturn(Optional.empty());
 
         Exception exception = assertThrows(IllegalArgumentException.class, () -> projectService.createProject(request));
@@ -131,20 +199,22 @@ class ProjectServiceTest {
         project.setId(id);
         project.setProjectCode("PROJ1");
         project.setTitle("Project One");
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(projectRepository.findById(id)).thenReturn(Optional.of(project));
+        when(projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
 
         ProjectResponse response = projectService.getProjectById(id);
 
         assertNotNull(response);
         assertEquals(id, response.getId());
+        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
         assertEquals("PROJ1", response.getProjectCode());
     }
 
     @Test
     void getProjectById_NotFound_ThrowsException() {
         UUID id = UUID.randomUUID();
-        when(projectRepository.findById(id)).thenReturn(Optional.empty());
+        when(projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> projectService.getProjectById(id));
     }
@@ -156,6 +226,7 @@ class ProjectServiceTest {
         project.setId(id);
         project.setProjectCode("RSA-2026-0001");
         project.setClientId(clientId);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
         ProjectUpdateRequest request = new ProjectUpdateRequest(
                 clientId, managerId, "RSA-2026-0002", "Corp Portrait Updated", "Corporate",
@@ -163,8 +234,8 @@ class ProjectServiceTest {
                 LocalDate.of(2026, 6, 2), LocalDate.of(2026, 6, 16), "Updated notes"
         );
 
-        when(projectRepository.findById(id)).thenReturn(Optional.of(project));
-        when(clientRepository.existsById(clientId)).thenReturn(true);
+        when(projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+        when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(new Client()));
         when(projectRepository.findByProjectCode("RSA-2026-0002")).thenReturn(Optional.empty());
         when(projectRepository.save(any(Project.class))).thenReturn(project);
 
@@ -176,12 +247,34 @@ class ProjectServiceTest {
     }
 
     @Test
+    void updateProject_ClientNotInStudio_ThrowsException() {
+        UUID id = UUID.randomUUID();
+        Project project = new Project();
+        project.setId(id);
+        project.setProjectCode("RSA-2026-0001");
+        project.setClientId(clientId);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        ProjectUpdateRequest request = new ProjectUpdateRequest(
+                clientId, managerId, "RSA-2026-0002", "Corp Portrait Updated", "Corporate",
+                BookingStatus.FULLY_BOOKED, PaymentStatus.FULLY_PAID, ProjectStatus.CONFIRMED,
+                null, null, null
+        );
+
+        when(projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+        when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> projectService.updateProject(id, request));
+    }
+
+    @Test
     void updateProject_DuplicateProjectCode_ThrowsException() {
         UUID id = UUID.randomUUID();
         Project project = new Project();
         project.setId(id);
         project.setProjectCode("RSA-2026-0001");
         project.setClientId(clientId);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
         ProjectUpdateRequest request = new ProjectUpdateRequest(
                 clientId, managerId, "RSA-2026-0002", "Corp Portrait Updated", "Corporate",
@@ -192,8 +285,8 @@ class ProjectServiceTest {
         anotherProject.setId(UUID.randomUUID());
         anotherProject.setProjectCode("RSA-2026-0002");
 
-        when(projectRepository.findById(id)).thenReturn(Optional.of(project));
-        when(clientRepository.existsById(clientId)).thenReturn(true);
+        when(projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+        when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(new Client()));
         when(projectRepository.findByProjectCode("RSA-2026-0002")).thenReturn(Optional.of(anotherProject));
 
         assertThrows(IllegalArgumentException.class, () -> projectService.updateProject(id, request));
@@ -204,8 +297,9 @@ class ProjectServiceTest {
         UUID id = UUID.randomUUID();
         Project project = new Project();
         project.setId(id);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(projectRepository.findById(id)).thenReturn(Optional.of(project));
+        when(projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
         doNothing().when(projectRepository).delete(project);
 
         assertDoesNotThrow(() -> projectService.deleteProject(id));
@@ -215,7 +309,7 @@ class ProjectServiceTest {
     @Test
     void deleteProject_NotFound_ThrowsException() {
         UUID id = UUID.randomUUID();
-        when(projectRepository.findById(id)).thenReturn(Optional.empty());
+        when(projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> projectService.deleteProject(id));
     }
@@ -224,28 +318,31 @@ class ProjectServiceTest {
     void listProjects_NoSearch_ReturnsAll() {
         Project p1 = new Project();
         p1.setProjectCode("P1");
+        p1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         Project p2 = new Project();
         p2.setProjectCode("P2");
+        p2.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(projectRepository.findAll()).thenReturn(List.of(p1, p2));
+        when(projectRepository.findAllByStudioId(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(List.of(p1, p2));
 
         List<ProjectResponse> responses = projectService.listProjects(null);
 
         assertEquals(2, responses.size());
-        verify(projectRepository, times(1)).findAll();
+        verify(projectRepository, times(1)).findAllByStudioId(TenantConstants.DEFAULT_STUDIO_ID);
     }
 
     @Test
     void listProjects_WithSearch_ReturnsMatching() {
         Project p1 = new Project();
         p1.setProjectCode("RSA-2026-0001");
+        p1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(projectRepository.searchProjects("RSA")).thenReturn(List.of(p1));
+        when(projectRepository.searchProjectsByStudio(TenantConstants.DEFAULT_STUDIO_ID, "RSA")).thenReturn(List.of(p1));
 
         List<ProjectResponse> responses = projectService.listProjects("RSA");
 
         assertEquals(1, responses.size());
         assertEquals("RSA-2026-0001", responses.get(0).getProjectCode());
-        verify(projectRepository, times(1)).searchProjects("RSA");
+        verify(projectRepository, times(1)).searchProjectsByStudio(TenantConstants.DEFAULT_STUDIO_ID, "RSA");
     }
 }

@@ -2,6 +2,8 @@ package com.studioops.project;
 
 import com.studioops.client.ClientRepository;
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
+import com.studioops.studio.StudioRepository;
 import com.studioops.project.dto.ProjectCreateRequest;
 import com.studioops.project.dto.ProjectResponse;
 import com.studioops.project.dto.ProjectUpdateRequest;
@@ -17,15 +19,22 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ClientRepository clientRepository;
+    private final StudioRepository studioRepository;
 
-    public ProjectService(ProjectRepository projectRepository, ClientRepository clientRepository) {
+    public ProjectService(ProjectRepository projectRepository, ClientRepository clientRepository, StudioRepository studioRepository) {
         this.projectRepository = projectRepository;
         this.clientRepository = clientRepository;
+        this.studioRepository = studioRepository;
     }
 
     public ProjectResponse createProject(ProjectCreateRequest request) {
-        // Validate client exists
-        if (!clientRepository.existsById(request.getClientId())) {
+        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        if (!studioRepository.existsById(studioId)) {
+            throw new IllegalArgumentException("Studio not found with id: " + studioId);
+        }
+
+        // Validate client belongs to the same studio
+        if (request.getClientId() == null || clientRepository.findByIdAndStudioId(request.getClientId(), studioId).isEmpty()) {
             throw new IllegalArgumentException("Client not found with id: " + request.getClientId());
         }
 
@@ -42,6 +51,7 @@ public class ProjectService {
         }
 
         Project project = new Project();
+        project.setStudioId(studioId);
         project.setClientId(request.getClientId());
         project.setAssignedProjectManagerId(request.getAssignedProjectManagerId());
         project.setProjectCode(trimmedCode);
@@ -62,11 +72,16 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public List<ProjectResponse> listProjects(String search) {
+        return listProjectsForStudio(TenantConstants.DEFAULT_STUDIO_ID, search);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProjectResponse> listProjectsForStudio(UUID studioId, String search) {
         List<Project> projects;
         if (search == null || search.trim().isEmpty()) {
-            projects = projectRepository.findAll();
+            projects = projectRepository.findAllByStudioId(studioId);
         } else {
-            projects = projectRepository.searchProjects(search.trim());
+            projects = projectRepository.searchProjectsByStudio(studioId, search.trim());
         }
         return projects.stream()
                 .map(ProjectMapper::toResponse)
@@ -75,17 +90,17 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public ProjectResponse getProjectById(UUID id) {
-        Project project = projectRepository.findById(id)
+        Project project = projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
         return ProjectMapper.toResponse(project);
     }
 
     public ProjectResponse updateProject(UUID id, ProjectUpdateRequest request) {
-        Project project = projectRepository.findById(id)
+        Project project = projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
 
-        // Validate client exists
-        if (!clientRepository.existsById(request.getClientId())) {
+        // Validate client belongs to the same studio
+        if (request.getClientId() == null || clientRepository.findByIdAndStudioId(request.getClientId(), project.getStudioId()).isEmpty()) {
             throw new IllegalArgumentException("Client not found with id: " + request.getClientId());
         }
 
@@ -121,7 +136,7 @@ public class ProjectService {
     }
 
     public void deleteProject(UUID id) {
-        Project project = projectRepository.findById(id)
+        Project project = projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
         projectRepository.delete(project);
     }

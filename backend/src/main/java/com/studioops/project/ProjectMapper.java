@@ -23,6 +23,7 @@ public class ProjectMapper {
         response.setNotes(project.getNotes());
         response.setCreatedAt(project.getCreatedAt());
         response.setUpdatedAt(project.getUpdatedAt());
+        response.setStudioId(project.getStudioId());
         return response;
     }
 }
