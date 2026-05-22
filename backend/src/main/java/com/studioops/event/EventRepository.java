@@ -5,11 +5,69 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface EventRepository extends JpaRepository<Event, UUID> {
 
     List<Event> findByProjectId(UUID projectId);
+
+    Optional<Event> findByIdAndStudioId(UUID id, UUID studioId);
+
+    List<Event> findAllByStudioId(UUID studioId);
+
+    List<Event> findByProjectIdAndStudioId(UUID projectId, UUID studioId);
+
+    @Query("SELECT e FROM Event e WHERE e.studioId = :studioId AND (" +
+           "(:search IS NULL OR :search = '' OR " +
+           " LOWER(e.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(STR(e.type)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(e.venueName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(e.city) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(e.address) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(STR(e.status)) LIKE LOWER(CONCAT('%', :search, '%'))))")
+    List<Event> searchEventsWithoutDatesByStudio(@Param("studioId") UUID studioId, @Param("search") String search);
+
+    @Query("SELECT e FROM Event e WHERE e.studioId = :studioId AND (" +
+           "(:search IS NULL OR :search = '' OR " +
+           " LOWER(e.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(STR(e.type)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(e.venueName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(e.city) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(e.address) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(STR(e.status)) LIKE LOWER(CONCAT('%', :search, '%')))) AND " +
+           "e.eventDate >= :fromDate")
+    List<Event> searchEventsWithFromDateByStudio(@Param("studioId") UUID studioId,
+                                                 @Param("search") String search, 
+                                                 @Param("fromDate") LocalDate fromDate);
+
+    @Query("SELECT e FROM Event e WHERE e.studioId = :studioId AND (" +
+           "(:search IS NULL OR :search = '' OR " +
+           " LOWER(e.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(STR(e.type)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(e.venueName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(e.city) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(e.address) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(STR(e.status)) LIKE LOWER(CONCAT('%', :search, '%')))) AND " +
+           "e.eventDate <= :toDate")
+    List<Event> searchEventsWithToDateByStudio(@Param("studioId") UUID studioId,
+                                               @Param("search") String search, 
+                                               @Param("toDate") LocalDate toDate);
+
+    @Query("SELECT e FROM Event e WHERE e.studioId = :studioId AND (" +
+           "(:search IS NULL OR :search = '' OR " +
+           " LOWER(e.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(STR(e.type)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(e.venueName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(e.city) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(e.address) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(STR(e.status)) LIKE LOWER(CONCAT('%', :search, '%')))) AND " +
+           "e.eventDate >= :fromDate AND " +
+           "e.eventDate <= :toDate")
+    List<Event> searchEventsWithDateRangeByStudio(@Param("studioId") UUID studioId,
+                                                  @Param("search") String search, 
+                                                  @Param("fromDate") LocalDate fromDate, 
+                                                  @Param("toDate") LocalDate toDate);
 
     @Query("SELECT e FROM Event e WHERE " +
            "(:search IS NULL OR :search = '' OR " +

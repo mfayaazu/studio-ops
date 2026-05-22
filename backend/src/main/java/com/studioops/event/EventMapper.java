@@ -21,7 +21,8 @@ public class EventMapper {
             event.getStatus(),
             event.getNotes(),
             event.getCreatedAt(),
-            event.getUpdatedAt()
+            event.getUpdatedAt(),
+            event.getStudioId()
         );
     }
 }

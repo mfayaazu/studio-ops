@@ -23,6 +23,7 @@ public class EventResponse {
     private String notes;
     private Instant createdAt;
     private Instant updatedAt;
+    private UUID studioId;
 
     public EventResponse() {
     }
@@ -44,6 +45,27 @@ public class EventResponse {
         this.notes = notes;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+    }
+
+    public EventResponse(UUID id, UUID projectId, String title, EventType type, LocalDate eventDate,
+                         LocalTime startTime, LocalTime endTime, String venueName, String city,
+                         String address, EventStatus status, String notes, Instant createdAt, Instant updatedAt,
+                         UUID studioId) {
+        this.id = id;
+        this.projectId = projectId;
+        this.title = title;
+        this.type = type;
+        this.eventDate = eventDate;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.venueName = venueName;
+        this.city = city;
+        this.address = address;
+        this.status = status;
+        this.notes = notes;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.studioId = studioId;
     }
 
     public UUID getId() {
@@ -156,5 +178,13 @@ public class EventResponse {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 }

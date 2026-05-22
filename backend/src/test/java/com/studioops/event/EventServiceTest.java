@@ -1,7 +1,10 @@
 package com.studioops.event;
 
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
+import com.studioops.project.Project;
 import com.studioops.project.ProjectRepository;
+import com.studioops.studio.StudioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -16,6 +19,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+
 import com.studioops.event.dto.EventCreateRequest;
 import com.studioops.event.dto.EventResponse;
 import com.studioops.event.dto.EventUpdateRequest;
@@ -28,6 +32,9 @@ class EventServiceTest {
     @Mock
     private ProjectRepository projectRepository;
 
+    @Mock
+    private StudioRepository studioRepository;
+
     @InjectMocks
     private EventService eventService;
 
@@ -37,6 +44,7 @@ class EventServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         projectId = UUID.randomUUID();
+        lenient().when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
     }
 
     @Test
@@ -47,11 +55,16 @@ class EventServiceTest {
                 "Main Street 1", EventStatus.SCHEDULED, "Bring wide lens"
         );
 
-        when(projectRepository.existsById(projectId)).thenReturn(true);
+        Project project = new Project();
+        project.setId(projectId);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(Optional.of(project));
 
         Event event = new Event();
         event.setId(UUID.randomUUID());
         event.setProjectId(projectId);
+        event.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         event.setTitle(request.getTitle());
         event.setType(request.getType());
         event.setEventDate(request.getEventDate());
@@ -71,6 +84,7 @@ class EventServiceTest {
         assertEquals(event.getId(), response.getId());
         assertEquals("Wedding Shoot", response.getTitle());
         assertEquals(EventType.WEDDING, response.getType());
+        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
         verify(eventRepository, times(1)).save(any(Event.class));
     }
 
@@ -82,7 +96,42 @@ class EventServiceTest {
                 "Main Street 1", EventStatus.SCHEDULED, "Bring wide lens"
         );
 
-        when(projectRepository.existsById(projectId)).thenReturn(false);
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(Optional.empty());
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> eventService.createEvent(request));
+        assertTrue(exception.getMessage().contains("Project not found with id"));
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+    @Test
+    void createEvent_InvalidStudioId_ThrowsException() {
+        UUID customStudioId = UUID.randomUUID();
+        EventCreateRequest request = new EventCreateRequest(
+                projectId, "Wedding Shoot", EventType.WEDDING, LocalDate.of(2026, 6, 5),
+                LocalTime.of(9, 0), LocalTime.of(17, 0), "Grand Ballroom", "Stockholm",
+                "Main Street 1", EventStatus.SCHEDULED, "Bring wide lens", customStudioId
+        );
+
+        when(studioRepository.existsById(customStudioId)).thenReturn(false);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> eventService.createEvent(request));
+        assertTrue(exception.getMessage().contains("Studio not found with id"));
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+    @Test
+    void createEvent_ProjectDifferentStudio_ThrowsException() {
+        UUID customStudioId = UUID.randomUUID();
+        EventCreateRequest request = new EventCreateRequest(
+                projectId, "Wedding Shoot", EventType.WEDDING, LocalDate.of(2026, 6, 5),
+                LocalTime.of(9, 0), LocalTime.of(17, 0), "Grand Ballroom", "Stockholm",
+                "Main Street 1", EventStatus.SCHEDULED, "Bring wide lens", customStudioId
+        );
+
+        when(studioRepository.existsById(customStudioId)).thenReturn(true);
+        when(projectRepository.findByIdAndStudioId(projectId, customStudioId))
+                .thenReturn(Optional.empty());
 
         Exception exception = assertThrows(IllegalArgumentException.class, () -> eventService.createEvent(request));
         assertTrue(exception.getMessage().contains("Project not found with id"));
@@ -97,7 +146,11 @@ class EventServiceTest {
                 "Main Street 1", EventStatus.SCHEDULED, "Bring wide lens"
         );
 
-        when(projectRepository.existsById(projectId)).thenReturn(true);
+        Project project = new Project();
+        project.setId(projectId);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(Optional.of(project));
 
         Exception exception = assertThrows(IllegalArgumentException.class, () -> eventService.createEvent(request));
         assertTrue(exception.getMessage().contains("Start time must be before end time"));
@@ -112,11 +165,16 @@ class EventServiceTest {
                 "Main Street 1", null, "Bring wide lens"
         );
 
-        when(projectRepository.existsById(projectId)).thenReturn(true);
+        Project project = new Project();
+        project.setId(projectId);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(Optional.of(project));
 
         Event event = new Event();
         event.setId(UUID.randomUUID());
         event.setProjectId(projectId);
+        event.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         event.setTitle(request.getTitle());
         event.setType(request.getType());
         event.setEventDate(request.getEventDate());
@@ -142,8 +200,9 @@ class EventServiceTest {
         event.setId(id);
         event.setTitle("Wedding");
         event.setProjectId(projectId);
+        event.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(eventRepository.findById(id)).thenReturn(Optional.of(event));
+        when(eventRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(event));
 
         EventResponse response = eventService.getEventById(id);
 
@@ -155,7 +214,7 @@ class EventServiceTest {
     @Test
     void getEventById_NotFound_ThrowsException() {
         UUID id = UUID.randomUUID();
-        when(eventRepository.findById(id)).thenReturn(Optional.empty());
+        when(eventRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> eventService.getEventById(id));
     }
@@ -165,22 +224,30 @@ class EventServiceTest {
         Event e1 = new Event();
         e1.setProjectId(projectId);
         e1.setTitle("Wedding");
+        e1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         Event e2 = new Event();
         e2.setProjectId(projectId);
         e2.setTitle("Engagement");
+        e2.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(projectRepository.existsById(projectId)).thenReturn(true);
-        when(eventRepository.findByProjectId(projectId)).thenReturn(List.of(e1, e2));
+        Project project = new Project();
+        project.setId(projectId);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(Optional.of(project));
+        when(eventRepository.findByProjectIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(List.of(e1, e2));
 
         List<EventResponse> responses = eventService.getEventsByProjectId(projectId);
 
         assertEquals(2, responses.size());
-        verify(eventRepository, times(1)).findByProjectId(projectId);
+        verify(eventRepository, times(1)).findByProjectIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID);
     }
 
     @Test
     void getEventsByProjectId_NotFound_ThrowsException() {
-        when(projectRepository.existsById(projectId)).thenReturn(false);
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> eventService.getEventsByProjectId(projectId));
     }
@@ -191,6 +258,7 @@ class EventServiceTest {
         Event event = new Event();
         event.setId(id);
         event.setProjectId(projectId);
+        event.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         event.setTitle("Wedding Shoot");
 
         EventUpdateRequest request = new EventUpdateRequest(
@@ -199,8 +267,12 @@ class EventServiceTest {
                 "Main Street 2", EventStatus.COMPLETED, "Updated notes"
         );
 
-        when(eventRepository.findById(id)).thenReturn(Optional.of(event));
-        when(projectRepository.existsById(projectId)).thenReturn(true);
+        when(eventRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(event));
+        Project project = new Project();
+        project.setId(projectId);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(Optional.of(project));
         when(eventRepository.save(any(Event.class))).thenReturn(event);
 
         EventResponse response = eventService.updateEvent(id, request);
@@ -216,6 +288,7 @@ class EventServiceTest {
         UUID id = UUID.randomUUID();
         Event event = new Event();
         event.setId(id);
+        event.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
         EventUpdateRequest request = new EventUpdateRequest(
                 projectId, "Wedding Shoot", EventType.WEDDING, LocalDate.of(2026, 6, 5),
@@ -223,8 +296,9 @@ class EventServiceTest {
                 "Main Street 2", EventStatus.COMPLETED, "Updated notes"
         );
 
-        when(eventRepository.findById(id)).thenReturn(Optional.of(event));
-        when(projectRepository.existsById(projectId)).thenReturn(false);
+        when(eventRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(event));
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> eventService.updateEvent(id, request));
     }
@@ -234,8 +308,9 @@ class EventServiceTest {
         UUID id = UUID.randomUUID();
         Event event = new Event();
         event.setId(id);
+        event.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(eventRepository.findById(id)).thenReturn(Optional.of(event));
+        when(eventRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(event));
         doNothing().when(eventRepository).delete(event);
 
         assertDoesNotThrow(() -> eventService.deleteEvent(id));
@@ -245,7 +320,7 @@ class EventServiceTest {
     @Test
     void deleteEvent_NotFound_ThrowsException() {
         UUID id = UUID.randomUUID();
-        when(eventRepository.findById(id)).thenReturn(Optional.empty());
+        when(eventRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> eventService.deleteEvent(id));
     }
@@ -255,15 +330,16 @@ class EventServiceTest {
         Event e1 = new Event();
         e1.setTitle("Wedding 1");
         e1.setEventDate(LocalDate.of(2026, 6, 5));
+        e1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(eventRepository.searchEventsWithoutDates("Wedding"))
+        when(eventRepository.searchEventsWithoutDatesByStudio(TenantConstants.DEFAULT_STUDIO_ID, "Wedding"))
                 .thenReturn(List.of(e1));
 
         List<EventResponse> responses = eventService.listEvents("Wedding", null, null);
 
         assertEquals(1, responses.size());
         assertEquals("Wedding 1", responses.get(0).getTitle());
-        verify(eventRepository, times(1)).searchEventsWithoutDates("Wedding");
+        verify(eventRepository, times(1)).searchEventsWithoutDatesByStudio(TenantConstants.DEFAULT_STUDIO_ID, "Wedding");
     }
 
     @Test
@@ -271,16 +347,17 @@ class EventServiceTest {
         Event e1 = new Event();
         e1.setTitle("Wedding 1");
         e1.setEventDate(LocalDate.of(2026, 6, 5));
+        e1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         LocalDate fromDate = LocalDate.of(2026, 6, 1);
 
-        when(eventRepository.searchEventsWithFromDate("Wedding", fromDate))
+        when(eventRepository.searchEventsWithFromDateByStudio(TenantConstants.DEFAULT_STUDIO_ID, "Wedding", fromDate))
                 .thenReturn(List.of(e1));
 
         List<EventResponse> responses = eventService.listEvents("Wedding", fromDate, null);
 
         assertEquals(1, responses.size());
         assertEquals("Wedding 1", responses.get(0).getTitle());
-        verify(eventRepository, times(1)).searchEventsWithFromDate("Wedding", fromDate);
+        verify(eventRepository, times(1)).searchEventsWithFromDateByStudio(TenantConstants.DEFAULT_STUDIO_ID, "Wedding", fromDate);
     }
 
     @Test
@@ -288,16 +365,17 @@ class EventServiceTest {
         Event e1 = new Event();
         e1.setTitle("Wedding 1");
         e1.setEventDate(LocalDate.of(2026, 6, 5));
+        e1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         LocalDate toDate = LocalDate.of(2026, 6, 10);
 
-        when(eventRepository.searchEventsWithToDate("Wedding", toDate))
+        when(eventRepository.searchEventsWithToDateByStudio(TenantConstants.DEFAULT_STUDIO_ID, "Wedding", toDate))
                 .thenReturn(List.of(e1));
 
         List<EventResponse> responses = eventService.listEvents("Wedding", null, toDate);
 
         assertEquals(1, responses.size());
         assertEquals("Wedding 1", responses.get(0).getTitle());
-        verify(eventRepository, times(1)).searchEventsWithToDate("Wedding", toDate);
+        verify(eventRepository, times(1)).searchEventsWithToDateByStudio(TenantConstants.DEFAULT_STUDIO_ID, "Wedding", toDate);
     }
 
     @Test
@@ -305,17 +383,18 @@ class EventServiceTest {
         Event e1 = new Event();
         e1.setTitle("Wedding 1");
         e1.setEventDate(LocalDate.of(2026, 6, 5));
+        e1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         LocalDate fromDate = LocalDate.of(2026, 6, 1);
         LocalDate toDate = LocalDate.of(2026, 6, 10);
 
-        when(eventRepository.searchEventsWithDateRange("Wedding", fromDate, toDate))
+        when(eventRepository.searchEventsWithDateRangeByStudio(TenantConstants.DEFAULT_STUDIO_ID, "Wedding", fromDate, toDate))
                 .thenReturn(List.of(e1));
 
         List<EventResponse> responses = eventService.listEvents("Wedding", fromDate, toDate);
 
         assertEquals(1, responses.size());
         assertEquals("Wedding 1", responses.get(0).getTitle());
-        verify(eventRepository, times(1)).searchEventsWithDateRange("Wedding", fromDate, toDate);
+        verify(eventRepository, times(1)).searchEventsWithDateRangeByStudio(TenantConstants.DEFAULT_STUDIO_ID, "Wedding", fromDate, toDate);
     }
 
     @Test
@@ -323,16 +402,17 @@ class EventServiceTest {
         Event e1 = new Event();
         e1.setTitle("Engagement 1");
         e1.setEventDate(LocalDate.of(2026, 6, 5));
+        e1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         LocalDate fromDate = LocalDate.of(2026, 6, 1);
         LocalDate toDate = LocalDate.of(2026, 6, 10);
 
-        when(eventRepository.searchEventsWithDateRange("Engagement", fromDate, toDate))
+        when(eventRepository.searchEventsWithDateRangeByStudio(TenantConstants.DEFAULT_STUDIO_ID, "Engagement", fromDate, toDate))
                 .thenReturn(List.of(e1));
 
         List<EventResponse> responses = eventService.listEvents("Engagement", fromDate, toDate);
 
         assertEquals(1, responses.size());
         assertEquals("Engagement 1", responses.get(0).getTitle());
-        verify(eventRepository, times(1)).searchEventsWithDateRange("Engagement", fromDate, toDate);
+        verify(eventRepository, times(1)).searchEventsWithDateRangeByStudio(TenantConstants.DEFAULT_STUDIO_ID, "Engagement", fromDate, toDate);
     }
 }

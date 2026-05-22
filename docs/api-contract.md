@@ -388,6 +388,7 @@ Retrieves all events.
 [
   {
     "id": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
     "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
     "title": "Studio Portraits Day 1",
     "type": "CORPORATE",
@@ -411,6 +412,7 @@ Retrieves a specific calendar event by ID.
 ```json
 {
   "id": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
   "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
   "title": "Studio Portraits Day 1",
   "type": "CORPORATE",
@@ -434,6 +436,7 @@ Retrieves all events assigned to a project.
 [
   {
     "id": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
     "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
     "title": "Studio Portraits Day 1",
     "type": "CORPORATE",
@@ -457,6 +460,7 @@ Creates a new calendar event. Returns the full created event object.
 ```json
 {
   "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e", // Optional
   "title": "Studio Portraits Day 1",
   "type": "CORPORATE",
   "eventDate": "2026-06-05",
@@ -473,6 +477,7 @@ Creates a new calendar event. Returns the full created event object.
 ```json
 {
   "id": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
   "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
   "title": "Studio Portraits Day 1",
   "type": "CORPORATE",
@@ -511,6 +516,7 @@ Updates an event. Returns the updated event representation.
 ```json
 {
   "id": "cb1e5bda-4f4d-45bf-9f0e-e55d648ccff9",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
   "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
   "title": "Studio Portraits Day 1 - Updated",
   "type": "CORPORATE",

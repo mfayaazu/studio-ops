@@ -14,6 +14,8 @@ public class EventCreateRequest {
     @NotNull(message = "projectId is required")
     private UUID projectId;
 
+    private UUID studioId;
+
     @NotBlank(message = "title is required")
     @Size(max = 255, message = "title must not exceed 255 characters")
     private String title;
@@ -62,6 +64,23 @@ public class EventCreateRequest {
         this.address = address;
         this.status = status;
         this.notes = notes;
+    }
+
+    public EventCreateRequest(UUID projectId, String title, EventType type, LocalDate eventDate,
+                              LocalTime startTime, LocalTime endTime, String venueName, String city,
+                              String address, EventStatus status, String notes, UUID studioId) {
+        this.projectId = projectId;
+        this.title = title;
+        this.type = type;
+        this.eventDate = eventDate;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.venueName = venueName;
+        this.city = city;
+        this.address = address;
+        this.status = status;
+        this.notes = notes;
+        this.studioId = studioId;
     }
 
     public UUID getProjectId() {
@@ -150,5 +169,13 @@ public class EventCreateRequest {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 }

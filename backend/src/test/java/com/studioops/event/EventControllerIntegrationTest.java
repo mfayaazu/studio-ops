@@ -3,6 +3,7 @@ package com.studioops.event;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.studioops.config.SecurityConfig;
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -41,6 +42,7 @@ class EventControllerIntegrationTest {
     @Test
     void createEvent_Success() throws Exception {
         UUID projectId = UUID.randomUUID();
+        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
         EventCreateRequest request = new EventCreateRequest(
                 projectId, "Wedding Day 1", EventType.WEDDING, LocalDate.of(2026, 6, 5),
                 LocalTime.of(9, 0), LocalTime.of(17, 0), "Grand Palace", "Gothenburg",
@@ -50,7 +52,8 @@ class EventControllerIntegrationTest {
         EventResponse response = new EventResponse(
                 UUID.randomUUID(), projectId, "Wedding Day 1", EventType.WEDDING, LocalDate.of(2026, 6, 5),
                 LocalTime.of(9, 0), LocalTime.of(17, 0), "Grand Palace", "Gothenburg",
-                "Storgatan 1", EventStatus.SCHEDULED, "Main event", Instant.now(), Instant.now()
+                "Storgatan 1", EventStatus.SCHEDULED, "Main event", Instant.now(), Instant.now(),
+                studioId
         );
 
         when(eventService.createEvent(any(EventCreateRequest.class))).thenReturn(response);
@@ -61,7 +64,8 @@ class EventControllerIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(response.getId().toString()))
                 .andExpect(jsonPath("$.title").value("Wedding Day 1"))
-                .andExpect(jsonPath("$.type").value("WEDDING"));
+                .andExpect(jsonPath("$.type").value("WEDDING"))
+                .andExpect(jsonPath("$.studioId").value(studioId.toString()));
     }
 
     @Test
@@ -91,10 +95,12 @@ class EventControllerIntegrationTest {
     void getEventById_Success() throws Exception {
         UUID id = UUID.randomUUID();
         UUID projectId = UUID.randomUUID();
+        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
         EventResponse response = new EventResponse(
                 id, projectId, "Wedding Day 1", EventType.WEDDING, LocalDate.of(2026, 6, 5),
                 LocalTime.of(9, 0), LocalTime.of(17, 0), "Grand Palace", "Gothenburg",
-                "Storgatan 1", EventStatus.SCHEDULED, null, Instant.now(), Instant.now()
+                "Storgatan 1", EventStatus.SCHEDULED, null, Instant.now(), Instant.now(),
+                studioId
         );
 
         when(eventService.getEventById(id)).thenReturn(response);
@@ -102,7 +108,8 @@ class EventControllerIntegrationTest {
         mockMvc.perform(get("/api/events/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
-                .andExpect(jsonPath("$.title").value("Wedding Day 1"));
+                .andExpect(jsonPath("$.title").value("Wedding Day 1"))
+                .andExpect(jsonPath("$.studioId").value(studioId.toString()));
     }
 
     @Test
@@ -118,10 +125,12 @@ class EventControllerIntegrationTest {
     @Test
     void getEventsByProjectId_Success() throws Exception {
         UUID projectId = UUID.randomUUID();
+        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
         EventResponse response = new EventResponse(
                 UUID.randomUUID(), projectId, "Wedding Day 1", EventType.WEDDING, LocalDate.of(2026, 6, 5),
                 LocalTime.of(9, 0), LocalTime.of(17, 0), "Grand Palace", "Gothenburg",
-                "Storgatan 1", EventStatus.SCHEDULED, null, Instant.now(), Instant.now()
+                "Storgatan 1", EventStatus.SCHEDULED, null, Instant.now(), Instant.now(),
+                studioId
         );
 
         when(eventService.getEventsByProjectId(projectId)).thenReturn(List.of(response));
@@ -129,15 +138,18 @@ class EventControllerIntegrationTest {
         mockMvc.perform(get("/api/projects/{projectId}/events", projectId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].projectId").value(projectId.toString()))
-                .andExpect(jsonPath("$[0].title").value("Wedding Day 1"));
+                .andExpect(jsonPath("$[0].title").value("Wedding Day 1"))
+                .andExpect(jsonPath("$[0].studioId").value(studioId.toString()));
     }
 
     @Test
     void listEvents_Success() throws Exception {
+        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
         EventResponse response = new EventResponse(
                 UUID.randomUUID(), UUID.randomUUID(), "Wedding Day 1", EventType.WEDDING, LocalDate.of(2026, 6, 5),
                 LocalTime.of(9, 0), LocalTime.of(17, 0), "Grand Palace", "Gothenburg",
-                "Storgatan 1", EventStatus.SCHEDULED, null, Instant.now(), Instant.now()
+                "Storgatan 1", EventStatus.SCHEDULED, null, Instant.now(), Instant.now(),
+                studioId
         );
 
         when(eventService.listEvents("Wedding", LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 10)))
@@ -148,13 +160,15 @@ class EventControllerIntegrationTest {
                 .param("fromDate", "2026-06-01")
                 .param("toDate", "2026-06-10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].title").value("Wedding Day 1"));
+                .andExpect(jsonPath("$[0].title").value("Wedding Day 1"))
+                .andExpect(jsonPath("$[0].studioId").value(studioId.toString()));
     }
 
     @Test
     void updateEvent_Success() throws Exception {
         UUID id = UUID.randomUUID();
         UUID projectId = UUID.randomUUID();
+        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
         EventUpdateRequest request = new EventUpdateRequest(
                 projectId, "Wedding Day 1 Updated", EventType.WEDDING, LocalDate.of(2026, 6, 5),
                 LocalTime.of(10, 0), LocalTime.of(18, 0), "Grand Palace 2", "Gothenburg",
@@ -164,7 +178,8 @@ class EventControllerIntegrationTest {
         EventResponse response = new EventResponse(
                 id, projectId, "Wedding Day 1 Updated", EventType.WEDDING, LocalDate.of(2026, 6, 5),
                 LocalTime.of(10, 0), LocalTime.of(18, 0), "Grand Palace 2", "Gothenburg",
-                "Storgatan 2", EventStatus.COMPLETED, "Some notes", Instant.now(), Instant.now()
+                "Storgatan 2", EventStatus.COMPLETED, "Some notes", Instant.now(), Instant.now(),
+                studioId
         );
 
         when(eventService.updateEvent(eq(id), any(EventUpdateRequest.class))).thenReturn(response);
@@ -174,7 +189,8 @@ class EventControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Wedding Day 1 Updated"))
-                .andExpect(jsonPath("$.status").value("COMPLETED"));
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.studioId").value(studioId.toString()));
     }
 
     @Test

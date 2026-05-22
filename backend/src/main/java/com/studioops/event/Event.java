@@ -18,6 +18,9 @@ public class Event {
     @Column(name = "project_id", nullable = false)
     private UUID projectId;
 
+    @Column(name = "studio_id", nullable = false)
+    private UUID studioId;
+
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
@@ -84,6 +87,14 @@ public class Event {
 
     public void setProjectId(UUID projectId) {
         this.projectId = projectId;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 
     public String getTitle() {
