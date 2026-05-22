@@ -6,6 +6,20 @@ All REST endpoints return payloads in `application/json` format.
 
 ---
 
+## Multi-Tenant SaaS API Scoping Guidelines
+
+> [!IMPORTANT]
+> **Implicit Scoping via Session**: Every business endpoint (Clients, Employees, Projects, Events, Assignments, Deliverables, Backups, and Dashboard Summary) is strictly partitioned by the authenticated user's `studioId`.
+> 
+> - Clients do **not** supply a `studioId` parameter in request headers, query strings, or JSON bodies.
+> - The backend resolves the user's `studioId` directly from the authenticated session context (Spring Security authentication principal).
+> - **Data Access Boundaries**:
+>   - `GET` requests only return records matching the active tenant's `studioId`.
+>   - `POST` requests automatically link newly created entities to the active tenant's `studioId`.
+>   - `PUT`/`DELETE` operations on resource IDs must verify the resource belongs to the user's `studioId`, failing with `403 Forbidden` if there is a tenant mismatch.
+
+---
+
 ## 1. System Gateway
 
 ### GET `/api/health`

@@ -1,92 +1,65 @@
-# Phase 1 Checklist: StudioOps Internal MVP
+# Phase 1 Checklist: StudioOps Multi-Tenant SaaS
 
-This document tracks the implementation status of Phase 1 requirements for the StudioOps backend and frontend modules.
-
-## Backend Modules Status
-
-### [x] Client Management
-- **Entity**: `Client`
-- **Flyway Migration**: Implemented (UUID PK, `full_name`, `email`, `phone`, `notes`, audit fields)
-- **Repository**: `ClientRepository`
-- **Service**: `ClientService` (implements uniqueness check, business rules)
-- **Controller**: `ClientController` (`POST`, `GET`, `GET /{id}`, `PUT /{id}`, `DELETE /{id}`)
-- **DTOs**: Moved to `com.studioops.client.dto` (`ClientCreateRequest`, `ClientUpdateRequest`, `ClientResponse`)
-- **Mapper**: `ClientMapper` (custom mapper)
-- **Tests**: Covered by Unit and Integration/Controller tests.
-
-### [x] Employee Management
-- **Entity**: `Employee`
-- **Flyway Migration**: Implemented (UUID PK, nullable `user_id`, `full_name`, `email`, `phone`, `primary_role`, `skills`, `status` enum)
-- **Repository**: `EmployeeRepository`
-- **Service**: `EmployeeService` (email uniqueness check, status validation)
-- **Controller**: `EmployeeController` (`POST`, `GET`, `GET /{id}`, `PUT /{id}`, `DELETE /{id}`)
-- **DTOs**: Moved to `com.studioops.employee.dto` (`EmployeeCreateRequest`, `EmployeeUpdateRequest`, `EmployeeResponse`)
-- **Tests**: Verified by Unit and Integration tests.
-
-### [x] Project Management
-- **Entity**: `Project`
-- **Flyway Migration**: Implemented (UUID PK, FK to `clients`, `project_code` unique, booking/payment/project status enums, dates, notes)
-- **Repository**: `ProjectRepository`
-- **Service**: `ProjectService` (validates client existence, project code generation, status transitions)
-- **Controller**: `ProjectController` (`POST`, `GET`, `GET /{id}`, `PUT /{id}`, `DELETE /{id}`)
-- **DTOs**: Moved to `com.studioops.project.dto` (`ProjectCreateRequest`, `ProjectUpdateRequest`, `ProjectResponse`)
-- **Tests**: Verified by Unit and Integration tests.
-
-### [x] Event Scheduling
-- **Entity**: `Event`
-- **Flyway Migration**: Implemented (UUID PK, FK to `projects`, type/status enums, date, times, venue/city/address details)
-- **Repository**: `EventRepository`
-- **Service**: `EventService` (validates project existence, dates)
-- **Controller**: `EventController` (`POST`, `GET`, `GET /{id}`, `GET /api/projects/{projectId}/events`, `PUT /{id}`, `DELETE /{id}`)
-- **DTOs**: Moved to `com.studioops.event.dto` (`EventCreateRequest`, `EventUpdateRequest`, `EventResponse`)
-- **Tests**: Verified by Unit and Integration tests.
-
-### [x] Team Allocation (EventAssignment)
-- **Entity**: `EventAssignment`
-- **Flyway Migration**: Implemented (UUID PK, FK to `events` and `employees`, role/status enums, `call_time` in LocalTime, notes)
-- **Repository**: `EventAssignmentRepository`
-- **Service**: `EventAssignmentService` (handles assignment logic, detects double-booking conflict warnings)
-- **Controller**: `EventAssignmentController` (`POST`, `GET`, `GET /{id}`, `PUT /{id}`, `DELETE /{id}`)
-- **DTOs**: Moved to `com.studioops.assignment.dto` (`EventAssignmentCreateRequest`, `EventAssignmentUpdateRequest`, `EventAssignmentResponse`)
-- **Tests**: Verified by Unit and Integration tests.
-
-### [x] Delivery Status (Deliverable)
-- **Entity**: `Deliverable`
-- **Flyway Migration**: Implemented (UUID PK, FK to `projects`, type/status enums, `reference_url`, `due_date`)
-- **Repository**: `DeliverableRepository`
-- **Service**: `DeliverableService` (validates project, handles status transitions)
-- **Controller**: `DeliverableController` (`POST`, `GET`, `GET /{id}`, `PUT /{id}`, `DELETE /{id}`)
-- **DTOs**: Moved to `com.studioops.deliverable.dto` (`DeliverableCreateRequest`, `DeliverableUpdateRequest`, `DeliverableResponse`)
-- **Tests**: Verified by Unit and Integration tests.
-
-### [x] Backup Status (BackupRecord)
-- **Entity**: `BackupRecord`
-- **Flyway Migration**: Implemented (UUID PK, FK to `projects` and `deliverables`, types, status, path, verification date)
-- **Repository**: `BackupRecordRepository`
-- **Service**: `BackupRecordService` (validates project and deliverable existence, handles backup state rules)
-- **Controller**: `BackupRecordController` (`POST`, `GET`, `GET /{id}`, `PUT /{id}`, `DELETE /{id}`)
-- **DTOs**: Moved to `com.studioops.backup.dto` (`BackupRecordCreateRequest`, `BackupRecordUpdateRequest`, `BackupRecordResponse`)
-- **Tests**: Verified by Unit and Integration tests.
-
-### [x] Basic Dashboard
-- **Service**: `DashboardService` (computes overview counts, gathers overlapping double-booking warnings, outputs low-redundancy backup checklists)
-- **Controller**: `DashboardController` (`GET /api/dashboard/summary`)
-- **DTOs**: Moved to `com.studioops.dashboard.dto` (`DashboardStats`, `DashboardWarning`, `DashboardBackupChecklist`, `DashboardSummaryResponse`)
-- **Tests**: Verified by Unit and Integration tests.
-
-### [ ] User / Authentication Skeleton
-- **Status**: PENDING (Planned for later implementation/security phase)
-
-### [ ] Activity Log (Audit Trails)
-- **Status**: PENDING (Planned for subsequent phases)
+This document tracks the implementation status of Phase 1 requirements for the StudioOps SaaS backend and frontend.
 
 ---
 
-## Frontend Status
+## 1. Single-Studio Modules (Implemented)
+These modules are fully operational but currently function in a single-studio scope. They must be migrated to the multi-tenant scoping schema in subsequent phases.
 
-### [x] Folder Structure & Core Architecture
-- **Structure**: Created clean package-by-feature architecture plan (`frontend/src/features/...`, `frontend/src/app/...`, `frontend/src/components/...`)
-- **Setup**: React TypeScript, Tailwind CSS, Vite config, basic routing placeholders, components foundation
+- **[x] Client Management**: CRUD, DTO mappings, custom mapper, unit/integration tests.
+- **[x] Employee Management**: CRUD, email uniqueness checks, status validations, integration tests.
+- **[x] Project Management**: CRUD, project code generation, status transitions, integration tests.
+- **[x] Event Scheduling**: CRUD, date/time boundaries, project linkages, integration tests.
+- **[x] Team Allocation**: Crew assignments, native pointer drag-and-drop availability planner (frontend), double-booking warnings.
+- **[x] Delivery Status**: Deliverable CRUD, status transitions (`PENDING` -> `DELIVERED`).
+- **[x] Backup Status**: Backup record audits, 3-2-1 backup verification checks (warnings for < 2 backup types).
+- **[x] Basic Dashboard**: Operations metrics cards, backup warnings panel, conflict listings.
+- **[x] Authentication Skeleton**: Session-based login/logout backend APIs and frontend context provider.
 
-### [ ] Real Screen Implementation
-- **Status**: PENDING (Planned once backend API endpoints are fully stabilized and integrated in Phase 1 execution)
+---
+
+## 2. Multi-Tenant SaaS Foundation (Pending)
+These tasks establish the multi-tenant SaaS capabilities of the platform.
+
+### [ ] Studio Tenant Module
+- **Status**: PENDING
+- **Tasks**:
+  - [ ] Add `studios` table Flyway migration.
+  - [ ] Implement `Studio` JPA entity, repository, service, and controller.
+  - [ ] Add studio status and subscription tier enums.
+
+### [ ] User Module Upgrades
+- **Status**: PENDING
+- **Tasks**:
+  - [ ] Add `studio_id` FK column to the `users` table via migration.
+  - [ ] Update `User` entity to reference `Studio`.
+  - [ ] Refactor user authentication and login DTOs to support tenant resolution.
+
+### [ ] studioId Entity Scoping
+- **Status**: PENDING
+- **Tasks**:
+  - [ ] Add `studio_id` columns to `clients` and `employees`.
+  - [ ] Add `studio_id` columns to `projects` and `events`.
+  - [ ] Add `studio_id` columns to `event_assignments`, `deliverables`, and `backup_records`.
+  - [ ] Refactor all service business logic and JPA repository queries to filter strictly by the authenticated tenant's `studioId`.
+
+### [ ] Subscription Billing
+- **Status**: PENDING
+- **Tasks**:
+  - [ ] Map out billing status transition logic.
+  - [ ] Design future checkout integration plan for Stripe/Paddle/Razorpay.
+
+### [ ] Security & Auth Enforcement
+- **Status**: PENDING
+- **Tasks**:
+  - [ ] Restrict access to tenant-specific resources, returning `403 Forbidden` if a user attempts to retrieve/modify records belonging to another tenant (`studio_id` mismatch check).
+
+---
+
+## 3. Frontend Views (In Progress)
+- **[x] Layout & Routing**: sidebar, navigation links, and providers setup.
+- **[x] Authentication Screens**: Dark-themed login screen with seed-user autofill.
+- **[x] Availability Planner**: Drag-and-drop crew assignment panel on the calendar.
+- **[ ] Multi-Tenant Studio Workspace Setup**: PENDING.
+- **[ ] Scoped Console Screens**: Client, Project, Deliverables lists.
