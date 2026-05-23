@@ -969,8 +969,8 @@ Deletes a template.
 
 ---
 
-### GET `/api/communication/sequences`
-Retrieves follow-up sequences.
+### GET `/api/follow-up-sequences`
+Retrieves all follow-up sequences for the current studio.
 **Response (200 OK):**
 ```json
 [
@@ -979,36 +979,21 @@ Retrieves follow-up sequences.
     "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
     "name": "Default 10-Day Sequence",
     "description": "Standard follow-up sequence after sending quotation.",
-    "isActive": true,
-    "steps": [
-      {
-        "id": "f8df4a4a-1123-4ad9-a78f-efbcd8213e4f",
-        "templateId": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
-        "offsetDays": 1,
-        "channel": "EMAIL"
-      }
-    ],
+    "active": true,
     "createdAt": "2026-05-21T09:51:00Z",
     "updatedAt": "2026-05-21T09:51:00Z"
   }
 ]
 ```
 
-### POST `/api/communication/sequences`
+### POST `/api/follow-up-sequences`
 Creates a follow-up sequence.
 **Request:**
 ```json
 {
   "name": "Default 10-Day Sequence",
   "description": "Standard follow-up sequence after sending quotation.",
-  "isActive": true,
-  "steps": [
-    {
-      "templateId": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
-      "offsetDays": 1,
-      "channel": "EMAIL"
-    }
-  ]
+  "active": true
 }
 ```
 **Response (201 Created):**
@@ -1018,18 +1003,125 @@ Creates a follow-up sequence.
   "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
   "name": "Default 10-Day Sequence",
   "description": "Standard follow-up sequence after sending quotation.",
-  "isActive": true,
-  "steps": [
-    {
-      "id": "f8df4a4a-1123-4ad9-a78f-efbcd8213e4f",
-      "templateId": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
-      "offsetDays": 1,
-      "channel": "EMAIL"
-    }
-  ],
+  "active": true,
   "createdAt": "2026-05-21T09:51:00Z",
   "updatedAt": "2026-05-21T09:51:00Z"
 }
+```
+
+### PUT `/api/follow-up-sequences/{id}`
+Updates a follow-up sequence.
+**Response (200 OK):**
+```json
+{
+  "id": "3a0cf82a-bc91-4d37-88ea-d43806fbce30",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "name": "Default 10-Day Sequence Updated",
+  "description": "New description.",
+  "active": true,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
+}
+```
+
+### DELETE `/api/follow-up-sequences/{id}`
+Deletes a follow-up sequence.
+**Response (204 No Content)**
+
+---
+
+### POST `/api/follow-up-steps`
+Creates a follow-up step.
+**Request:**
+```json
+{
+  "sequenceId": "3a0cf82a-bc91-4d37-88ea-d43806fbce30",
+  "stepOrder": 1,
+  "delayDays": 1,
+  "channel": "EMAIL",
+  "templateId": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
+  "goal": "Check-in on quote receipt"
+}
+```
+**Response (201 Created):**
+```json
+{
+  "id": "f8df4a4a-1123-4ad9-a78f-efbcd8213e4f",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "sequenceId": "3a0cf82a-bc91-4d37-88ea-d43806fbce30",
+  "stepOrder": 1,
+  "delayDays": 1,
+  "channel": "EMAIL",
+  "templateId": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
+  "goal": "Check-in on quote receipt",
+  "active": true,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
+### GET `/api/follow-up-sequences/{sequenceId}/steps`
+Retrieves steps for a sequence, ordered by stepOrder.
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "f8df4a4a-1123-4ad9-a78f-efbcd8213e4f",
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+    "sequenceId": "3a0cf82a-bc91-4d37-88ea-d43806fbce30",
+    "stepOrder": 1,
+    "delayDays": 1,
+    "channel": "EMAIL",
+    "templateId": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
+    "goal": "Check-in on quote receipt",
+    "active": true,
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
+  }
+]
+```
+
+### GET `/api/follow-up-steps/{id}`
+Retrieves a specific step.
+**Response (200 OK):**
+```json
+{
+  "id": "f8df4a4a-1123-4ad9-a78f-efbcd8213e4f",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "sequenceId": "3a0cf82a-bc91-4d37-88ea-d43806fbce30",
+  "stepOrder": 1,
+  "delayDays": 1,
+  "channel": "EMAIL",
+  "templateId": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
+  "goal": "Check-in on quote receipt",
+  "active": true,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
+### PUT `/api/follow-up-steps/{id}`
+Updates a step.
+**Response (200 OK):**
+```json
+{
+  "id": "f8df4a4a-1123-4ad9-a78f-efbcd8213e4f",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "sequenceId": "3a0cf82a-bc91-4d37-88ea-d43806fbce30",
+  "stepOrder": 1,
+  "delayDays": 2,
+  "channel": "SMS",
+  "templateId": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
+  "goal": "SMS check-in on quote receipt",
+  "active": true,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
+}
+```
+
+### DELETE `/api/follow-up-steps/{id}`
+Deletes a step.
+**Response (204 No Content)**
 ```
 
 ---
