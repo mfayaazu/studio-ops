@@ -45,9 +45,11 @@ class DeliverableControllerIntegrationTest {
                 "s3://bucket/photos.zip", LocalDate.of(2026, 6, 20)
         );
 
+        UUID studioId = UUID.randomUUID();
         DeliverableResponse response = new DeliverableResponse();
         response.setId(UUID.randomUUID());
         response.setProjectId(projectId);
+        response.setStudioId(studioId);
         response.setName("Edited Photos");
         response.setDeliverableType(DeliverableType.PHOTOS);
         response.setStatus(DeliverableStatus.NOT_STARTED);
@@ -63,6 +65,7 @@ class DeliverableControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(response.getId().toString()))
+                .andExpect(jsonPath("$.studioId").value(studioId.toString()))
                 .andExpect(jsonPath("$.name").value("Edited Photos"))
                 .andExpect(jsonPath("$.deliverableType").value("PHOTOS"));
     }
@@ -88,9 +91,11 @@ class DeliverableControllerIntegrationTest {
     @Test
     void listDeliverables_Success() throws Exception {
         UUID projectId = UUID.randomUUID();
+        UUID studioId = UUID.randomUUID();
         DeliverableResponse response = new DeliverableResponse();
         response.setId(UUID.randomUUID());
         response.setProjectId(projectId);
+        response.setStudioId(studioId);
         response.setName("Album Design");
         response.setDeliverableType(DeliverableType.ALBUM_DESIGN);
         response.setStatus(DeliverableStatus.IN_PROGRESS);
@@ -101,15 +106,18 @@ class DeliverableControllerIntegrationTest {
                 .param("projectId", projectId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size()").value(1))
-                .andExpect(jsonPath("$[0].name").value("Album Design"));
+                .andExpect(jsonPath("$[0].name").value("Album Design"))
+                .andExpect(jsonPath("$[0].studioId").value(studioId.toString()));
     }
 
     @Test
     void getDeliverableById_Success() throws Exception {
         UUID id = UUID.randomUUID();
+        UUID studioId = UUID.randomUUID();
         DeliverableResponse response = new DeliverableResponse();
         response.setId(id);
         response.setProjectId(UUID.randomUUID());
+        response.setStudioId(studioId);
         response.setName("Full Video");
         response.setDeliverableType(DeliverableType.FULL_VIDEO);
         response.setStatus(DeliverableStatus.DELIVERED);
@@ -119,6 +127,7 @@ class DeliverableControllerIntegrationTest {
         mockMvc.perform(get("/api/deliverables/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.studioId").value(studioId.toString()))
                 .andExpect(jsonPath("$.name").value("Full Video"));
     }
 
@@ -134,6 +143,7 @@ class DeliverableControllerIntegrationTest {
     @Test
     void updateDeliverable_Success() throws Exception {
         UUID id = UUID.randomUUID();
+        UUID studioId = UUID.randomUUID();
         DeliverableUpdateRequest request = new DeliverableUpdateRequest(
                 "Updated Name", DeliverableType.PHOTOS, DeliverableStatus.READY_FOR_REVIEW,
                 "s3://bucket/photos_v2.zip", LocalDate.of(2026, 6, 25)
@@ -142,6 +152,7 @@ class DeliverableControllerIntegrationTest {
         DeliverableResponse response = new DeliverableResponse();
         response.setId(id);
         response.setProjectId(UUID.randomUUID());
+        response.setStudioId(studioId);
         response.setName("Updated Name");
         response.setDeliverableType(DeliverableType.PHOTOS);
         response.setStatus(DeliverableStatus.READY_FOR_REVIEW);
@@ -152,6 +163,7 @@ class DeliverableControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.studioId").value(studioId.toString()))
                 .andExpect(jsonPath("$.name").value("Updated Name"))
                 .andExpect(jsonPath("$.status").value("READY_FOR_REVIEW"));
     }

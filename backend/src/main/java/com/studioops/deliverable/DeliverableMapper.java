@@ -20,6 +20,7 @@ public class DeliverableMapper {
         DeliverableResponse response = new DeliverableResponse();
         response.setId(entity.getId());
         response.setProjectId(entity.getProjectId());
+        response.setStudioId(entity.getStudioId());
         response.setName(entity.getName());
         response.setDeliverableType(entity.getDeliverableType());
         response.setStatus(entity.getStatus());

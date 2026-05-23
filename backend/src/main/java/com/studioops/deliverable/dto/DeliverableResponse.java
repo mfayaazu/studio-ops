@@ -10,6 +10,7 @@ public class DeliverableResponse {
 
     private UUID id;
     private UUID projectId;
+    private UUID studioId;
     private String name;
     private DeliverableType deliverableType;
     private DeliverableStatus status;
@@ -35,6 +36,14 @@ public class DeliverableResponse {
 
     public void setProjectId(UUID projectId) {
         this.projectId = projectId;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 
     public String getName() {

@@ -1,7 +1,9 @@
 package com.studioops.deliverable;
 
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
 import com.studioops.project.ProjectRepository;
+import com.studioops.studio.StudioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -16,18 +18,31 @@ public class DeliverableService {
 
     private final DeliverableRepository deliverableRepository;
     private final ProjectRepository projectRepository;
+    private final StudioRepository studioRepository;
 
-    public DeliverableService(DeliverableRepository deliverableRepository, ProjectRepository projectRepository) {
+    public DeliverableService(DeliverableRepository deliverableRepository,
+                              ProjectRepository projectRepository,
+                              StudioRepository studioRepository) {
         this.deliverableRepository = deliverableRepository;
         this.projectRepository = projectRepository;
+        this.studioRepository = studioRepository;
     }
 
     public DeliverableResponse createDeliverable(DeliverableCreateRequest request) {
-        if (!projectRepository.existsById(request.getProjectId())) {
-            throw new IllegalArgumentException("Project not found with id: " + request.getProjectId());
+        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+
+        // Validate studio exists
+        if (!studioRepository.existsById(studioId)) {
+            throw new ResourceNotFoundException("Studio not found with id: " + studioId);
         }
 
+        // Validate project exists and belongs to the same studio
+        projectRepository.findByIdAndStudioId(request.getProjectId(), studioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + request.getProjectId()));
+
         Deliverable deliverable = DeliverableMapper.toEntity(request);
+        deliverable.setStudioId(studioId);
+
         Deliverable saved = deliverableRepository.save(deliverable);
         return DeliverableMapper.toResponse(saved);
     }
@@ -35,11 +50,17 @@ public class DeliverableService {
     @Transactional(readOnly = true)
     public List<DeliverableResponse> listDeliverables(UUID projectId) {
         List<Deliverable> deliverables;
+        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+
         if (projectId != null) {
-            deliverables = deliverableRepository.findByProjectId(projectId);
+            // Validate project belongs to default studio
+            projectRepository.findByIdAndStudioId(projectId, studioId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
+            deliverables = deliverableRepository.findByProjectIdAndStudioId(projectId, studioId);
         } else {
-            deliverables = deliverableRepository.findAll();
+            deliverables = deliverableRepository.findAllByStudioId(studioId);
         }
+
         return deliverables.stream()
                 .map(DeliverableMapper::toResponse)
                 .toList();
@@ -47,13 +68,13 @@ public class DeliverableService {
 
     @Transactional(readOnly = true)
     public DeliverableResponse getDeliverableById(UUID id) {
-        Deliverable deliverable = deliverableRepository.findById(id)
+        Deliverable deliverable = deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Deliverable not found with id: " + id));
         return DeliverableMapper.toResponse(deliverable);
     }
 
     public DeliverableResponse updateDeliverable(UUID id, DeliverableUpdateRequest request) {
-        Deliverable deliverable = deliverableRepository.findById(id)
+        Deliverable deliverable = deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Deliverable not found with id: " + id));
 
         DeliverableMapper.updateEntity(deliverable, request);
@@ -62,9 +83,8 @@ public class DeliverableService {
     }
 
     public void deleteDeliverable(UUID id) {
-        if (!deliverableRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Deliverable not found with id: " + id);
-        }
-        deliverableRepository.deleteById(id);
+        Deliverable deliverable = deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+                .orElseThrow(() -> new ResourceNotFoundException("Deliverable not found with id: " + id));
+        deliverableRepository.delete(deliverable);
     }
 }

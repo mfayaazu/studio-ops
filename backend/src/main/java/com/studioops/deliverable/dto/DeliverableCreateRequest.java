@@ -10,6 +10,8 @@ import java.util.UUID;
 
 public class DeliverableCreateRequest {
 
+    private UUID studioId;
+
     @NotNull(message = "projectId is required")
     private UUID projectId;
 
@@ -29,6 +31,14 @@ public class DeliverableCreateRequest {
     private LocalDate dueDate;
 
     public DeliverableCreateRequest() {
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 
     public DeliverableCreateRequest(UUID projectId, String name, DeliverableType deliverableType, DeliverableStatus status, String referenceUrl, LocalDate dueDate) {

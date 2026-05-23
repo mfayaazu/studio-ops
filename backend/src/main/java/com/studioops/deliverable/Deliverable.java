@@ -17,6 +17,9 @@ public class Deliverable {
     @Column(name = "project_id", nullable = false)
     private UUID projectId;
 
+    @Column(name = "studio_id", nullable = false)
+    private UUID studioId;
+
     @Column(name = "name", nullable = false, length = 255)
     private String name;
 
@@ -68,6 +71,14 @@ public class Deliverable {
 
     public void setProjectId(UUID projectId) {
         this.projectId = projectId;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 
     public String getName() {

@@ -1,7 +1,10 @@
 package com.studioops.deliverable;
 
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
+import com.studioops.project.Project;
 import com.studioops.project.ProjectRepository;
+import com.studioops.studio.StudioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -27,15 +30,24 @@ class DeliverableServiceTest {
     @Mock
     private ProjectRepository projectRepository;
 
+    @Mock
+    private StudioRepository studioRepository;
+
     @InjectMocks
     private DeliverableService deliverableService;
 
     private UUID projectId;
+    private Project project;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         projectId = UUID.randomUUID();
+        project = new Project();
+        project.setId(projectId);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        lenient().when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
     }
 
     @Test
@@ -45,11 +57,12 @@ class DeliverableServiceTest {
                 "s3://bucket/photos.zip", LocalDate.of(2026, 6, 20)
         );
 
-        when(projectRepository.existsById(projectId)).thenReturn(true);
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
 
         Deliverable deliverable = new Deliverable();
         deliverable.setId(UUID.randomUUID());
         deliverable.setProjectId(projectId);
+        deliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         deliverable.setName(request.getName());
         deliverable.setDeliverableType(request.getDeliverableType());
         deliverable.setStatus(request.getStatus());
@@ -63,8 +76,49 @@ class DeliverableServiceTest {
         assertNotNull(response);
         assertEquals(deliverable.getId(), response.getId());
         assertEquals(projectId, response.getProjectId());
+        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
         assertEquals("Edited Photos", response.getName());
         verify(deliverableRepository, times(1)).save(any(Deliverable.class));
+    }
+
+    @Test
+    void createDeliverable_DefaultsToDefaultStudio_WhenStudioIdMissing() {
+        DeliverableCreateRequest request = new DeliverableCreateRequest(
+                projectId, "Edited Photos", DeliverableType.PHOTOS, DeliverableStatus.NOT_STARTED,
+                "s3://bucket/photos.zip", LocalDate.of(2026, 6, 20)
+        );
+
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+
+        Deliverable deliverable = new Deliverable();
+        deliverable.setId(UUID.randomUUID());
+        deliverable.setProjectId(projectId);
+        deliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        deliverable.setName(request.getName());
+        deliverable.setDeliverableType(request.getDeliverableType());
+        deliverable.setStatus(request.getStatus());
+
+        when(deliverableRepository.save(any(Deliverable.class))).thenReturn(deliverable);
+
+        DeliverableResponse response = deliverableService.createDeliverable(request);
+
+        assertNotNull(response);
+        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
+    }
+
+    @Test
+    void createDeliverable_Fails_WhenStudioIdDoesNotExist() {
+        UUID nonExistentStudioId = UUID.randomUUID();
+        DeliverableCreateRequest request = new DeliverableCreateRequest(
+                projectId, "Edited Photos", DeliverableType.PHOTOS, DeliverableStatus.NOT_STARTED,
+                "s3://bucket/photos.zip", LocalDate.of(2026, 6, 20)
+        );
+        request.setStudioId(nonExistentStudioId);
+
+        when(studioRepository.existsById(nonExistentStudioId)).thenReturn(false);
+
+        assertThrows(ResourceNotFoundException.class, () -> deliverableService.createDeliverable(request));
+        verify(deliverableRepository, never()).save(any(Deliverable.class));
     }
 
     @Test
@@ -74,10 +128,24 @@ class DeliverableServiceTest {
                 null, null
         );
 
-        when(projectRepository.existsById(projectId)).thenReturn(false);
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> deliverableService.createDeliverable(request));
-        assertTrue(exception.getMessage().contains("Project not found with id"));
+        assertThrows(ResourceNotFoundException.class, () -> deliverableService.createDeliverable(request));
+        verify(deliverableRepository, never()).save(any(Deliverable.class));
+    }
+
+    @Test
+    void createDeliverable_ProjectDoesNotBelongToSameStudio() {
+        UUID customStudioId = UUID.randomUUID();
+        DeliverableCreateRequest request = new DeliverableCreateRequest(
+                projectId, "Edited Photos", DeliverableType.PHOTOS, DeliverableStatus.NOT_STARTED,
+                null, null
+        );
+        request.setStudioId(customStudioId);
+
+        when(projectRepository.findByIdAndStudioId(projectId, customStudioId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> deliverableService.createDeliverable(request));
         verify(deliverableRepository, never()).save(any(Deliverable.class));
     }
 
@@ -85,31 +153,42 @@ class DeliverableServiceTest {
     void listDeliverables_All() {
         Deliverable d1 = new Deliverable();
         d1.setProjectId(projectId);
+        d1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         Deliverable d2 = new Deliverable();
         d2.setProjectId(UUID.randomUUID());
+        d2.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(deliverableRepository.findAll()).thenReturn(List.of(d1, d2));
+        when(deliverableRepository.findAllByStudioId(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(List.of(d1, d2));
 
         List<DeliverableResponse> list = deliverableService.listDeliverables(null);
 
         assertEquals(2, list.size());
-        verify(deliverableRepository, times(1)).findAll();
-        verify(deliverableRepository, never()).findByProjectId(any(UUID.class));
+        verify(deliverableRepository, times(1)).findAllByStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        verify(deliverableRepository, never()).findByProjectIdAndStudioId(any(UUID.class), any(UUID.class));
     }
 
     @Test
-    void listDeliverables_ByProject() {
+    void listDeliverables_ByProject_Success() {
         Deliverable d1 = new Deliverable();
         d1.setProjectId(projectId);
+        d1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(deliverableRepository.findByProjectId(projectId)).thenReturn(List.of(d1));
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+        when(deliverableRepository.findByProjectIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(List.of(d1));
 
         List<DeliverableResponse> list = deliverableService.listDeliverables(projectId);
 
         assertEquals(1, list.size());
         assertEquals(projectId, list.get(0).getProjectId());
-        verify(deliverableRepository, times(1)).findByProjectId(projectId);
-        verify(deliverableRepository, never()).findAll();
+        verify(deliverableRepository, times(1)).findByProjectIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID);
+        verify(deliverableRepository, never()).findAllByStudioId(any(UUID.class));
+    }
+
+    @Test
+    void listDeliverables_ByProject_ProjectNotFound() {
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> deliverableService.listDeliverables(projectId));
     }
 
     @Test
@@ -118,9 +197,10 @@ class DeliverableServiceTest {
         Deliverable deliverable = new Deliverable();
         deliverable.setId(id);
         deliverable.setProjectId(projectId);
+        deliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         deliverable.setName("Teaser Video");
 
-        when(deliverableRepository.findById(id)).thenReturn(Optional.of(deliverable));
+        when(deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(deliverable));
 
         DeliverableResponse response = deliverableService.getDeliverableById(id);
 
@@ -132,7 +212,7 @@ class DeliverableServiceTest {
     @Test
     void getDeliverableById_NotFound_ThrowsException() {
         UUID id = UUID.randomUUID();
-        when(deliverableRepository.findById(id)).thenReturn(Optional.empty());
+        when(deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> deliverableService.getDeliverableById(id));
     }
@@ -143,6 +223,7 @@ class DeliverableServiceTest {
         Deliverable deliverable = new Deliverable();
         deliverable.setId(id);
         deliverable.setProjectId(projectId);
+        deliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         deliverable.setName("Old Name");
         deliverable.setDeliverableType(DeliverableType.PHOTOS);
         deliverable.setStatus(DeliverableStatus.NOT_STARTED);
@@ -152,7 +233,7 @@ class DeliverableServiceTest {
                 "s3://new-url", LocalDate.of(2026, 7, 1)
         );
 
-        when(deliverableRepository.findById(id)).thenReturn(Optional.of(deliverable));
+        when(deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(deliverable));
         when(deliverableRepository.save(any(Deliverable.class))).thenReturn(deliverable);
 
         DeliverableResponse response = deliverableService.updateDeliverable(id, request);
@@ -166,19 +247,23 @@ class DeliverableServiceTest {
     @Test
     void deleteDeliverable_Success() {
         UUID id = UUID.randomUUID();
-        when(deliverableRepository.existsById(id)).thenReturn(true);
-        doNothing().when(deliverableRepository).deleteById(id);
+        Deliverable deliverable = new Deliverable();
+        deliverable.setId(id);
+        deliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        when(deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(deliverable));
+        doNothing().when(deliverableRepository).delete(deliverable);
 
         assertDoesNotThrow(() -> deliverableService.deleteDeliverable(id));
-        verify(deliverableRepository, times(1)).deleteById(id);
+        verify(deliverableRepository, times(1)).delete(deliverable);
     }
 
     @Test
     void deleteDeliverable_NotFound_ThrowsException() {
         UUID id = UUID.randomUUID();
-        when(deliverableRepository.existsById(id)).thenReturn(false);
+        when(deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> deliverableService.deleteDeliverable(id));
-        verify(deliverableRepository, never()).deleteById(id);
+        verify(deliverableRepository, never()).delete(any(Deliverable.class));
     }
 }
