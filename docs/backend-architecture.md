@@ -90,3 +90,45 @@ Features are structured **package-by-feature** in a modular monolith design:
 > **Cross-Tenant Leakage Risks**: 
 > - Writing custom JPQL or native SQL queries without a `where studio_id = :studioId` clause is strictly prohibited.
 > - Always perform check operations (e.g. `existsByIdAndStudioId`) before completing updates (`PUT`) or deletions (`DELETE`) to prevent horizontal privilege escalation.
+
+---
+
+## 5. Follow-up & Communication Architecture
+
+To avoid vendor lock-in and secure tenant provider integrations, the Follow-up Automation module implements specific provider abstractions and encryption patterns.
+
+### A. Provider Abstraction
+To keep the application decoupled from external providers (e.g. Twilio, Meta, Gmail, SendGrid), dispatches are channeled through unified service interfaces.
+
+```
+       ┌───────────────────────────────┐
+       │   FollowUpService / Scheduler │
+       └───────────────┬───────────────┘
+                       │
+       ┌───────────────▼───────────────┐
+       │      MessageSenderRouter      │
+       └───────────────┬───────────────┘
+                       │ (resolves provider settings)
+         ┌─────────────┼─────────────┐
+         ▼             ▼             ▼
+   ┌───────────┐ ┌───────────┐ ┌───────────┐
+   │EmailSender│ │ SMS_Sender│ │ WhatsApp  │
+   │ Interface │ │ Interface │ │  Sender   │
+   └─────┬─────┘ └─────┬─────┘ └─────┬─────┘
+         │             │             │
+   ┌─────▼─────┐ ┌─────▼─────┐ ┌─────▼─────┐
+   │ SMTP /    │ │  Twilio   │ │ Twilio /  │
+   │ Gmail API │ │  Gateway  │ │ Meta Cloud│
+   └───────────┘ └───────────┘ └───────────┘
+```
+
+The system defines interface layers:
+* `EmailSender`: Sends HTML templates via SMTP or Gmail API.
+* `SmsSender`: Dispatches short alerts via Twilio or local gateways.
+* `WhatsAppSender`: Sends template dispatches via Twilio WhatsApp API or Meta Cloud API.
+
+### B. Provider Credential Security
+* **No Plaintext Secrets**: Studios configure custom mail servers and Twilio API keys. Plaintext credentials must never be written to the database.
+* **Encryption standard**: Provider credential payloads (e.g. SMTP password, Twilio Auth Tokens) stored in the `StudioCommunicationSettings` database table must be protected. Use strong authenticated encryption such as AES-GCM-256 or cloud KMS-backed encryption.
+* **Decryption Lifecycle**: Credentials are decrypted on-the-fly in memory during the dispatch lifecycle and must never be exposed via endpoints or logged.
+

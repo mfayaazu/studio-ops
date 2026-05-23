@@ -79,8 +79,19 @@ gantt
   * Support login configurations identifying the studio workspace (e.g. workspace subdomain routing or login matching).
   * Align the user profile panel to show the active Studio name.
 
+### Step 9: Follow-up Automation / Communication Funnel
+* **Goal**: Establish a post-quotation follow-up and communication engine for leads.
+* **Phases**:
+  * **C1: Documentation Spec & Design**: Detailed documentation of databases, APIs, and plans.
+  * **C2: Backend Foundation & Models**: Database schemas (Flyway migrations), JPA entities, repositories, and basic service skeletons (mocked provider interfaces).
+  * **C3: Email Integration**: Implement encrypted credential settings, SMTP/Gmail API integration, templates renderer, and email sender task processor.
+  * **C4: WhatsApp/SMS integration**: Integration with Twilio API (or Meta Cloud API), WhatsApp template matching, and SMS gateway.
+  * **C5: Automation & Scheduler**: Cron/background task scheduler to scan projects, transition leads, generate draft follow-up tasks, and expire outstanding quotes.
+  * **C6: Follow-up Center UI**: React board/list to manage templates, monitor the pipeline, and approve/trigger pending tasks.
+
 ---
 
 ## Technical Debt & Cleanup Notes
 - **Lombok Adoption**: Adoption of Project Lombok to reduce Java boilerplate (getters, setters, builders, constructors) can be considered as a separate future cleanup task.
+
 

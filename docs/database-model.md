@@ -18,16 +18,32 @@ erDiagram
     Studio ||--o{ EventAssignment : "scopes"
     Studio ||--o{ Deliverable : "scopes"
     Studio ||--o{ BackupRecord : "scopes"
+    Studio ||--o{ Quotation : "scopes"
+    Studio ||--o{ MessageTemplate : "scopes"
+    Studio ||--o{ FollowUpSequence : "scopes"
+    Studio ||--o{ FollowUpStep : "scopes"
+    Studio ||--o{ FollowUpTask : "scopes"
+    Studio ||--o{ CommunicationLog : "scopes"
+    Studio ||--o{ StudioCommunicationSettings : "scopes"
     User ||--o| Employee : "has profile"
     User ||--o{ Project : "manages"
     User ||--o{ ActivityLog : "triggers"
     Client ||--o{ Project : "orders"
+    Client ||--o{ CommunicationLog : "receives"
     Project ||--o{ Event : "contains"
     Project ||--o{ Deliverable : "requires"
     Project ||--o{ BackupRecord : "secures"
+    Project ||--o{ Quotation : "proposes"
+    Project ||--o{ FollowUpTask : "schedules"
+    Project ||--o{ CommunicationLog : "logs"
     Deliverable ||--o{ BackupRecord : "backed up in"
     Event ||--o{ EventAssignment : "assigns"
     Employee ||--o{ EventAssignment : "allocated to"
+    Quotation ||--o{ FollowUpTask : "triggers"
+    MessageTemplate ||--o{ FollowUpStep : "formats"
+    FollowUpSequence ||--o{ FollowUpStep : "contains"
+    FollowUpStep ||--o{ FollowUpTask : "defines"
+    FollowUpTask ||--o{ CommunicationLog : "records dispatch"
 ```
 
 ---
@@ -272,3 +288,146 @@ erDiagram
 * **Relationships**:
   * Many-to-One with `Studio`
   * Many-to-One with `User`
+
+---
+
+## 11. Quotation
+* **Purpose**: Records quote pricing packages, PDF documents, and acceptance progress for projects, scoped by tenant.
+* **Attributes**:
+  * `id`: `UUID` | Required | Primary Key
+  * `studioId`: `UUID` | Required | Foreign Key -> `Studio(id)`
+  * `projectId`: `UUID` | Required | Foreign Key -> `Project(id)`
+  * `totalAmount`: `DECIMAL(12, 2)` | Required
+  * `validUntil`: `DATE` | Required
+  * `pdfUrl`: `VARCHAR(1000)` | Optional
+  * `status`: `Enum(QuotationStatus)` | Required
+  * `createdAt`: `TIMESTAMP WITH TIME ZONE` | Required
+  * `updatedAt`: `TIMESTAMP WITH TIME ZONE` | Required
+* **Relationships**:
+  * Many-to-One with `Studio`
+  * Many-to-One with `Project`
+  * One-to-Many with `FollowUpTask`
+* **Enums**:
+  * `QuotationStatus`: `DRAFT`, `SENT`, `ACCEPTED`, `REJECTED`, `EXPIRED`
+
+---
+
+## 12. MessageTemplate
+* **Purpose**: Stores multi-channel message templates for follow-up dispatches, scoped by tenant.
+* **Attributes**:
+  * `id`: `UUID` | Required | Primary Key
+  * `studioId`: `UUID` | Required | Foreign Key -> `Studio(id)`
+  * `name`: `VARCHAR(100)` | Required
+  * `channel`: `Enum(CommunicationChannel)` | Required
+  * `subject`: `VARCHAR(255)` | Optional (e.g. for EMAIL)
+  * `body`: `TEXT` | Required
+  * `createdAt`: `TIMESTAMP WITH TIME ZONE` | Required
+  * `updatedAt`: `TIMESTAMP WITH TIME ZONE` | Required
+* **Relationships**:
+  * Many-to-One with `Studio`
+  * One-to-Many with `FollowUpStep`
+* **Enums**:
+  * `CommunicationChannel`: `EMAIL`, `WHATSAPP`, `SMS`, `MANUAL_CALL`
+
+---
+
+## 13. FollowUpSequence
+* **Purpose**: Configures default multi-step communication flows for automated lead scoping, scoped by tenant.
+* **Attributes**:
+  * `id`: `UUID` | Required | Primary Key
+  * `studioId`: `UUID` | Required | Foreign Key -> `Studio(id)`
+  * `name`: `VARCHAR(100)` | Required
+  * `description`: `TEXT` | Optional
+  * `isActive`: `BOOLEAN` | Required | Default: `true`
+  * `createdAt`: `TIMESTAMP WITH TIME ZONE` | Required
+  * `updatedAt`: `TIMESTAMP WITH TIME ZONE` | Required
+* **Relationships**:
+  * Many-to-One with `Studio`
+  * One-to-Many with `FollowUpStep`
+
+---
+
+## 14. FollowUpStep
+* **Purpose**: Individual steps within a sequence defining time offsets and messaging templates, scoped by tenant.
+* **Attributes**:
+  * `id`: `UUID` | Required | Primary Key
+  * `studioId`: `UUID` | Required | Foreign Key -> `Studio(id)`
+  * `sequenceId`: `UUID` | Required | Foreign Key -> `FollowUpSequence(id)`
+  * `templateId`: `UUID` | Required | Foreign Key -> `MessageTemplate(id)`
+  * `offsetDays`: `INT` | Required | Time offset in days relative to quote sending date
+  * `channel`: `Enum(CommunicationChannel)` | Required
+  * `createdAt`: `TIMESTAMP WITH TIME ZONE` | Required
+  * `updatedAt`: `TIMESTAMP WITH TIME ZONE` | Required
+* **Relationships**:
+  * Many-to-One with `Studio`
+  * Many-to-One with `FollowUpSequence`
+  * Many-to-One with `MessageTemplate`
+
+---
+
+## 15. FollowUpTask
+* **Purpose**: Records pending, approved, and cancelled follow-up communication dispatches for active leads, scoped by tenant.
+* **Attributes**:
+  * `id`: `UUID` | Required | Primary Key
+  * `studioId`: `UUID` | Required | Foreign Key -> `Studio(id)`
+  * `projectId`: `UUID` | Required | Foreign Key -> `Project(id)`
+  * `quotationId`: `UUID` | Required | Foreign Key -> `Quotation(id)`
+  * `stepId`: `UUID` | Optional | Foreign Key -> `FollowUpStep(id)`
+  * `channel`: `Enum(CommunicationChannel)` | Required
+  * `dueDate`: `DATE` | Required
+  * `status`: `Enum(FollowUpTaskStatus)` | Required
+  * `draftSubject`: `VARCHAR(255)` | Optional
+  * `draftBody`: `TEXT` | Required
+  * `createdAt`: `TIMESTAMP WITH TIME ZONE` | Required
+  * `updatedAt`: `TIMESTAMP WITH TIME ZONE` | Required
+* **Relationships**:
+  * Many-to-One with `Studio`
+  * Many-to-One with `Project`
+  * Many-to-One with `Quotation`
+  * Many-to-One with `FollowUpStep`
+  * One-to-Many with `CommunicationLog`
+* **Enums**:
+  * `FollowUpTaskStatus`: `PENDING_APPROVAL`, `APPROVED`, `SENT`, `CANCELLED`
+
+---
+
+## 16. CommunicationLog
+* **Purpose**: Stores audit records and message details for sent communications, scoped by tenant.
+* **Attributes**:
+  * `id`: `UUID` | Required | Primary Key
+  * `studioId`: `UUID` | Required | Foreign Key -> `Studio(id)`
+  * `projectId`: `UUID` | Optional | Foreign Key -> `Project(id)`
+  * `clientId`: `UUID` | Required | Foreign Key -> `Client(id)`
+  * `taskId`: `UUID` | Optional | Foreign Key -> `FollowUpTask(id)`
+  * `channel`: `Enum(CommunicationChannel)` | Required
+  * `sender`: `VARCHAR(255)` | Required (e.g. SMTP username or Twilio sender phone)
+  * `recipient`: `VARCHAR(255)` | Required (e.g. client email or phone number)
+  * `subject`: `VARCHAR(255)` | Optional
+  * `body`: `TEXT` | Required
+  * `deliveryStatus`: `VARCHAR(100)` | Required (e.g. "SENT", "DELIVERED", "FAILED")
+  * `deliveryStatusDetails`: `TEXT` | Optional (error codes / message SID logs)
+  * `createdAt`: `TIMESTAMP WITH TIME ZONE` | Required
+* **Relationships**:
+  * Many-to-One with `Studio`
+  * Many-to-One with `Project`
+  * Many-to-One with `Client`
+  * Many-to-One with `FollowUpTask`
+
+---
+
+## 17. StudioCommunicationSettings
+* **Purpose**: Stores configurations and encrypted credential details for a studio's email/WhatsApp/SMS integrations, scoped by tenant.
+* **Attributes**:
+  * `id`: `UUID` | Required | Primary Key
+  * `studioId`: `UUID` | Required | Foreign Key -> `Studio(id)`
+  * `emailProvider`: `VARCHAR(100)` | Optional (e.g. "SMTP", "GMAIL_API")
+  * `emailSettingsEncrypted`: `TEXT` | Optional (stores encrypted JSON config: host, port, username, credentials password)
+  * `whatsappProvider`: `VARCHAR(100)` | Optional (e.g. "TWILIO", "META_CLOUD")
+  * `whatsappSettingsEncrypted`: `TEXT` | Optional (stores encrypted auth tokens / phone numbers)
+  * `smsProvider`: `VARCHAR(100)` | Optional (e.g. "TWILIO")
+  * `smsSettingsEncrypted`: `TEXT` | Optional (stores Twilio auth token / SID details)
+  * `createdAt`: `TIMESTAMP WITH TIME ZONE` | Required
+  * `updatedAt`: `TIMESTAMP WITH TIME ZONE` | Required
+* **Relationships**:
+  * One-to-One with `Studio`
+

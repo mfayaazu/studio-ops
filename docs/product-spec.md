@@ -106,3 +106,41 @@ To ensure a clean, focused initial delivery, the following features are **explic
 ### System Dashboard
 * Displays total clients count, active projects pipeline, upcoming event calendars (next 7 days), filtered by the active user's `studioId`.
 * Summarizes active double-booking conflicts and incomplete backup tasks for the current Studio.
+
+---
+
+## 7. Follow-up Automation & Communication Funnel (Planned Module)
+
+The Follow-up Automation module establishes a structured post-quotation funnel for photography and creative studios to maximize client booking conversion rates.
+
+### A. Funnel Stages
+All leads/projects in the communication funnel progress through the following sequential stages:
+1. `NEW_LEAD`: The initial inquiry has been registered.
+2. `QUOTE_SENT`: A formal quotation has been generated and sent to the lead.
+3. `WARM`: The client has engaged (e.g., opened email, clicked portfolio link) but not booked yet.
+4. `NEGOTIATION`: Direct discussions regarding price adjustments or packaging custom requests.
+5. `FOLLOW_UP_PENDING`: A follow-up task has been scheduled and awaits studio staff confirmation.
+6. `CONFIRMED`: The lead signed the contract and/or paid the booking deposit.
+7. `LOST`: The lead officially declined, decided not to book, or stopped responding.
+
+### B. Default Follow-up Sequence
+When a quote is dispatched, the system activates the default communication flow:
+* **Day 0 (Immediate)**: Send quotation details, a customized portfolio showcase link, a testimonial from a relevant past client, and a clear Call-To-Action (CTA) to schedule a consultation.
+* **Day 1**: Soft check-in follow-up confirming they received the quotation and asking if they have any initial questions.
+* **Day 3**: Value-focused touchpoint sharing a planning guide (e.g., "5 mistakes to avoid on your wedding schedule").
+* **Day 5-7**: Scarcity-focused warning alerting them about limited weekend booking slots or pricing expiry.
+* **Day 10**: Final polite closure checking one last time before archiving the lead.
+
+### C. Supported Communication Channels
+The system coordinates dispatches across the following channels:
+* `EMAIL`: High-fidelity HTML emails utilizing SMTP or Google/Gmail APIs.
+* `WHATSAPP`: Quick interactive messages sent via Twilio or Meta WhatsApp Cloud API.
+* `SMS`: Direct alert notifications sent via Twilio.
+* `MANUAL_CALL`: Prompts dashboard users with specific talking points, logging outcome details.
+
+### D. MVP Operational Safety Rule (Manual Gate)
+To avoid embarrassing automated messages (e.g., sending generic follow-ups to a client who already agreed over a phone call), all system-generated follow-up steps are created as **pending tasks requiring manual approval**.
+* The scheduler generates drafts and places them in the "Pending Follow-ups" list.
+* A studio staff member must review, optionally edit, and click **Approve & Send** to initiate dispatch.
+* Once a project transitions to `CONFIRMED` or `LOST`, all future scheduled follow-up tasks linked to it are automatically cancelled.
+

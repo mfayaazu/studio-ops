@@ -899,4 +899,228 @@ Retrieves system overview statistics, warning flags, and recent checklists.
     }
   ]
 }
+
+---
+
+## 10. Communication and Follow-up Automation
+
+### GET `/api/communication/templates`
+Retrieves all message templates for the current studio.
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+    "name": "Soft Follow-up (Day 1)",
+    "channel": "EMAIL",
+    "subject": "Quick question regarding your quote",
+    "body": "Hi {{client_name}},\n\nI wanted to confirm you received our quotation for {{quote_amount}}...",
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
+  }
+]
+```
+
+### POST `/api/communication/templates`
+Creates a new message template.
+**Request:**
+```json
+{
+  "name": "Soft Follow-up (Day 1)",
+  "channel": "EMAIL",
+  "subject": "Quick question regarding your quote",
+  "body": "Hi {{client_name}},\n\nI wanted to confirm you received our quotation for {{quote_amount}}..."
+}
+```
+**Response (201 Created):**
+```json
+{
+  "id": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "name": "Soft Follow-up (Day 1)",
+  "channel": "EMAIL",
+  "subject": "Quick question regarding your quote",
+  "body": "Hi {{client_name}},\n\nI wanted to confirm you received our quotation for {{quote_amount}}...",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
+### PUT `/api/communication/templates/{id}`
+Updates a template.
+**Response (200 OK):**
+```json
+{
+  "id": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "name": "Soft Follow-up (Day 1) Updated",
+  "channel": "EMAIL",
+  "subject": "Quick check-in on the quote",
+  "body": "Hi {{client_name}},\n\nJust checking in...",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
+}
+```
+
+### DELETE `/api/communication/templates/{id}`
+Deletes a template.
+**Response (204 No Content)**
+
+---
+
+### GET `/api/communication/sequences`
+Retrieves follow-up sequences.
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "3a0cf82a-bc91-4d37-88ea-d43806fbce30",
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+    "name": "Default 10-Day Sequence",
+    "description": "Standard follow-up sequence after sending quotation.",
+    "isActive": true,
+    "steps": [
+      {
+        "id": "f8df4a4a-1123-4ad9-a78f-efbcd8213e4f",
+        "templateId": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
+        "offsetDays": 1,
+        "channel": "EMAIL"
+      }
+    ],
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
+  }
+]
+```
+
+### POST `/api/communication/sequences`
+Creates a follow-up sequence.
+**Request:**
+```json
+{
+  "name": "Default 10-Day Sequence",
+  "description": "Standard follow-up sequence after sending quotation.",
+  "isActive": true,
+  "steps": [
+    {
+      "templateId": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
+      "offsetDays": 1,
+      "channel": "EMAIL"
+    }
+  ]
+}
+```
+**Response (201 Created):**
+```json
+{
+  "id": "3a0cf82a-bc91-4d37-88ea-d43806fbce30",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "name": "Default 10-Day Sequence",
+  "description": "Standard follow-up sequence after sending quotation.",
+  "isActive": true,
+  "steps": [
+    {
+      "id": "f8df4a4a-1123-4ad9-a78f-efbcd8213e4f",
+      "templateId": "e30cf82a-bc91-4d37-88ea-d43806fbce20",
+      "offsetDays": 1,
+      "channel": "EMAIL"
+    }
+  ],
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
+---
+
+### POST `/api/communication/tasks/generate`
+Generates pending follow-up tasks for a project based on the active sequence when a quotation is marked as `SENT`.
+**Request (Query Parameters):**
+`POST /api/communication/tasks/generate?projectId=99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033&quotationId=efbc20f8-c215-4ad9-a79f-0744040212db`
+**Response (200 OK):**
+```json
+{
+  "generatedTasksCount": 5,
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033"
+}
+```
+
+### GET `/api/communication/tasks/pending`
+Lists all pending approval follow-up tasks.
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "78df4a4a-1123-4ad9-a78f-efbcd8213e55",
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+    "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+    "quotationId": "efbc20f8-c215-4ad9-a79f-0744040212db",
+    "channel": "EMAIL",
+    "dueDate": "2026-05-24",
+    "status": "PENDING_APPROVAL",
+    "draftSubject": "Quick check-in on the quote",
+    "draftBody": "Hi Alice, I wanted to confirm you received our quotation...",
+    "createdAt": "2026-05-23T21:00:00Z",
+    "updatedAt": "2026-05-23T21:00:00Z"
+  }
+]
+```
+
+### POST `/api/communication/tasks/{id}/approve`
+Approves and dispatches a follow-up task immediately.
+**Response (200 OK):**
+```json
+{
+  "id": "78df4a4a-1123-4ad9-a78f-efbcd8213e55",
+  "status": "SENT",
+  "dispatchedAt": "2026-05-23T23:25:29Z",
+  "logId": "88df4a4a-1123-4ad9-a78f-efbcd8213e99"
+}
+```
+
+### POST `/api/communication/tasks/{id}/cancel`
+Cancels a specific pending task.
+**Response (200 OK):**
+```json
+{
+  "id": "78df4a4a-1123-4ad9-a78f-efbcd8213e55",
+  "status": "CANCELLED"
+}
+```
+
+### POST `/api/projects/{projectId}/cancel-follow-ups`
+Cancels all remaining follow-ups when lead becomes confirmed or lost.
+**Response (200 OK):**
+```json
+{
+  "cancelledTasksCount": 3,
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033"
+}
+```
+
+---
+
+### GET `/api/communication/logs`
+Retrieves sent communication logs, filterable by `projectId` or `clientId`.
+**Request:** `GET /api/communication/logs?projectId=99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033`
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "88df4a4a-1123-4ad9-a78f-efbcd8213e99",
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+    "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+    "clientId": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+    "channel": "EMAIL",
+    "sender": "contact@nordiclight.se",
+    "recipient": "alice@example.com",
+    "subject": "Quick check-in on the quote",
+    "body": "Hi Alice, I wanted to confirm you received our quotation...",
+    "deliveryStatus": "SENT",
+    "createdAt": "2026-05-23T23:25:29Z"
+  }
+]
+```
+
 ```

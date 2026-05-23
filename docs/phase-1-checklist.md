@@ -63,3 +63,50 @@ These tasks establish the multi-tenant SaaS capabilities of the platform.
 - **[x] Availability Planner**: Drag-and-drop crew assignment panel on the calendar.
 - **[ ] Multi-Tenant Studio Workspace Setup**: PENDING.
 - **[ ] Scoped Console Screens**: Client, Project, Deliverables lists.
+
+---
+
+## 4. Follow-up Automation / Communication Funnel (Planned)
+These tasks track follow-up funnel execution capabilities.
+
+### [x] C1: Documentation Spec & Design
+- **Status**: COMPLETED
+- **Tasks**:
+  - [x] Define funnel stages in product specification.
+  - [x] Model quotation and follow-up tables in database schema.
+  - [x] Design template, sequence, task, and log endpoints in API contract.
+  - [x] Specify credential security and provider abstractions in architecture guide.
+
+### [ ] C2: Backend Foundation & Models
+- **Status**: PENDING
+- **Tasks**:
+  - [ ] Add migrations for quotation, follow-up, templates, and log tables.
+  - [ ] Implement JPA entities, repositories, and mapper classes.
+  - [ ] Establish basic CRUD services for templates and sequences.
+
+### [ ] C3: Email Integration
+- **Status**: PENDING
+- **Tasks**:
+  - [ ] Implement encrypted SMTP/Gmail credential configuration.
+  - [ ] Set up HTML template rendering system.
+  - [ ] Add service layer dispatches using JavaMailSender.
+
+### [ ] C4: WhatsApp/SMS integration
+- **Status**: PENDING
+- **Tasks**:
+  - [ ] Integrate Twilio API (or Meta Cloud API) adapters.
+  - [ ] Implement short message templates and dispatch endpoints.
+
+### [ ] C5: Automation & Scheduler
+- **Status**: PENDING
+- **Tasks**:
+  - [ ] Set up background cron tasks to check quote validity dates.
+  - [ ] Automate draft task generations on quote sent.
+  - [ ] Automate auto-cancellations when status matches confirmed/lost.
+
+### [ ] C6: Follow-up Center UI
+- **Status**: PENDING
+- **Tasks**:
+  - [ ] Build React templates manager dashboard.
+  - [ ] Build drag-and-drop follow-up pipeline board.
+  - [ ] Implement manual gate sending/approval controls.
