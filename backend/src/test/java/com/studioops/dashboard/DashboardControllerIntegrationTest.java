@@ -2,6 +2,7 @@ package com.studioops.dashboard;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.studioops.config.SecurityConfig;
+import com.studioops.common.tenant.TenantConstants;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -59,7 +60,7 @@ class DashboardControllerIntegrationTest {
                 stats, List.of(warning), List.of(checklist)
         );
 
-        when(dashboardService.getSummary()).thenReturn(response);
+        when(dashboardService.getSummary(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(response);
 
         mockMvc.perform(get("/api/dashboard/summary")
                 .accept(MediaType.APPLICATION_JSON))
@@ -73,6 +74,6 @@ class DashboardControllerIntegrationTest {
                 .andExpect(jsonPath("$.backupChecklists[0].projectName").value("Corporate Portrait Shoot 2026"))
                 .andExpect(jsonPath("$.backupChecklists[0].status").value("WARNING_LOW_REDUNDANCY"));
 
-        verify(dashboardService, times(1)).getSummary();
+        verify(dashboardService, times(1)).getSummary(TenantConstants.DEFAULT_STUDIO_ID);
     }
 }

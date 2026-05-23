@@ -118,4 +118,6 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
                                           @Param("toDate") LocalDate toDate);
 
     long countByStatusAndEventDateGreaterThanEqual(EventStatus status, LocalDate date);
+
+    long countByStatusAndEventDateGreaterThanEqualAndStudioId(EventStatus status, LocalDate date, UUID studioId);
 }

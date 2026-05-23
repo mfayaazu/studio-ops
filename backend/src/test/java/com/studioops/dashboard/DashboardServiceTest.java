@@ -7,6 +7,7 @@ import com.studioops.backup.BackupLocationType;
 import com.studioops.backup.BackupRecordRepository;
 import com.studioops.backup.BackupStatus;
 import com.studioops.client.ClientRepository;
+import com.studioops.common.tenant.TenantConstants;
 import com.studioops.deliverable.Deliverable;
 import com.studioops.deliverable.DeliverableRepository;
 import com.studioops.employee.Employee;
@@ -68,18 +69,21 @@ class DashboardServiceTest {
 
     @Test
     void getSummary_Success() {
+        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+
         // Mock Statistics
-        when(clientRepository.count()).thenReturn(10L);
-        when(projectRepository.countByStatusNotIn(any())).thenReturn(5L);
-        when(eventRepository.countByStatusAndEventDateGreaterThanEqual(eq(EventStatus.SCHEDULED), any(LocalDate.class))).thenReturn(3L);
-        when(backupRecordRepository.countByStatus(BackupStatus.COMPLETED)).thenReturn(8L);
+        when(clientRepository.countByStudioId(studioId)).thenReturn(10L);
+        when(projectRepository.countByStatusNotInAndStudioId(any(), eq(studioId))).thenReturn(5L);
+        when(eventRepository.countByStatusAndEventDateGreaterThanEqualAndStudioId(eq(EventStatus.SCHEDULED), any(LocalDate.class), eq(studioId))).thenReturn(3L);
+        when(backupRecordRepository.countByStatusAndStudioId(BackupStatus.COMPLETED, studioId)).thenReturn(8L);
 
         // Mock Employees
         UUID empId = UUID.randomUUID();
         Employee employee = new Employee();
         employee.setId(empId);
         employee.setFullName("John Doe");
-        when(employeeRepository.findAll()).thenReturn(List.of(employee));
+        employee.setStudioId(studioId);
+        when(employeeRepository.findAllByStudioId(studioId)).thenReturn(List.of(employee));
 
         // Mock Events with an overlap
         UUID eventId1 = UUID.randomUUID();
@@ -89,6 +93,7 @@ class DashboardServiceTest {
         event1.setEventDate(LocalDate.of(2026, 6, 5));
         event1.setStartTime(LocalTime.of(9, 0));
         event1.setEndTime(LocalTime.of(12, 0));
+        event1.setStudioId(studioId);
 
         UUID eventId2 = UUID.randomUUID();
         Event event2 = new Event();
@@ -97,8 +102,9 @@ class DashboardServiceTest {
         event2.setEventDate(LocalDate.of(2026, 6, 5));
         event2.setStartTime(LocalTime.of(10, 0));
         event2.setEndTime(LocalTime.of(14, 0));
+        event2.setStudioId(studioId);
 
-        when(eventRepository.findAll()).thenReturn(List.of(event1, event2));
+        when(eventRepository.findAllByStudioId(studioId)).thenReturn(List.of(event1, event2));
 
         // Mock Event Assignments
         EventAssignment assignment1 = new EventAssignment();
@@ -106,21 +112,24 @@ class DashboardServiceTest {
         assignment1.setEventId(eventId1);
         assignment1.setEmployeeId(empId);
         assignment1.setAssignmentStatus(AssignmentStatus.ACCEPTED);
+        assignment1.setStudioId(studioId);
 
         EventAssignment assignment2 = new EventAssignment();
         assignment2.setId(UUID.randomUUID());
         assignment2.setEventId(eventId2);
         assignment2.setEmployeeId(empId);
         assignment2.setAssignmentStatus(AssignmentStatus.PROPOSED);
+        assignment2.setStudioId(studioId);
 
-        when(eventAssignmentRepository.findAll()).thenReturn(List.of(assignment1, assignment2));
+        when(eventAssignmentRepository.findAllByStudioId(studioId)).thenReturn(List.of(assignment1, assignment2));
 
         // Mock Projects
         UUID projectId = UUID.randomUUID();
         Project project = new Project();
         project.setId(projectId);
         project.setTitle("Project Alpha");
-        when(projectRepository.findAll()).thenReturn(List.of(project));
+        project.setStudioId(studioId);
+        when(projectRepository.findAllByStudioId(studioId)).thenReturn(List.of(project));
 
         // Mock Deliverables
         UUID deliverableId = UUID.randomUUID();
@@ -128,14 +137,15 @@ class DashboardServiceTest {
         deliverable.setId(deliverableId);
         deliverable.setProjectId(projectId);
         deliverable.setName("Main Edited Video");
-        when(deliverableRepository.findAll()).thenReturn(List.of(deliverable));
+        deliverable.setStudioId(studioId);
+        when(deliverableRepository.findAllByStudioId(studioId)).thenReturn(List.of(deliverable));
 
         // Mock Backup Records completed location count
-        when(backupRecordRepository.findDistinctCompletedLocationTypesByDeliverableId(deliverableId))
+        when(backupRecordRepository.findDistinctCompletedLocationTypesByDeliverableIdAndStudioId(deliverableId, studioId))
                 .thenReturn(List.of(BackupLocationType.LOCAL_NAS));
 
         // Execute
-        DashboardSummaryResponse response = dashboardService.getSummary();
+        DashboardSummaryResponse response = dashboardService.getSummary(studioId);
 
         // Verify statistics
         assertNotNull(response);
@@ -169,18 +179,21 @@ class DashboardServiceTest {
 
     @Test
     void getSummary_NoOverlaps_SafeBackups() {
+        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+
         // Mock Statistics
-        when(clientRepository.count()).thenReturn(1L);
-        when(projectRepository.countByStatusNotIn(any())).thenReturn(1L);
-        when(eventRepository.countByStatusAndEventDateGreaterThanEqual(eq(EventStatus.SCHEDULED), any(LocalDate.class))).thenReturn(1L);
-        when(backupRecordRepository.countByStatus(BackupStatus.COMPLETED)).thenReturn(2L);
+        when(clientRepository.countByStudioId(studioId)).thenReturn(1L);
+        when(projectRepository.countByStatusNotInAndStudioId(any(), eq(studioId))).thenReturn(1L);
+        when(eventRepository.countByStatusAndEventDateGreaterThanEqualAndStudioId(eq(EventStatus.SCHEDULED), any(LocalDate.class), eq(studioId))).thenReturn(1L);
+        when(backupRecordRepository.countByStatusAndStudioId(BackupStatus.COMPLETED, studioId)).thenReturn(2L);
 
         // Mock Employees
         UUID empId = UUID.randomUUID();
         Employee employee = new Employee();
         employee.setId(empId);
         employee.setFullName("Jane Doe");
-        when(employeeRepository.findAll()).thenReturn(List.of(employee));
+        employee.setStudioId(studioId);
+        when(employeeRepository.findAllByStudioId(studioId)).thenReturn(List.of(employee));
 
         // Mock Events
         UUID eventId1 = UUID.randomUUID();
@@ -190,6 +203,7 @@ class DashboardServiceTest {
         event1.setEventDate(LocalDate.of(2026, 6, 5));
         event1.setStartTime(LocalTime.of(9, 0));
         event1.setEndTime(LocalTime.of(12, 0));
+        event1.setStudioId(studioId);
 
         UUID eventId2 = UUID.randomUUID();
         Event event2 = new Event();
@@ -198,8 +212,9 @@ class DashboardServiceTest {
         event2.setEventDate(LocalDate.of(2026, 6, 5));
         event2.setStartTime(LocalTime.of(18, 0)); // No overlap
         event2.setEndTime(LocalTime.of(22, 0));
+        event2.setStudioId(studioId);
 
-        when(eventRepository.findAll()).thenReturn(List.of(event1, event2));
+        when(eventRepository.findAllByStudioId(studioId)).thenReturn(List.of(event1, event2));
 
         // Mock Event Assignments
         EventAssignment assignment1 = new EventAssignment();
@@ -207,21 +222,24 @@ class DashboardServiceTest {
         assignment1.setEventId(eventId1);
         assignment1.setEmployeeId(empId);
         assignment1.setAssignmentStatus(AssignmentStatus.ACCEPTED);
+        assignment1.setStudioId(studioId);
 
         EventAssignment assignment2 = new EventAssignment();
         assignment2.setId(UUID.randomUUID());
         assignment2.setEventId(eventId2);
         assignment2.setEmployeeId(empId);
         assignment2.setAssignmentStatus(AssignmentStatus.ACCEPTED);
+        assignment2.setStudioId(studioId);
 
-        when(eventAssignmentRepository.findAll()).thenReturn(List.of(assignment1, assignment2));
+        when(eventAssignmentRepository.findAllByStudioId(studioId)).thenReturn(List.of(assignment1, assignment2));
 
         // Mock Projects
         UUID projectId = UUID.randomUUID();
         Project project = new Project();
         project.setId(projectId);
         project.setTitle("Project Beta");
-        when(projectRepository.findAll()).thenReturn(List.of(project));
+        project.setStudioId(studioId);
+        when(projectRepository.findAllByStudioId(studioId)).thenReturn(List.of(project));
 
         // Mock Deliverables
         UUID deliverableId = UUID.randomUUID();
@@ -229,14 +247,15 @@ class DashboardServiceTest {
         deliverable.setId(deliverableId);
         deliverable.setProjectId(projectId);
         deliverable.setName("High Res JPGs");
-        when(deliverableRepository.findAll()).thenReturn(List.of(deliverable));
+        deliverable.setStudioId(studioId);
+        when(deliverableRepository.findAllByStudioId(studioId)).thenReturn(List.of(deliverable));
 
         // Mock Backup Records: 2 completed locations -> SAFE
-        when(backupRecordRepository.findDistinctCompletedLocationTypesByDeliverableId(deliverableId))
+        when(backupRecordRepository.findDistinctCompletedLocationTypesByDeliverableIdAndStudioId(deliverableId, studioId))
                 .thenReturn(List.of(BackupLocationType.LOCAL_NAS, BackupLocationType.CLOUD_S3));
 
         // Execute
-        DashboardSummaryResponse response = dashboardService.getSummary();
+        DashboardSummaryResponse response = dashboardService.getSummary(studioId);
 
         // Verify
         assertNotNull(response);
@@ -247,5 +266,78 @@ class DashboardServiceTest {
         assertEquals("SAFE", checklist.getStatus());
         assertEquals("Redundant backups verified (current: LOCAL_NAS, CLOUD_S3).", checklist.getDetails());
         assertEquals(2, checklist.getRedundantBackupCount());
+    }
+
+    @Test
+    void getSummary_TenantIsolation() {
+        UUID primaryStudioId = UUID.randomUUID();
+        UUID otherStudioId = UUID.randomUUID();
+
+        // 1. Setup stats mock
+        when(clientRepository.countByStudioId(primaryStudioId)).thenReturn(5L);
+        when(clientRepository.countByStudioId(otherStudioId)).thenReturn(100L);
+
+        // 2. Setup assignments for primary and other studio
+        UUID empId1 = UUID.randomUUID();
+        Employee primaryEmployee = new Employee();
+        primaryEmployee.setId(empId1);
+        primaryEmployee.setFullName("Primary Emp");
+        primaryEmployee.setStudioId(primaryStudioId);
+
+        UUID eventId1 = UUID.randomUUID();
+        Event primaryEvent1 = new Event();
+        primaryEvent1.setId(eventId1);
+        primaryEvent1.setTitle("Primary Event 1");
+        primaryEvent1.setEventDate(LocalDate.of(2026, 6, 5));
+        primaryEvent1.setStartTime(LocalTime.of(9, 0));
+        primaryEvent1.setEndTime(LocalTime.of(12, 0));
+        primaryEvent1.setStudioId(primaryStudioId);
+
+        UUID eventId2 = UUID.randomUUID();
+        Event primaryEvent2 = new Event();
+        primaryEvent2.setId(eventId2);
+        primaryEvent2.setTitle("Primary Event 2");
+        primaryEvent2.setEventDate(LocalDate.of(2026, 6, 5));
+        primaryEvent2.setStartTime(LocalTime.of(10, 0)); // Overlaps
+        primaryEvent2.setEndTime(LocalTime.of(14, 0));
+        primaryEvent2.setStudioId(primaryStudioId);
+
+        // Other studio double booking events
+        UUID empId2 = UUID.randomUUID();
+        UUID otherEventId1 = UUID.randomUUID();
+
+        // Setup Repository Mocks based on Studio ID
+        when(employeeRepository.findAllByStudioId(primaryStudioId)).thenReturn(List.of(primaryEmployee));
+        when(employeeRepository.findAllByStudioId(otherStudioId)).thenReturn(List.of());
+
+        when(eventRepository.findAllByStudioId(primaryStudioId)).thenReturn(List.of(primaryEvent1, primaryEvent2));
+        when(eventRepository.findAllByStudioId(otherStudioId)).thenReturn(List.of());
+
+        EventAssignment primaryAssignment1 = new EventAssignment();
+        primaryAssignment1.setId(UUID.randomUUID());
+        primaryAssignment1.setEventId(eventId1);
+        primaryAssignment1.setEmployeeId(empId1);
+        primaryAssignment1.setAssignmentStatus(AssignmentStatus.ACCEPTED);
+        primaryAssignment1.setStudioId(primaryStudioId);
+
+        EventAssignment primaryAssignment2 = new EventAssignment();
+        primaryAssignment2.setId(UUID.randomUUID());
+        primaryAssignment2.setEventId(eventId2);
+        primaryAssignment2.setEmployeeId(empId1);
+        primaryAssignment2.setAssignmentStatus(AssignmentStatus.ACCEPTED);
+        primaryAssignment2.setStudioId(primaryStudioId);
+
+        when(eventAssignmentRepository.findAllByStudioId(primaryStudioId)).thenReturn(List.of(primaryAssignment1, primaryAssignment2));
+        when(eventAssignmentRepository.findAllByStudioId(otherStudioId)).thenReturn(List.of());
+
+        // Execute for primary studio
+        DashboardSummaryResponse primaryResponse = dashboardService.getSummary(primaryStudioId);
+        assertEquals(5L, primaryResponse.getStats().getTotalClients());
+        assertEquals(1, primaryResponse.getWarnings().size());
+
+        // Execute for other studio
+        DashboardSummaryResponse otherResponse = dashboardService.getSummary(otherStudioId);
+        assertEquals(100L, otherResponse.getStats().getTotalClients());
+        assertTrue(otherResponse.getWarnings().isEmpty());
     }
 }

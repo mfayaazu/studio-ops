@@ -18,4 +18,6 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
            "LOWER(c.phone) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(c.email) LIKE LOWER(CONCAT('%', :search, '%')))")
     List<Client> searchClientsByStudio(@Param("studioId") UUID studioId, @Param("search") String search);
+
+    long countByStudioId(UUID studioId);
 }

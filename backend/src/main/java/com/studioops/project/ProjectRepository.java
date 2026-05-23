@@ -34,4 +34,8 @@ public interface ProjectRepository extends JpaRepository<Project, UUID> {
     List<Project> searchProjects(@Param("search") String search);
 
     long countByStatusNotIn(java.util.Collection<ProjectStatus> statuses);
+
+    long countByStudioId(UUID studioId);
+
+    long countByStatusNotInAndStudioId(java.util.Collection<ProjectStatus> statuses, UUID studioId);
 }

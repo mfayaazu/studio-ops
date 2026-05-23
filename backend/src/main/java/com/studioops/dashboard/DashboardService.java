@@ -59,29 +59,29 @@ public class DashboardService {
         this.deliverableRepository = deliverableRepository;
     }
 
-    public DashboardSummaryResponse getSummary() {
+    public DashboardSummaryResponse getSummary(UUID studioId) {
         // 1. Statistics
-        long totalClients = clientRepository.count();
-        long activeProjects = projectRepository.countByStatusNotIn(List.of(ProjectStatus.ARCHIVED, ProjectStatus.CANCELLED));
-        long upcomingEvents = eventRepository.countByStatusAndEventDateGreaterThanEqual(EventStatus.SCHEDULED, LocalDate.now());
-        long successfulBackups = backupRecordRepository.countByStatus(BackupStatus.COMPLETED);
+        long totalClients = clientRepository.countByStudioId(studioId);
+        long activeProjects = projectRepository.countByStatusNotInAndStudioId(List.of(ProjectStatus.ARCHIVED, ProjectStatus.CANCELLED), studioId);
+        long upcomingEvents = eventRepository.countByStatusAndEventDateGreaterThanEqualAndStudioId(EventStatus.SCHEDULED, LocalDate.now(), studioId);
+        long successfulBackups = backupRecordRepository.countByStatusAndStudioId(BackupStatus.COMPLETED, studioId);
 
         DashboardStats stats = new DashboardStats(totalClients, activeProjects, upcomingEvents, successfulBackups);
 
         // 2. Warnings (Double Bookings)
-        List<DashboardWarning> warnings = getDoubleBookingWarnings();
+        List<DashboardWarning> warnings = getDoubleBookingWarnings(studioId);
 
         // 3. Backup Checklists
-        List<DashboardBackupChecklist> backupChecklists = getBackupChecklists();
+        List<DashboardBackupChecklist> backupChecklists = getBackupChecklists(studioId);
 
         return new DashboardSummaryResponse(stats, warnings, backupChecklists);
     }
 
-    private List<DashboardWarning> getDoubleBookingWarnings() {
+    private List<DashboardWarning> getDoubleBookingWarnings(UUID studioId) {
         List<DashboardWarning> warnings = new ArrayList<>();
-        List<EventAssignment> allAssignments = eventAssignmentRepository.findAll();
-        List<Event> allEvents = eventRepository.findAll();
-        List<Employee> allEmployees = employeeRepository.findAll();
+        List<EventAssignment> allAssignments = eventAssignmentRepository.findAllByStudioId(studioId);
+        List<Event> allEvents = eventRepository.findAllByStudioId(studioId);
+        List<Employee> allEmployees = employeeRepository.findAllByStudioId(studioId);
 
         Map<UUID, Event> eventMap = allEvents.stream()
                 .collect(Collectors.toMap(Event::getId, Function.identity(), (e1, e2) -> e1));
@@ -146,9 +146,9 @@ public class DashboardService {
         return warnings;
     }
 
-    private List<DashboardBackupChecklist> getBackupChecklists() {
-        List<Deliverable> deliverables = deliverableRepository.findAll();
-        List<Project> projects = projectRepository.findAll();
+    private List<DashboardBackupChecklist> getBackupChecklists(UUID studioId) {
+        List<Deliverable> deliverables = deliverableRepository.findAllByStudioId(studioId);
+        List<Project> projects = projectRepository.findAllByStudioId(studioId);
 
         Map<UUID, Project> projectMap = projects.stream()
                 .collect(Collectors.toMap(Project::getId, Function.identity(), (p1, p2) -> p1));
@@ -162,7 +162,7 @@ public class DashboardService {
             }
 
             List<BackupLocationType> completedLocations = backupRecordRepository
-                    .findDistinctCompletedLocationTypesByDeliverableId(deliverable.getId());
+                    .findDistinctCompletedLocationTypesByDeliverableIdAndStudioId(deliverable.getId(), studioId);
             
             int count = completedLocations.size();
             String status = count < 2 ? "WARNING_LOW_REDUNDANCY" : "SAFE";

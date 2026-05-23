@@ -35,4 +35,6 @@ public interface BackupRecordRepository extends JpaRepository<BackupRecord, UUID
     );
 
     long countByStatus(BackupStatus status);
+
+    long countByStatusAndStudioId(BackupStatus status, UUID studioId);
 }
