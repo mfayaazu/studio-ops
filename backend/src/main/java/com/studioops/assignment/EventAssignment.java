@@ -17,6 +17,9 @@ public class EventAssignment {
     @Column(name = "event_id", nullable = false)
     private UUID eventId;
 
+    @Column(name = "studio_id", nullable = false)
+    private UUID studioId;
+
     @Column(name = "employee_id", nullable = false)
     private UUID employeeId;
 
@@ -68,6 +71,14 @@ public class EventAssignment {
 
     public void setEventId(UUID eventId) {
         this.eventId = eventId;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 
     public UUID getEmployeeId() {

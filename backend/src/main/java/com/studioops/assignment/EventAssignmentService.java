@@ -5,6 +5,8 @@ import com.studioops.employee.EmployeeRepository;
 import com.studioops.event.Event;
 import com.studioops.event.EventRepository;
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
+import com.studioops.studio.StudioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,25 +26,36 @@ public class EventAssignmentService {
     private final EventAssignmentRepository eventAssignmentRepository;
     private final EventRepository eventRepository;
     private final EmployeeRepository employeeRepository;
+    private final StudioRepository studioRepository;
 
     public EventAssignmentService(EventAssignmentRepository eventAssignmentRepository,
                                   EventRepository eventRepository,
-                                  EmployeeRepository employeeRepository) {
+                                  EmployeeRepository employeeRepository,
+                                  StudioRepository studioRepository) {
         this.eventAssignmentRepository = eventAssignmentRepository;
         this.eventRepository = eventRepository;
         this.employeeRepository = employeeRepository;
+        this.studioRepository = studioRepository;
     }
 
     public EventAssignmentResponse createAssignment(EventAssignmentCreateRequest request) {
-        // Validate event exists
-        Event event = eventRepository.findById(request.getEventId())
+        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+
+        // Validate studio exists
+        if (!studioRepository.existsById(studioId)) {
+            throw new ResourceNotFoundException("Studio not found with id: " + studioId);
+        }
+
+        // Validate event exists and belongs to the same studio
+        Event event = eventRepository.findByIdAndStudioId(request.getEventId(), studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + request.getEventId()));
 
-        // Validate employee exists
-        Employee employee = employeeRepository.findById(request.getEmployeeId())
+        // Validate employee exists and belongs to the same studio
+        Employee employee = employeeRepository.findByIdAndStudioId(request.getEmployeeId(), studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + request.getEmployeeId()));
 
         EventAssignment assignment = new EventAssignment();
+        assignment.setStudioId(studioId);
         assignment.setEventId(request.getEventId());
         assignment.setEmployeeId(request.getEmployeeId());
         assignment.setAssignmentRole(request.getAssignmentRole());
@@ -58,12 +71,19 @@ public class EventAssignmentService {
     @Transactional(readOnly = true)
     public List<EventAssignmentResponse> listAssignments(UUID eventId, UUID employeeId) {
         List<EventAssignment> assignments;
+        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
         if (eventId != null) {
-            assignments = eventAssignmentRepository.findByEventId(eventId);
+            // Validate event belongs to default studio
+            eventRepository.findByIdAndStudioId(eventId, studioId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + eventId));
+            assignments = eventAssignmentRepository.findByEventIdAndStudioId(eventId, studioId);
         } else if (employeeId != null) {
-            assignments = eventAssignmentRepository.findByEmployeeId(employeeId);
+            // Validate employee belongs to default studio
+            employeeRepository.findByIdAndStudioId(employeeId, studioId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + employeeId));
+            assignments = eventAssignmentRepository.findByEmployeeIdAndStudioId(employeeId, studioId);
         } else {
-            assignments = eventAssignmentRepository.findAll();
+            assignments = eventAssignmentRepository.findAllByStudioId(studioId);
         }
 
         return assignments.stream()
@@ -73,13 +93,13 @@ public class EventAssignmentService {
 
     @Transactional(readOnly = true)
     public EventAssignmentResponse getAssignmentById(UUID id) {
-        EventAssignment assignment = eventAssignmentRepository.findById(id)
+        EventAssignment assignment = eventAssignmentRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + id));
         return toResponseWithConflictCheck(assignment);
     }
 
     public EventAssignmentResponse updateAssignment(UUID id, EventAssignmentUpdateRequest request) {
-        EventAssignment assignment = eventAssignmentRepository.findById(id)
+        EventAssignment assignment = eventAssignmentRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + id));
 
         assignment.setAssignmentRole(request.getAssignmentRole());
@@ -92,7 +112,7 @@ public class EventAssignmentService {
     }
 
     public void deleteAssignment(UUID id) {
-        EventAssignment assignment = eventAssignmentRepository.findById(id)
+        EventAssignment assignment = eventAssignmentRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + id));
         eventAssignmentRepository.delete(assignment);
     }
@@ -101,8 +121,8 @@ public class EventAssignmentService {
         if (ea == null) {
             return null;
         }
-        Event event = eventRepository.findById(ea.getEventId()).orElse(null);
-        Employee employee = employeeRepository.findById(ea.getEmployeeId()).orElse(null);
+        Event event = eventRepository.findByIdAndStudioId(ea.getEventId(), ea.getStudioId()).orElse(null);
+        Employee employee = employeeRepository.findByIdAndStudioId(ea.getEmployeeId(), ea.getStudioId()).orElse(null);
         return toResponseWithConflictCheck(ea, event, employee);
     }
 
@@ -121,7 +141,8 @@ public class EventAssignmentService {
         }
 
         // Check for overlaps with other non-cancelled/non-rejected assignments of this employee
-        List<EventAssignment> overlaps = eventAssignmentRepository.findOverlappingAssignments(
+        List<EventAssignment> overlaps = eventAssignmentRepository.findOverlappingAssignmentsByStudio(
+                ea.getStudioId(),
                 ea.getEmployeeId(),
                 ea.getEventId(),
                 event.getEventDate(),
@@ -132,7 +153,7 @@ public class EventAssignmentService {
 
         if (!overlaps.isEmpty()) {
             EventAssignment conflictAssignment = overlaps.get(0);
-            Event conflictEvent = eventRepository.findById(conflictAssignment.getEventId()).orElse(null);
+            Event conflictEvent = eventRepository.findByIdAndStudioId(conflictAssignment.getEventId(), ea.getStudioId()).orElse(null);
             String conflictEventTitle = conflictEvent != null ? conflictEvent.getTitle() : "Other Event";
             String startTimeStr = conflictEvent != null ? conflictEvent.getStartTime().format(TIME_FORMATTER) : "00:00";
             String endTimeStr = conflictEvent != null ? conflictEvent.getEndTime().format(TIME_FORMATTER) : "00:00";

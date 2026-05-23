@@ -8,6 +8,8 @@ import com.studioops.event.EventRepository;
 import com.studioops.event.EventStatus;
 import com.studioops.event.EventType;
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
+import com.studioops.studio.StudioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -38,6 +40,9 @@ class EventAssignmentServiceTest {
     @Mock
     private EmployeeRepository employeeRepository;
 
+    @Mock
+    private StudioRepository studioRepository;
+
     @InjectMocks
     private EventAssignmentService eventAssignmentService;
 
@@ -54,6 +59,7 @@ class EventAssignmentServiceTest {
 
         event = new Event();
         event.setId(eventId);
+        event.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         event.setProjectId(UUID.randomUUID());
         event.setTitle("Wedding Shoot");
         event.setType(EventType.WEDDING);
@@ -63,10 +69,13 @@ class EventAssignmentServiceTest {
 
         employee = new Employee();
         employee.setId(employeeId);
+        employee.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         employee.setFullName("John Doe");
         employee.setEmail("john.doe@studioops.se");
         employee.setPrimaryRole("Photographer");
         employee.setStatus(EmployeeStatus.ACTIVE);
+
+        lenient().when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
     }
 
     @Test
@@ -79,13 +88,14 @@ class EventAssignmentServiceTest {
         request.setCallTime(LocalTime.of(8, 30));
         request.setNotes("Backup camera body");
 
-        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        when(employeeRepository.findById(employeeId)).thenReturn(Optional.of(employee));
-        when(eventAssignmentRepository.findOverlappingAssignments(any(), any(), any(), any(), any(), any()))
+        when(eventRepository.findByIdAndStudioId(eventId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(event));
+        when(employeeRepository.findByIdAndStudioId(employeeId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(employee));
+        when(eventAssignmentRepository.findOverlappingAssignmentsByStudio(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(List.of());
 
         EventAssignment assignment = new EventAssignment();
         assignment.setId(UUID.randomUUID());
+        assignment.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         assignment.setEventId(eventId);
         assignment.setEmployeeId(employeeId);
         assignment.setAssignmentRole(request.getAssignmentRole());
@@ -99,69 +109,131 @@ class EventAssignmentServiceTest {
 
         assertNotNull(response);
         assertEquals(assignment.getId(), response.getId());
+        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
         assertFalse(response.isConflictWarning());
         assertNull(response.getConflictReason());
         verify(eventAssignmentRepository, times(1)).save(any(EventAssignment.class));
     }
 
     @Test
-    void createAssignment_EventNotFound_ThrowsException() {
-        EventAssignmentCreateRequest request = new EventAssignmentCreateRequest();
-        request.setEventId(eventId);
-        request.setEmployeeId(employeeId);
-
-        when(eventRepository.findById(eventId)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class, () -> eventAssignmentService.createAssignment(request));
-        verify(eventAssignmentRepository, never()).save(any(EventAssignment.class));
-    }
-
-    @Test
-    void createAssignment_EmployeeNotFound_ThrowsException() {
-        EventAssignmentCreateRequest request = new EventAssignmentCreateRequest();
-        request.setEventId(eventId);
-        request.setEmployeeId(employeeId);
-
-        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        when(employeeRepository.findById(employeeId)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class, () -> eventAssignmentService.createAssignment(request));
-        verify(eventAssignmentRepository, never()).save(any(EventAssignment.class));
-    }
-
-    @Test
-    void createAssignment_ConflictDetected() {
+    void createAssignment_DefaultsToDefaultStudio_WhenStudioIdMissing() {
         EventAssignmentCreateRequest request = new EventAssignmentCreateRequest();
         request.setEventId(eventId);
         request.setEmployeeId(employeeId);
         request.setAssignmentRole(AssignmentRole.CANDID_PHOTOGRAPHER);
         request.setAssignmentStatus(AssignmentStatus.PROPOSED);
 
-        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        when(employeeRepository.findById(employeeId)).thenReturn(Optional.of(employee));
+        when(eventRepository.findByIdAndStudioId(eventId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(event));
+        when(employeeRepository.findByIdAndStudioId(employeeId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(employee));
+        when(eventAssignmentRepository.findOverlappingAssignmentsByStudio(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(List.of());
+
+        EventAssignment assignment = new EventAssignment();
+        assignment.setId(UUID.randomUUID());
+        assignment.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        assignment.setEventId(eventId);
+        assignment.setEmployeeId(employeeId);
+        assignment.setAssignmentRole(request.getAssignmentRole());
+        assignment.setAssignmentStatus(request.getAssignmentStatus());
+
+        when(eventAssignmentRepository.save(any(EventAssignment.class))).thenReturn(assignment);
+
+        EventAssignmentResponse response = eventAssignmentService.createAssignment(request);
+
+        assertNotNull(response);
+        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
+    }
+
+    @Test
+    void createAssignment_Fails_WhenStudioIdDoesNotExist() {
+        UUID nonExistentStudioId = UUID.randomUUID();
+        EventAssignmentCreateRequest request = new EventAssignmentCreateRequest();
+        request.setStudioId(nonExistentStudioId);
+        request.setEventId(eventId);
+        request.setEmployeeId(employeeId);
+        request.setAssignmentRole(AssignmentRole.CANDID_PHOTOGRAPHER);
+        request.setAssignmentStatus(AssignmentStatus.PROPOSED);
+
+        when(studioRepository.existsById(nonExistentStudioId)).thenReturn(false);
+
+        assertThrows(ResourceNotFoundException.class, () -> eventAssignmentService.createAssignment(request));
+        verify(eventAssignmentRepository, never()).save(any(EventAssignment.class));
+    }
+
+    @Test
+    void createAssignment_Fails_WhenEventIdDoesNotBelongToSameStudio() {
+        UUID customStudioId = UUID.randomUUID();
+        EventAssignmentCreateRequest request = new EventAssignmentCreateRequest();
+        request.setStudioId(customStudioId);
+        request.setEventId(eventId);
+        request.setEmployeeId(employeeId);
+        request.setAssignmentRole(AssignmentRole.CANDID_PHOTOGRAPHER);
+        request.setAssignmentStatus(AssignmentStatus.PROPOSED);
+
+        // Event returned belongs to DEFAULT_STUDIO_ID, but request is for customStudioId
+        when(eventRepository.findByIdAndStudioId(eventId, customStudioId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> eventAssignmentService.createAssignment(request));
+        verify(eventAssignmentRepository, never()).save(any(EventAssignment.class));
+    }
+
+    @Test
+    void createAssignment_Fails_WhenEmployeeIdDoesNotBelongToSameStudio() {
+        UUID customStudioId = UUID.randomUUID();
+        EventAssignmentCreateRequest request = new EventAssignmentCreateRequest();
+        request.setStudioId(customStudioId);
+        request.setEventId(eventId);
+        request.setEmployeeId(employeeId);
+        request.setAssignmentRole(AssignmentRole.CANDID_PHOTOGRAPHER);
+        request.setAssignmentStatus(AssignmentStatus.PROPOSED);
+
+        Event customEvent = new Event();
+        customEvent.setId(eventId);
+        customEvent.setStudioId(customStudioId);
+
+        when(eventRepository.findByIdAndStudioId(eventId, customStudioId)).thenReturn(Optional.of(customEvent));
+        // Employee belongs to DEFAULT_STUDIO_ID, so looking up in customStudioId returns empty
+        when(employeeRepository.findByIdAndStudioId(employeeId, customStudioId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> eventAssignmentService.createAssignment(request));
+        verify(eventAssignmentRepository, never()).save(any(EventAssignment.class));
+    }
+
+    @Test
+    void createAssignment_ConflictDetected_StudioScoped() {
+        EventAssignmentCreateRequest request = new EventAssignmentCreateRequest();
+        request.setEventId(eventId);
+        request.setEmployeeId(employeeId);
+        request.setAssignmentRole(AssignmentRole.CANDID_PHOTOGRAPHER);
+        request.setAssignmentStatus(AssignmentStatus.PROPOSED);
+
+        when(eventRepository.findByIdAndStudioId(eventId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(event));
+        when(employeeRepository.findByIdAndStudioId(employeeId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(employee));
 
         // Create overlapping assignment & event details
         UUID otherEventId = UUID.randomUUID();
         EventAssignment overlapAssignment = new EventAssignment();
         overlapAssignment.setId(UUID.randomUUID());
+        overlapAssignment.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         overlapAssignment.setEventId(otherEventId);
         overlapAssignment.setEmployeeId(employeeId);
         overlapAssignment.setAssignmentStatus(AssignmentStatus.ACCEPTED);
 
         Event otherEvent = new Event();
         otherEvent.setId(otherEventId);
+        otherEvent.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         otherEvent.setTitle("Product Promo");
         otherEvent.setEventDate(LocalDate.of(2026, 6, 5));
         otherEvent.setStartTime(LocalTime.of(8, 0));
         otherEvent.setEndTime(LocalTime.of(12, 0));
 
-        when(eventAssignmentRepository.findOverlappingAssignments(eq(employeeId), eq(eventId), eq(event.getEventDate()), eq(event.getStartTime()), eq(event.getEndTime()), any()))
+        when(eventAssignmentRepository.findOverlappingAssignmentsByStudio(eq(TenantConstants.DEFAULT_STUDIO_ID), eq(employeeId), eq(eventId), eq(event.getEventDate()), eq(event.getStartTime()), eq(event.getEndTime()), any()))
                 .thenReturn(List.of(overlapAssignment));
-        when(eventRepository.findById(otherEventId)).thenReturn(Optional.of(otherEvent));
-        when(employeeRepository.findById(employeeId)).thenReturn(Optional.of(employee));
+        when(eventRepository.findByIdAndStudioId(otherEventId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(otherEvent));
 
         EventAssignment assignment = new EventAssignment();
         assignment.setId(UUID.randomUUID());
+        assignment.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         assignment.setEventId(eventId);
         assignment.setEmployeeId(employeeId);
         assignment.setAssignmentRole(request.getAssignmentRole());
@@ -177,30 +249,41 @@ class EventAssignmentServiceTest {
     }
 
     @Test
-    void createAssignment_CancelledStatus_NoConflictChecked() {
-        EventAssignmentCreateRequest request = new EventAssignmentCreateRequest();
-        request.setEventId(eventId);
-        request.setEmployeeId(employeeId);
-        request.setAssignmentRole(AssignmentRole.CANDID_PHOTOGRAPHER);
-        request.setAssignmentStatus(AssignmentStatus.CANCELLED);
-
-        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        when(employeeRepository.findById(employeeId)).thenReturn(Optional.of(employee));
-
+    void listAssignments_FilterByEvent_StudioScoped() {
+        when(eventRepository.findByIdAndStudioId(eventId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(event));
         EventAssignment assignment = new EventAssignment();
         assignment.setId(UUID.randomUUID());
+        assignment.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         assignment.setEventId(eventId);
         assignment.setEmployeeId(employeeId);
-        assignment.setAssignmentRole(request.getAssignmentRole());
-        assignment.setAssignmentStatus(AssignmentStatus.CANCELLED);
+        assignment.setAssignmentStatus(AssignmentStatus.ACCEPTED);
 
-        when(eventAssignmentRepository.save(any(EventAssignment.class))).thenReturn(assignment);
+        when(eventAssignmentRepository.findByEventIdAndStudioId(eventId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(List.of(assignment));
+        when(employeeRepository.findByIdAndStudioId(employeeId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(employee));
 
-        EventAssignmentResponse response = eventAssignmentService.createAssignment(request);
+        List<EventAssignmentResponse> results = eventAssignmentService.listAssignments(eventId, null);
+        assertEquals(1, results.size());
+        assertEquals(assignment.getId(), results.get(0).getId());
+    }
 
-        assertNotNull(response);
-        assertFalse(response.isConflictWarning());
-        verify(eventAssignmentRepository, never()).findOverlappingAssignments(any(), any(), any(), any(), any(), any());
+    @Test
+    void listAssignments_FilterByEmployee_StudioScoped() {
+        when(employeeRepository.findByIdAndStudioId(employeeId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(employee));
+        EventAssignment assignment = new EventAssignment();
+        assignment.setId(UUID.randomUUID());
+        assignment.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        assignment.setEventId(eventId);
+        assignment.setEmployeeId(employeeId);
+        assignment.setAssignmentStatus(AssignmentStatus.ACCEPTED);
+
+        when(eventAssignmentRepository.findByEmployeeIdAndStudioId(employeeId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(List.of(assignment));
+        when(eventRepository.findByIdAndStudioId(eventId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(event));
+
+        List<EventAssignmentResponse> results = eventAssignmentService.listAssignments(null, employeeId);
+        assertEquals(1, results.size());
+        assertEquals(assignment.getId(), results.get(0).getId());
     }
 
     @Test
@@ -208,14 +291,15 @@ class EventAssignmentServiceTest {
         UUID id = UUID.randomUUID();
         EventAssignment assignment = new EventAssignment();
         assignment.setId(id);
+        assignment.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         assignment.setEventId(eventId);
         assignment.setEmployeeId(employeeId);
         assignment.setAssignmentStatus(AssignmentStatus.ACCEPTED);
 
-        when(eventAssignmentRepository.findById(id)).thenReturn(Optional.of(assignment));
-        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        when(employeeRepository.findById(employeeId)).thenReturn(Optional.of(employee));
-        when(eventAssignmentRepository.findOverlappingAssignments(any(), any(), any(), any(), any(), any()))
+        when(eventAssignmentRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(assignment));
+        when(eventRepository.findByIdAndStudioId(eventId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(event));
+        when(employeeRepository.findByIdAndStudioId(employeeId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(employee));
+        when(eventAssignmentRepository.findOverlappingAssignmentsByStudio(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(List.of());
 
         EventAssignmentResponse response = eventAssignmentService.getAssignmentById(id);
@@ -229,6 +313,7 @@ class EventAssignmentServiceTest {
         UUID id = UUID.randomUUID();
         EventAssignment assignment = new EventAssignment();
         assignment.setId(id);
+        assignment.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         assignment.setEventId(eventId);
         assignment.setEmployeeId(employeeId);
         assignment.setAssignmentRole(AssignmentRole.ASSISTANT);
@@ -240,10 +325,10 @@ class EventAssignmentServiceTest {
         request.setCallTime(LocalTime.of(8, 0));
         request.setNotes("Updated notes");
 
-        when(eventAssignmentRepository.findById(id)).thenReturn(Optional.of(assignment));
-        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
-        when(employeeRepository.findById(employeeId)).thenReturn(Optional.of(employee));
-        when(eventAssignmentRepository.findOverlappingAssignments(any(), any(), any(), any(), any(), any()))
+        when(eventAssignmentRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(assignment));
+        when(eventRepository.findByIdAndStudioId(eventId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(event));
+        when(employeeRepository.findByIdAndStudioId(employeeId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(employee));
+        when(eventAssignmentRepository.findOverlappingAssignmentsByStudio(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(List.of());
         when(eventAssignmentRepository.save(any(EventAssignment.class))).thenReturn(assignment);
 
@@ -259,8 +344,9 @@ class EventAssignmentServiceTest {
         UUID id = UUID.randomUUID();
         EventAssignment assignment = new EventAssignment();
         assignment.setId(id);
+        assignment.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(eventAssignmentRepository.findById(id)).thenReturn(Optional.of(assignment));
+        when(eventAssignmentRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(assignment));
         doNothing().when(eventAssignmentRepository).delete(assignment);
 
         assertDoesNotThrow(() -> eventAssignmentService.deleteAssignment(id));

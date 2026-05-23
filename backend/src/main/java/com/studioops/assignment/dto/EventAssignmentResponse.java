@@ -10,6 +10,7 @@ public class EventAssignmentResponse {
 
     private UUID id;
     private UUID eventId;
+    private UUID studioId;
     private UUID employeeId;
     private AssignmentRole assignmentRole;
     private AssignmentStatus assignmentStatus;
@@ -37,6 +38,14 @@ public class EventAssignmentResponse {
 
     public void setEventId(UUID eventId) {
         this.eventId = eventId;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 
     public UUID getEmployeeId() {

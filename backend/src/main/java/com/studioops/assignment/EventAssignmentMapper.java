@@ -10,6 +10,7 @@ public class EventAssignmentMapper {
         EventAssignmentResponse response = new EventAssignmentResponse();
         response.setId(assignment.getId());
         response.setEventId(assignment.getEventId());
+        response.setStudioId(assignment.getStudioId());
         response.setEmployeeId(assignment.getEmployeeId());
         response.setAssignmentRole(assignment.getAssignmentRole());
         response.setAssignmentStatus(assignment.getAssignmentStatus());

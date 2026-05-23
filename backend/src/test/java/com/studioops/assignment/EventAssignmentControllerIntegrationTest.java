@@ -51,9 +51,11 @@ class EventAssignmentControllerIntegrationTest {
         request.setCallTime(LocalTime.of(8, 30));
         request.setNotes("Notes here");
 
+        UUID studioId = UUID.randomUUID();
         EventAssignmentResponse response = new EventAssignmentResponse();
         response.setId(UUID.randomUUID());
         response.setEventId(eventId);
+        response.setStudioId(studioId);
         response.setEmployeeId(employeeId);
         response.setAssignmentRole(AssignmentRole.CANDID_PHOTOGRAPHER);
         response.setAssignmentStatus(AssignmentStatus.PROPOSED);
@@ -71,6 +73,7 @@ class EventAssignmentControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(response.getId().toString()))
+                .andExpect(jsonPath("$.studioId").value(studioId.toString()))
                 .andExpect(jsonPath("$.conflictWarning").value(true))
                 .andExpect(jsonPath("$.conflictReason").value("Conflict message"))
                 .andExpect(jsonPath("$.assignmentRole").value("CANDID_PHOTOGRAPHER"));
@@ -98,9 +101,11 @@ class EventAssignmentControllerIntegrationTest {
         UUID eventId = UUID.randomUUID();
         UUID employeeId = UUID.randomUUID();
 
+        UUID studioId = UUID.randomUUID();
         EventAssignmentResponse response = new EventAssignmentResponse();
         response.setId(id);
         response.setEventId(eventId);
+        response.setStudioId(studioId);
         response.setEmployeeId(employeeId);
         response.setAssignmentRole(AssignmentRole.CANDID_PHOTOGRAPHER);
         response.setAssignmentStatus(AssignmentStatus.ACCEPTED);
@@ -110,6 +115,7 @@ class EventAssignmentControllerIntegrationTest {
         mockMvc.perform(get("/api/assignments/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.studioId").value(studioId.toString()))
                 .andExpect(jsonPath("$.assignmentStatus").value("ACCEPTED"));
     }
 
@@ -127,9 +133,11 @@ class EventAssignmentControllerIntegrationTest {
     @Test
     void listAssignments_Success() throws Exception {
         UUID eventId = UUID.randomUUID();
+        UUID studioId = UUID.randomUUID();
         EventAssignmentResponse response = new EventAssignmentResponse();
         response.setId(UUID.randomUUID());
         response.setEventId(eventId);
+        response.setStudioId(studioId);
         response.setAssignmentRole(AssignmentRole.DRONE_OPERATOR);
 
         when(eventAssignmentService.listAssignments(eq(eventId), any())).thenReturn(List.of(response));
@@ -138,18 +146,21 @@ class EventAssignmentControllerIntegrationTest {
                         .param("eventId", eventId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].eventId").value(eventId.toString()))
+                .andExpect(jsonPath("$[0].studioId").value(studioId.toString()))
                 .andExpect(jsonPath("$[0].assignmentRole").value("DRONE_OPERATOR"));
     }
 
     @Test
     void updateAssignment_Success() throws Exception {
         UUID id = UUID.randomUUID();
+        UUID studioId = UUID.randomUUID();
         EventAssignmentUpdateRequest request = new EventAssignmentUpdateRequest();
         request.setAssignmentRole(AssignmentRole.CINEMATOGRAPHER);
         request.setAssignmentStatus(AssignmentStatus.ACCEPTED);
 
         EventAssignmentResponse response = new EventAssignmentResponse();
         response.setId(id);
+        response.setStudioId(studioId);
         response.setAssignmentRole(AssignmentRole.CINEMATOGRAPHER);
         response.setAssignmentStatus(AssignmentStatus.ACCEPTED);
 
@@ -159,6 +170,7 @@ class EventAssignmentControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.studioId").value(studioId.toString()))
                 .andExpect(jsonPath("$.assignmentRole").value("CINEMATOGRAPHER"))
                 .andExpect(jsonPath("$.assignmentStatus").value("ACCEPTED"));
     }

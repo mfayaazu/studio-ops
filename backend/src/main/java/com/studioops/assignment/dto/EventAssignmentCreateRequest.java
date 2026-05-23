@@ -8,6 +8,8 @@ import java.util.UUID;
 
 public class EventAssignmentCreateRequest {
 
+    private UUID studioId;
+
     @NotNull(message = "Event ID is required")
     private UUID eventId;
 
@@ -24,6 +26,14 @@ public class EventAssignmentCreateRequest {
     private String notes;
 
     public EventAssignmentCreateRequest() {
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 
     public UUID getEventId() {
