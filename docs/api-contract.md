@@ -904,7 +904,7 @@ Retrieves system overview statistics, warning flags, and recent checklists.
 
 ## 10. Communication and Follow-up Automation
 
-### GET `/api/communication/templates`
+### GET `/api/message-templates`
 Retrieves all message templates for the current studio.
 **Response (200 OK):**
 ```json
@@ -922,7 +922,7 @@ Retrieves all message templates for the current studio.
 ]
 ```
 
-### POST `/api/communication/templates`
+### POST `/api/message-templates`
 Creates a new message template.
 **Request:**
 ```json
@@ -947,7 +947,7 @@ Creates a new message template.
 }
 ```
 
-### PUT `/api/communication/templates/{id}`
+### PUT `/api/message-templates/{id}`
 Updates a template.
 **Response (200 OK):**
 ```json
@@ -963,7 +963,7 @@ Updates a template.
 }
 ```
 
-### DELETE `/api/communication/templates/{id}`
+### DELETE `/api/message-templates/{id}`
 Deletes a template.
 **Response (204 No Content)**
 
