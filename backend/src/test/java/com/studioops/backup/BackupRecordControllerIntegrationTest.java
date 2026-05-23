@@ -40,14 +40,17 @@ class BackupRecordControllerIntegrationTest {
     void createBackup_Success() throws Exception {
         UUID projectId = UUID.randomUUID();
         UUID deliverableId = UUID.randomUUID();
+        UUID studioId = UUID.randomUUID();
         BackupRecordCreateRequest request = new BackupRecordCreateRequest(
                 projectId, deliverableId, BackupType.RAW_PHOTOS, BackupLocationType.LOCAL_NAS,
                 "NAS_Volume_2/photos.zip", BackupStatus.COMPLETED, "Initial backup", Instant.now()
         );
+        request.setStudioId(studioId);
 
         BackupRecordResponse response = new BackupRecordResponse();
         response.setId(UUID.randomUUID());
         response.setProjectId(projectId);
+        response.setStudioId(studioId);
         response.setDeliverableId(deliverableId);
         response.setBackupType(BackupType.RAW_PHOTOS);
         response.setLocationType(BackupLocationType.LOCAL_NAS);
@@ -61,6 +64,7 @@ class BackupRecordControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(response.getId().toString()))
+                .andExpect(jsonPath("$.studioId").value(studioId.toString()))
                 .andExpect(jsonPath("$.destinationPath").value("NAS_Volume_2/photos.zip"))
                 .andExpect(jsonPath("$.status").value("COMPLETED"));
     }
@@ -87,9 +91,11 @@ class BackupRecordControllerIntegrationTest {
     @Test
     void listBackups_Success() throws Exception {
         UUID projectId = UUID.randomUUID();
+        UUID studioId = UUID.randomUUID();
         BackupRecordResponse response = new BackupRecordResponse();
         response.setId(UUID.randomUUID());
         response.setProjectId(projectId);
+        response.setStudioId(studioId);
         response.setBackupType(BackupType.EDITED_PHOTOS);
         response.setLocationType(BackupLocationType.CLOUD_S3);
         response.setDestinationPath("s3://bucket/photos.zip");
@@ -101,15 +107,18 @@ class BackupRecordControllerIntegrationTest {
                 .param("projectId", projectId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size()").value(1))
-                .andExpect(jsonPath("$[0].destinationPath").value("s3://bucket/photos.zip"));
+                .andExpect(jsonPath("$[0].destinationPath").value("s3://bucket/photos.zip"))
+                .andExpect(jsonPath("$[0].studioId").value(studioId.toString()));
     }
 
     @Test
     void getBackupById_Success() throws Exception {
         UUID id = UUID.randomUUID();
+        UUID studioId = UUID.randomUUID();
         BackupRecordResponse response = new BackupRecordResponse();
         response.setId(id);
         response.setProjectId(UUID.randomUUID());
+        response.setStudioId(studioId);
         response.setBackupType(BackupType.RAW_VIDEOS);
         response.setLocationType(BackupLocationType.EXTERNAL_HARD_DRIVE);
         response.setDestinationPath("Drive E:/videos");
@@ -120,6 +129,7 @@ class BackupRecordControllerIntegrationTest {
         mockMvc.perform(get("/api/backups/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.studioId").value(studioId.toString()))
                 .andExpect(jsonPath("$.destinationPath").value("Drive E:/videos"));
     }
 
@@ -135,6 +145,7 @@ class BackupRecordControllerIntegrationTest {
     @Test
     void updateBackup_Success() throws Exception {
         UUID id = UUID.randomUUID();
+        UUID studioId = UUID.randomUUID();
         BackupRecordUpdateRequest request = new BackupRecordUpdateRequest(
                 BackupType.RAW_VIDEOS, BackupLocationType.LOCAL_NAS, "NAS/raw_videos.zip",
                 BackupStatus.COMPLETED, "note updated", null
@@ -143,6 +154,7 @@ class BackupRecordControllerIntegrationTest {
         BackupRecordResponse response = new BackupRecordResponse();
         response.setId(id);
         response.setProjectId(UUID.randomUUID());
+        response.setStudioId(studioId);
         response.setDestinationPath("NAS/raw_videos.zip");
         response.setStatus(BackupStatus.COMPLETED);
 
@@ -153,6 +165,7 @@ class BackupRecordControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.destinationPath").value("NAS/raw_videos.zip"))
+                .andExpect(jsonPath("$.studioId").value(studioId.toString()))
                 .andExpect(jsonPath("$.status").value("COMPLETED"));
     }
 

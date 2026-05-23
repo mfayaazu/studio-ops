@@ -3,7 +3,10 @@ package com.studioops.backup;
 import com.studioops.deliverable.Deliverable;
 import com.studioops.deliverable.DeliverableRepository;
 import com.studioops.common.exception.ResourceNotFoundException;
+import com.studioops.common.tenant.TenantConstants;
+import com.studioops.project.Project;
 import com.studioops.project.ProjectRepository;
+import com.studioops.studio.StudioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -32,17 +35,33 @@ class BackupRecordServiceTest {
     @Mock
     private DeliverableRepository deliverableRepository;
 
+    @Mock
+    private StudioRepository studioRepository;
+
     @InjectMocks
     private BackupRecordService backupRecordService;
 
     private UUID projectId;
     private UUID deliverableId;
+    private Project project;
+    private Deliverable deliverable;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         projectId = UUID.randomUUID();
         deliverableId = UUID.randomUUID();
+
+        project = new Project();
+        project.setId(projectId);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        deliverable = new Deliverable();
+        deliverable.setId(deliverableId);
+        deliverable.setProjectId(projectId);
+        deliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        lenient().when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
     }
 
     @Test
@@ -52,16 +71,13 @@ class BackupRecordServiceTest {
                 "NAS_Volume_2/photos.zip", BackupStatus.COMPLETED, "Initial backup", Instant.now()
         );
 
-        when(projectRepository.existsById(projectId)).thenReturn(true);
-
-        Deliverable deliverable = new Deliverable();
-        deliverable.setId(deliverableId);
-        deliverable.setProjectId(projectId);
-        when(deliverableRepository.findById(deliverableId)).thenReturn(Optional.of(deliverable));
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+        when(deliverableRepository.findByIdAndStudioId(deliverableId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(deliverable));
 
         BackupRecord record = new BackupRecord();
         record.setId(UUID.randomUUID());
         record.setProjectId(projectId);
+        record.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         record.setDeliverableId(deliverableId);
         record.setBackupType(request.getBackupType());
         record.setLocationType(request.getLocationType());
@@ -75,8 +91,50 @@ class BackupRecordServiceTest {
         assertNotNull(response);
         assertEquals(record.getId(), response.getId());
         assertEquals(projectId, response.getProjectId());
+        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
         assertEquals(deliverableId, response.getDeliverableId());
         verify(backupRecordRepository, times(1)).save(any(BackupRecord.class));
+    }
+
+    @Test
+    void createBackup_DefaultsToDefaultStudio_WhenStudioIdMissing() {
+        BackupRecordCreateRequest request = new BackupRecordCreateRequest(
+                projectId, null, BackupType.RAW_PHOTOS, BackupLocationType.LOCAL_NAS,
+                "NAS_Volume_2/photos.zip", BackupStatus.COMPLETED, null, null
+        );
+
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+
+        BackupRecord record = new BackupRecord();
+        record.setId(UUID.randomUUID());
+        record.setProjectId(projectId);
+        record.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        record.setBackupType(request.getBackupType());
+        record.setLocationType(request.getLocationType());
+        record.setDestinationPath(request.getDestinationPath());
+        record.setStatus(request.getStatus());
+
+        when(backupRecordRepository.save(any(BackupRecord.class))).thenReturn(record);
+
+        BackupRecordResponse response = backupRecordService.createBackup(request);
+
+        assertNotNull(response);
+        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
+    }
+
+    @Test
+    void createBackup_Fails_WhenStudioIdDoesNotExist() {
+        UUID customStudioId = UUID.randomUUID();
+        BackupRecordCreateRequest request = new BackupRecordCreateRequest(
+                projectId, null, BackupType.RAW_PHOTOS, BackupLocationType.LOCAL_NAS,
+                "NAS_Volume_2/photos.zip", BackupStatus.COMPLETED, null, null
+        );
+        request.setStudioId(customStudioId);
+
+        when(studioRepository.existsById(customStudioId)).thenReturn(false);
+
+        assertThrows(ResourceNotFoundException.class, () -> backupRecordService.createBackup(request));
+        verify(backupRecordRepository, never()).save(any(BackupRecord.class));
     }
 
     @Test
@@ -86,10 +144,24 @@ class BackupRecordServiceTest {
                 "NAS_Volume_2/photos.zip", BackupStatus.COMPLETED, null, null
         );
 
-        when(projectRepository.existsById(projectId)).thenReturn(false);
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> backupRecordService.createBackup(request));
-        assertTrue(exception.getMessage().contains("Project not found with id"));
+        assertThrows(ResourceNotFoundException.class, () -> backupRecordService.createBackup(request));
+        verify(backupRecordRepository, never()).save(any(BackupRecord.class));
+    }
+
+    @Test
+    void createBackup_ProjectDoesNotBelongToSameStudio() {
+        UUID customStudioId = UUID.randomUUID();
+        BackupRecordCreateRequest request = new BackupRecordCreateRequest(
+                projectId, null, BackupType.RAW_PHOTOS, BackupLocationType.LOCAL_NAS,
+                "NAS_Volume_2/photos.zip", BackupStatus.COMPLETED, null, null
+        );
+        request.setStudioId(customStudioId);
+
+        when(projectRepository.findByIdAndStudioId(projectId, customStudioId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> backupRecordService.createBackup(request));
         verify(backupRecordRepository, never()).save(any(BackupRecord.class));
     }
 
@@ -100,11 +172,26 @@ class BackupRecordServiceTest {
                 "NAS_Volume_2/photos.zip", BackupStatus.COMPLETED, null, null
         );
 
-        when(projectRepository.existsById(projectId)).thenReturn(true);
-        when(deliverableRepository.findById(deliverableId)).thenReturn(Optional.empty());
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+        when(deliverableRepository.findByIdAndStudioId(deliverableId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> backupRecordService.createBackup(request));
-        assertTrue(exception.getMessage().contains("Deliverable not found with id"));
+        assertThrows(ResourceNotFoundException.class, () -> backupRecordService.createBackup(request));
+        verify(backupRecordRepository, never()).save(any(BackupRecord.class));
+    }
+
+    @Test
+    void createBackup_DeliverableDoesNotBelongToSameStudio() {
+        UUID customStudioId = UUID.randomUUID();
+        BackupRecordCreateRequest request = new BackupRecordCreateRequest(
+                projectId, deliverableId, BackupType.RAW_PHOTOS, BackupLocationType.LOCAL_NAS,
+                "NAS_Volume_2/photos.zip", BackupStatus.COMPLETED, null, null
+        );
+        request.setStudioId(customStudioId);
+
+        when(projectRepository.findByIdAndStudioId(projectId, customStudioId)).thenReturn(Optional.of(project));
+        when(deliverableRepository.findByIdAndStudioId(deliverableId, customStudioId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> backupRecordService.createBackup(request));
         verify(backupRecordRepository, never()).save(any(BackupRecord.class));
     }
 
@@ -115,12 +202,13 @@ class BackupRecordServiceTest {
                 "NAS_Volume_2/photos.zip", BackupStatus.COMPLETED, null, null
         );
 
-        when(projectRepository.existsById(projectId)).thenReturn(true);
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
 
-        Deliverable deliverable = new Deliverable();
-        deliverable.setId(deliverableId);
-        deliverable.setProjectId(UUID.randomUUID()); // Mismatch project id
-        when(deliverableRepository.findById(deliverableId)).thenReturn(Optional.of(deliverable));
+        Deliverable mismatchedDeliverable = new Deliverable();
+        mismatchedDeliverable.setId(deliverableId);
+        mismatchedDeliverable.setProjectId(UUID.randomUUID()); // Mismatched project ID
+        mismatchedDeliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        when(deliverableRepository.findByIdAndStudioId(deliverableId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(mismatchedDeliverable));
 
         Exception exception = assertThrows(IllegalArgumentException.class, () -> backupRecordService.createBackup(request));
         assertTrue(exception.getMessage().contains("Deliverable must belong to the same project"));
@@ -131,23 +219,27 @@ class BackupRecordServiceTest {
     void listBackups_All() {
         BackupRecord r1 = new BackupRecord();
         r1.setProjectId(projectId);
+        r1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         BackupRecord r2 = new BackupRecord();
         r2.setProjectId(UUID.randomUUID());
+        r2.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(backupRecordRepository.findAll()).thenReturn(List.of(r1, r2));
+        when(backupRecordRepository.findAllByStudioId(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(List.of(r1, r2));
 
         List<BackupRecordResponse> list = backupRecordService.listBackups(null, null);
 
         assertEquals(2, list.size());
-        verify(backupRecordRepository, times(1)).findAll();
+        verify(backupRecordRepository, times(1)).findAllByStudioId(TenantConstants.DEFAULT_STUDIO_ID);
     }
 
     @Test
-    void listBackups_ByProject() {
+    void listBackups_ByProject_Success() {
         BackupRecord r1 = new BackupRecord();
         r1.setProjectId(projectId);
+        r1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
-        when(backupRecordRepository.findByProjectId(projectId)).thenReturn(List.of(r1));
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+        when(backupRecordRepository.findByProjectIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(List.of(r1));
 
         List<BackupRecordResponse> list = backupRecordService.listBackups(projectId, null);
 
@@ -156,14 +248,45 @@ class BackupRecordServiceTest {
     }
 
     @Test
+    void listBackups_ByProject_ProjectNotFound() {
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> backupRecordService.listBackups(projectId, null));
+    }
+
+    @Test
+    void listBackups_ByDeliverable_Success() {
+        BackupRecord r1 = new BackupRecord();
+        r1.setProjectId(projectId);
+        r1.setDeliverableId(deliverableId);
+        r1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        when(deliverableRepository.findByIdAndStudioId(deliverableId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(deliverable));
+        when(backupRecordRepository.findByDeliverableIdAndStudioId(deliverableId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(List.of(r1));
+
+        List<BackupRecordResponse> list = backupRecordService.listBackups(null, deliverableId);
+
+        assertEquals(1, list.size());
+        assertEquals(deliverableId, list.get(0).getDeliverableId());
+    }
+
+    @Test
+    void listBackups_ByDeliverable_DeliverableNotFound() {
+        when(deliverableRepository.findByIdAndStudioId(deliverableId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> backupRecordService.listBackups(null, deliverableId));
+    }
+
+    @Test
     void getBackupById_Success() {
         UUID id = UUID.randomUUID();
         BackupRecord record = new BackupRecord();
         record.setId(id);
         record.setProjectId(projectId);
+        record.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         record.setBackupType(BackupType.RAW_PHOTOS);
 
-        when(backupRecordRepository.findById(id)).thenReturn(Optional.of(record));
+        when(backupRecordRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(record));
 
         BackupRecordResponse response = backupRecordService.getBackupById(id);
 
@@ -174,7 +297,7 @@ class BackupRecordServiceTest {
     @Test
     void getBackupById_NotFound_ThrowsException() {
         UUID id = UUID.randomUUID();
-        when(backupRecordRepository.findById(id)).thenReturn(Optional.empty());
+        when(backupRecordRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> backupRecordService.getBackupById(id));
     }
@@ -185,6 +308,7 @@ class BackupRecordServiceTest {
         BackupRecord record = new BackupRecord();
         record.setId(id);
         record.setProjectId(projectId);
+        record.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
         record.setBackupType(BackupType.RAW_PHOTOS);
         record.setLocationType(BackupLocationType.LOCAL_NAS);
         record.setStatus(BackupStatus.PENDING);
@@ -195,7 +319,7 @@ class BackupRecordServiceTest {
                 BackupStatus.COMPLETED, "note", null
         );
 
-        when(backupRecordRepository.findById(id)).thenReturn(Optional.of(record));
+        when(backupRecordRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(record));
         when(backupRecordRepository.save(any(BackupRecord.class))).thenReturn(record);
 
         BackupRecordResponse response = backupRecordService.updateBackup(id, request);
@@ -208,13 +332,44 @@ class BackupRecordServiceTest {
     }
 
     @Test
-    void getDistinctCompletedBackupLocationsCount() {
-        when(backupRecordRepository.findDistinctCompletedLocationTypesByDeliverableId(deliverableId))
+    void deleteBackup_Success() {
+        UUID id = UUID.randomUUID();
+        BackupRecord record = new BackupRecord();
+        record.setId(id);
+        record.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        when(backupRecordRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(record));
+        doNothing().when(backupRecordRepository).delete(record);
+
+        assertDoesNotThrow(() -> backupRecordService.deleteBackup(id));
+        verify(backupRecordRepository, times(1)).delete(record);
+    }
+
+    @Test
+    void deleteBackup_NotFound_ThrowsException() {
+        UUID id = UUID.randomUUID();
+        when(backupRecordRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> backupRecordService.deleteBackup(id));
+        verify(backupRecordRepository, never()).delete(any(BackupRecord.class));
+    }
+
+    @Test
+    void getDistinctCompletedBackupLocationsCount_Success() {
+        when(deliverableRepository.findByIdAndStudioId(deliverableId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(deliverable));
+        when(backupRecordRepository.findDistinctCompletedLocationTypesByDeliverableIdAndStudioId(deliverableId, TenantConstants.DEFAULT_STUDIO_ID))
                 .thenReturn(List.of(BackupLocationType.LOCAL_NAS, BackupLocationType.CLOUD_S3));
 
         int count = backupRecordService.getDistinctCompletedBackupLocationsCount(deliverableId);
 
         assertEquals(2, count);
-        verify(backupRecordRepository, times(1)).findDistinctCompletedLocationTypesByDeliverableId(deliverableId);
+        verify(backupRecordRepository, times(1)).findDistinctCompletedLocationTypesByDeliverableIdAndStudioId(deliverableId, TenantConstants.DEFAULT_STUDIO_ID);
+    }
+
+    @Test
+    void getDistinctCompletedBackupLocationsCount_DeliverableNotFound() {
+        when(deliverableRepository.findByIdAndStudioId(deliverableId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> backupRecordService.getDistinctCompletedBackupLocationsCount(deliverableId));
     }
 }

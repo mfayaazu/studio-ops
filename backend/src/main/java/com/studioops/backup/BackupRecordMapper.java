@@ -22,6 +22,7 @@ public class BackupRecordMapper {
         BackupRecordResponse response = new BackupRecordResponse();
         response.setId(entity.getId());
         response.setProjectId(entity.getProjectId());
+        response.setStudioId(entity.getStudioId());
         response.setDeliverableId(entity.getDeliverableId());
         response.setBackupType(entity.getBackupType());
         response.setLocationType(entity.getLocationType());

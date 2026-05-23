@@ -10,6 +10,7 @@ public class BackupRecordResponse {
 
     private UUID id;
     private UUID projectId;
+    private UUID studioId;
     private UUID deliverableId;
     private BackupType backupType;
     private BackupLocationType locationType;
@@ -37,6 +38,14 @@ public class BackupRecordResponse {
 
     public void setProjectId(UUID projectId) {
         this.projectId = projectId;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 
     public UUID getDeliverableId() {

@@ -11,6 +11,8 @@ import java.util.UUID;
 
 public class BackupRecordCreateRequest {
 
+    private UUID studioId;
+
     @NotNull(message = "projectId is required")
     private UUID projectId;
 
@@ -34,6 +36,14 @@ public class BackupRecordCreateRequest {
     private Instant verifiedAt;
 
     public BackupRecordCreateRequest() {
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 
     public BackupRecordCreateRequest(UUID projectId, UUID deliverableId, BackupType backupType, BackupLocationType locationType, String destinationPath, BackupStatus status, String notes, Instant verifiedAt) {

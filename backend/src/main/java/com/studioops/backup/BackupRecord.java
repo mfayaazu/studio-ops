@@ -16,6 +16,9 @@ public class BackupRecord {
     @Column(name = "project_id", nullable = false)
     private UUID projectId;
 
+    @Column(name = "studio_id", nullable = false)
+    private UUID studioId;
+
     @Column(name = "deliverable_id")
     private UUID deliverableId;
 
@@ -74,6 +77,14 @@ public class BackupRecord {
 
     public void setProjectId(UUID projectId) {
         this.projectId = projectId;
+    }
+
+    public UUID getStudioId() {
+        return studioId;
+    }
+
+    public void setStudioId(UUID studioId) {
+        this.studioId = studioId;
     }
 
     public UUID getDeliverableId() {
