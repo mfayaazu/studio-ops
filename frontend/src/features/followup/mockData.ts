@@ -13,6 +13,12 @@ export const mockLeads: Lead[] = [
     stage: 'QUOTE_SENT',
     priority: 'high',
     urgencyDays: 0,
+    sequenceName: 'Standard 10-day Wedding Sequence',
+    notes: 'Requested custom destination pricing. Interested in adding a second photographer and engagement shoot package.',
+    history: [
+      { date: '2026-05-18', event: 'Initial inquiry received', status: 'system' },
+      { date: '2026-05-20', event: 'Quotation of $4,200 sent', status: 'sent' }
+    ]
   },
   {
     id: 'l2',
@@ -26,6 +32,13 @@ export const mockLeads: Lead[] = [
     stage: 'WARM',
     priority: 'medium',
     urgencyDays: -2,
+    sequenceName: 'Commercial Follow-up Sequence',
+    notes: 'Needs headshots for 15 board members. Requested clean solid grey backdrop.',
+    history: [
+      { date: '2026-05-15', event: 'Inquiry submitted via website form', status: 'system' },
+      { date: '2026-05-16', event: 'Commercial packages sent', status: 'sent' },
+      { date: '2026-05-18', event: 'Followed up via WhatsApp, client expressed positive interest', status: 'sent' }
+    ]
   },
   {
     id: 'l3',
@@ -39,6 +52,11 @@ export const mockLeads: Lead[] = [
     stage: 'NEW_LEAD',
     priority: 'low',
     urgencyDays: 1,
+    sequenceName: 'Standard Family Portrait Sequence',
+    notes: 'Family reunion event. Total of 12 adults and 4 kids. Looking for relaxed, outdoor aesthetic.',
+    history: [
+      { date: '2026-05-22', event: 'Inquiry received for family shoot', status: 'system' }
+    ]
   },
   {
     id: 'l4',
@@ -52,6 +70,13 @@ export const mockLeads: Lead[] = [
     stage: 'NEGOTIATION',
     priority: 'high',
     urgencyDays: 0,
+    sequenceName: 'Engagement Portrait Sequence',
+    notes: 'Negotiating location options. Marcus wants a scenic mountain overlook but concerns about sunset timing.',
+    history: [
+      { date: '2026-05-10', event: 'Inquiry submitted', status: 'system' },
+      { date: '2026-05-12', event: 'Price sheet and location guide sent', status: 'sent' },
+      { date: '2026-05-15', event: 'Consultation call completed', status: 'sent' }
+    ]
   },
   {
     id: 'l5',
@@ -65,6 +90,13 @@ export const mockLeads: Lead[] = [
     stage: 'FOLLOW_UP_PENDING',
     priority: 'medium',
     urgencyDays: 3,
+    sequenceName: 'Maternity/Newborn Sequence',
+    notes: 'Client is currently in her 28th week. Prefers a studio session with soft high-key lighting.',
+    history: [
+      { date: '2026-05-20', event: 'Inquiry received', status: 'system' },
+      { date: '2026-05-21', event: 'Pricing options sent', status: 'sent' },
+      { date: '2026-05-23', event: 'Scheduled follow-up email approved & sent', status: 'sent' }
+    ]
   },
   {
     id: 'l6',
@@ -78,6 +110,12 @@ export const mockLeads: Lead[] = [
     stage: 'QUOTE_SENT',
     priority: 'high',
     urgencyDays: -4,
+    sequenceName: 'Standard Event Sequence',
+    notes: 'Party venue booked in downtown rooftop. Needs coverage for 4 hours including speeches.',
+    history: [
+      { date: '2026-05-08', event: 'Party inquiry received', status: 'system' },
+      { date: '2026-05-10', event: 'Custom quote sent', status: 'sent' }
+    ]
   },
   {
     id: 'l7',
@@ -91,6 +129,14 @@ export const mockLeads: Lead[] = [
     stage: 'CONFIRMED',
     priority: 'high',
     urgencyDays: 99,
+    sequenceName: 'Commercial Editorial Sequence',
+    notes: 'Deposit paid. Contract signed. Moodboard finalized on Pinterest.',
+    history: [
+      { date: '2026-05-15', event: 'Inquiry received', status: 'system' },
+      { date: '2026-05-17', event: 'Quote sent', status: 'sent' },
+      { date: '2026-05-20', event: 'Contracts sent for signature', status: 'sent' },
+      { date: '2026-05-22', event: 'Deposit paid & contract fully executed', status: 'system' }
+    ]
   },
   {
     id: 'l8',
@@ -104,6 +150,13 @@ export const mockLeads: Lead[] = [
     stage: 'LOST',
     priority: 'low',
     urgencyDays: 99,
+    sequenceName: 'Standard Portrait Sequence',
+    notes: 'Lost to competitor offering a lower price point.',
+    history: [
+      { date: '2026-05-01', event: 'Inquiry received', status: 'system' },
+      { date: '2026-05-03', event: 'Pricing brochure sent', status: 'sent' },
+      { date: '2026-05-05', event: 'Client responded they chose another provider', status: 'system' }
+    ]
   }
 ];
 

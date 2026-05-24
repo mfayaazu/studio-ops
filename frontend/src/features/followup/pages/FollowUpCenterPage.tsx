@@ -5,17 +5,29 @@ import { FollowUpPipelineBoard } from '../components/FollowUpPipelineBoard';
 import { FollowUpTimeline } from '../components/FollowUpTimeline';
 import { TemplateCardGrid } from '../components/TemplateCardGrid';
 import { PendingFollowUpsPanel } from '../components/PendingFollowUpsPanel';
-import { Sparkles, MessageSquare, Compass, LayoutGrid } from 'lucide-react';
+import { LeadDetailDrawer } from '../components/LeadDetailDrawer';
+import type { Lead } from '../types';
+import { Sparkles, MessageSquare, Compass, LayoutGrid, CheckSquare } from 'lucide-react';
 
 export const FollowUpCenterPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'sequence' | 'templates'>('pipeline');
+  const [leads, setLeads] = useState<Lead[]>(mockLeads);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'sequence' | 'templates' | 'approvals'>('pipeline');
 
-  // Calculate stats dynamically from mock data
-  const openLeads = mockLeads.filter((l) => l.stage !== 'CONFIRMED' && l.stage !== 'LOST');
+  // Find currently selected lead
+  const selectedLead = leads.find((l) => l.id === selectedLeadId) || null;
+
+  // Handle lead update (e.g. status transition or sending message)
+  const handleUpdateLead = (updatedLead: Lead) => {
+    setLeads(leads.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+  };
+
+  // Calculate stats dynamically from state
+  const openLeads = leads.filter((l) => l.stage !== 'CONFIRMED' && l.stage !== 'LOST');
   const leadsInFunnel = openLeads.length;
   
   const dueTodayCount = mockPendingFollowUps.filter((p) => p.dueStatus === 'due_today').length;
-  const warmLeadsCount = mockLeads.filter((l) => l.stage === 'WARM').length;
+  const warmLeadsCount = leads.filter((l) => l.stage === 'WARM').length;
   const overdueCount = mockPendingFollowUps.filter((p) => p.dueStatus === 'overdue').length;
   
   const estimatedOpenValue = openLeads.reduce((sum, lead) => sum + lead.estimatedValue, 0);
@@ -58,60 +70,74 @@ export const FollowUpCenterPage: React.FC = () => {
         estimatedOpenValue={estimatedOpenValue}
       />
 
-      {/* Main Split Grid: Left Side active tab, Right Side manual approvals */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Left Side: Tabs Switcher and Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Tab Navigation buttons */}
-          <div className="flex border-b border-slate-800/80 gap-2">
-            <button
-              onClick={() => setActiveTab('pipeline')}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 border-b-2 ${
-                activeTab === 'pipeline'
-                  ? 'border-violet-500 text-white bg-violet-600/5'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              <span>Pipeline Board</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('sequence')}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 border-b-2 ${
-                activeTab === 'sequence'
-                  ? 'border-violet-500 text-white bg-violet-600/5'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Compass className="h-4 w-4" />
-              <span>Sequence Timeline</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('templates')}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 border-b-2 ${
-                activeTab === 'templates'
-                  ? 'border-violet-500 text-white bg-violet-600/5'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <MessageSquare className="h-4 w-4" />
-              <span>Message Templates</span>
-            </button>
-          </div>
-
-          {/* Active Tab Screen */}
-          <div>
-            {activeTab === 'pipeline' && <FollowUpPipelineBoard leads={mockLeads} />}
-            {activeTab === 'sequence' && <FollowUpTimeline steps={mockSequenceSteps} />}
-            {activeTab === 'templates' && <TemplateCardGrid templates={mockTemplates} />}
-          </div>
-        </div>
-
-        {/* Right Side: Manual Approvals Gate Panel */}
-        <div className="lg:col-span-1">
-          <PendingFollowUpsPanel initialTasks={mockPendingFollowUps} />
-        </div>
+      {/* Tab Navigation header */}
+      <div className="flex border-b border-slate-800/80 gap-2">
+        <button
+          onClick={() => setActiveTab('pipeline')}
+          className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 border-b-2 ${
+            activeTab === 'pipeline'
+              ? 'border-violet-500 text-white bg-violet-600/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <LayoutGrid className="h-4 w-4" />
+          <span>Pipeline Board</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('sequence')}
+          className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 border-b-2 ${
+            activeTab === 'sequence'
+              ? 'border-violet-500 text-white bg-violet-600/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Compass className="h-4 w-4" />
+          <span>Sequence Timeline</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('templates')}
+          className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 border-b-2 ${
+            activeTab === 'templates'
+              ? 'border-violet-500 text-white bg-violet-600/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <MessageSquare className="h-4 w-4" />
+          <span>Message Templates</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('approvals')}
+          className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-all duration-200 border-b-2 ${
+            activeTab === 'approvals'
+              ? 'border-violet-500 text-white bg-violet-600/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <CheckSquare className="h-4 w-4" />
+          <span>Pending Approvals ({dueTodayCount + overdueCount})</span>
+        </button>
       </div>
+
+      {/* Active Tab Screen */}
+      <div className="w-full">
+        {activeTab === 'pipeline' && (
+          <FollowUpPipelineBoard 
+            leads={leads} 
+            onLeadClick={(leadId) => setSelectedLeadId(leadId)} 
+          />
+        )}
+        {activeTab === 'sequence' && <FollowUpTimeline steps={mockSequenceSteps} />}
+        {activeTab === 'templates' && <TemplateCardGrid templates={mockTemplates} />}
+        {activeTab === 'approvals' && <PendingFollowUpsPanel initialTasks={mockPendingFollowUps} />}
+      </div>
+
+      {/* Lead Detail Drawer overlay */}
+      <LeadDetailDrawer
+        lead={selectedLead}
+        isOpen={selectedLeadId !== null}
+        onClose={() => setSelectedLeadId(null)}
+        onUpdateLead={handleUpdateLead}
+      />
     </main>
   );
 };

@@ -5,9 +5,10 @@ import { LeadCard } from './LeadCard';
 interface PipelineColumnProps {
   stage: LeadStage;
   leads: Lead[];
+  onLeadClick?: (leadId: string) => void;
 }
 
-export const PipelineColumn: React.FC<PipelineColumnProps> = ({ stage, leads }) => {
+export const PipelineColumn: React.FC<PipelineColumnProps> = ({ stage, leads, onLeadClick }) => {
   const getStageLabel = (stage: LeadStage) => {
     switch (stage) {
       case 'NEW_LEAD':
@@ -76,7 +77,13 @@ export const PipelineColumn: React.FC<PipelineColumnProps> = ({ stage, leads }) 
             <span className="text-[10px] text-slate-600 font-semibold tracking-wide">No Leads in Stage</span>
           </div>
         ) : (
-          leads.map((lead) => <LeadCard key={lead.id} lead={lead} />)
+          leads.map((lead) => (
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              onClick={() => onLeadClick && onLeadClick(lead.id)}
+            />
+          ))
         )}
       </div>
     </div>

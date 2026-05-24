@@ -18,6 +18,13 @@ export interface Lead {
   stage: LeadStage;
   priority: 'low' | 'medium' | 'high';
   urgencyDays: number;
+  notes?: string;
+  sequenceName?: string;
+  history?: Array<{
+    date: string;
+    event: string;
+    status: 'sent' | 'skipped' | 'system';
+  }>;
 }
 
 export interface SequenceStep {

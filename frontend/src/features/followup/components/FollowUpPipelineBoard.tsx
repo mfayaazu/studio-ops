@@ -4,9 +4,10 @@ import { PipelineColumn } from './PipelineColumn';
 
 interface FollowUpPipelineBoardProps {
   leads: Lead[];
+  onLeadClick?: (leadId: string) => void;
 }
 
-export const FollowUpPipelineBoard: React.FC<FollowUpPipelineBoardProps> = ({ leads }) => {
+export const FollowUpPipelineBoard: React.FC<FollowUpPipelineBoardProps> = ({ leads, onLeadClick }) => {
   const stages: LeadStage[] = [
     'NEW_LEAD',
     'QUOTE_SENT',
@@ -25,7 +26,7 @@ export const FollowUpPipelineBoard: React.FC<FollowUpPipelineBoardProps> = ({ le
             Booking & Follow-up Funnel
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Track leads from initial quotation sent to deposit paid confirmation
+            Track leads from initial quotation sent to deposit paid confirmation (click card to view details & take action)
           </p>
         </div>
       </div>
@@ -39,6 +40,7 @@ export const FollowUpPipelineBoard: React.FC<FollowUpPipelineBoardProps> = ({ le
               key={stage}
               stage={stage}
               leads={stageLeads}
+              onLeadClick={onLeadClick}
             />
           );
         })}
