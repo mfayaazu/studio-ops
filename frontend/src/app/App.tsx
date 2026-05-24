@@ -15,6 +15,7 @@ import { EventsPage } from '../features/events/pages/EventsPage';
 import { AvailabilityPlannerPage } from '../features/assignments/pages/AvailabilityPlannerPage';
 import { BackupCenterPage } from '../features/backups/pages/BackupCenterPage';
 import { DeliverablesPage } from '../features/deliverables/pages/DeliverablesPage';
+import { FollowUpCenterPage } from '../features/followup/pages/FollowUpCenterPage';
 
 interface HealthResponse {
   status: string;
@@ -93,6 +94,8 @@ const AppContent: React.FC = () => {
         return <BackupCenterPage />;
       case 'deliverables':
         return <DeliverablesPage />;
+      case 'follow-up-center':
+        return <FollowUpCenterPage />;
       default:
         return <DashboardPage />;
     }
