@@ -1,12 +1,18 @@
 import React from 'react';
-import type { SequenceStep } from '../types';
+import type { SequenceStep, FollowUpStep, MessageTemplate } from '../types';
 import { Mail, MessageSquare, Phone, Smartphone, Check, Clock, ChevronRight } from 'lucide-react';
 
 interface FollowUpTimelineProps {
-  steps: SequenceStep[];
+  steps: (SequenceStep | FollowUpStep)[];
+  templates?: MessageTemplate[];
+  sequenceName?: string;
 }
 
-export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({ steps }) => {
+export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({ 
+  steps, 
+  templates = [],
+  sequenceName = 'Default 10-Day Follow-up Timeline'
+}) => {
   const getChannelIcon = (channel: string) => {
     switch (channel) {
       case 'EMAIL':
@@ -39,11 +45,24 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({ steps }) => 
     }
   };
 
+  const getStepTemplateLabel = (step: SequenceStep | FollowUpStep) => {
+    // If it's a backend step with templateId
+    if ('templateId' in step && step.templateId) {
+      const tmpl = templates.find(t => t.id === step.templateId);
+      return tmpl ? getTemplateTypeLabel(tmpl.templateType) : 'Custom Template';
+    }
+    // If it's a mock step with templateType
+    if ('templateType' in step && step.templateType) {
+      return getTemplateTypeLabel(step.templateType);
+    }
+    return 'Template Step';
+  };
+
   return (
     <div className="bg-[#0b1222]/50 border border-slate-800/60 rounded-2xl p-6 shadow-xl space-y-6">
       <div>
         <h3 className="text-sm font-semibold text-slate-200">
-          Default 10-Day Follow-up Timeline
+          {sequenceName}
         </h3>
         <p className="text-xs text-slate-500 mt-0.5">
           Automatic communication sequence triggered when a project quotation is sent
@@ -81,7 +100,7 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({ steps }) => 
                   <span>{step.channel}</span>
                 </div>
                 <h4 className="text-[11px] font-mono text-slate-500 mt-1 uppercase tracking-wide">
-                  {getTemplateTypeLabel(step.templateType)}
+                  {getStepTemplateLabel(step)}
                 </h4>
               </div>
 

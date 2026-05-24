@@ -57,3 +57,27 @@ export interface PendingFollowUp {
   subject?: string;
   body: string;
 }
+
+export interface FollowUpSequence {
+  id: string;
+  studioId: string;
+  name: string;
+  description?: string;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface FollowUpStep {
+  id: string;
+  studioId: string;
+  sequenceId: string;
+  stepOrder: number;
+  delayDays: number;
+  channel: ChannelType;
+  templateId: string;
+  goal: string;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
