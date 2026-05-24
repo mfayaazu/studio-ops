@@ -3,9 +3,9 @@ import type { Lead, SequenceStep, MessageTemplate, PendingFollowUp } from './typ
 export const mockLeads: Lead[] = [
   {
     id: 'l1',
-    clientName: 'Sarah Jenkins',
-    projectTitle: 'Jenkins-Miller Wedding',
-    estimatedValue: 4200,
+    clientName: 'Priya & Arjun',
+    projectTitle: 'Telugu Wedding Photography in Hyderabad',
+    estimatedValue: 350000,
     eventDate: '2026-09-12',
     lastContacted: '2026-05-20',
     nextFollowUp: '2026-05-24', // Due today
@@ -13,18 +13,18 @@ export const mockLeads: Lead[] = [
     stage: 'QUOTE_SENT',
     priority: 'high',
     urgencyDays: 0,
-    sequenceName: 'Standard 10-day Wedding Sequence',
-    notes: 'Requested custom destination pricing. Interested in adding a second photographer and engagement shoot package.',
+    sequenceName: 'Premium 3-Day Wedding Sequence',
+    notes: 'Requested custom destination pricing for a 3-day wedding in Hyderabad. Interested in traditional Telugu rituals coverage + cinematic film and premium leather-bound albums.',
     history: [
-      { date: '2026-05-18', event: 'Initial inquiry received', status: 'system' },
-      { date: '2026-05-20', event: 'Quotation of $4,200 sent', status: 'sent' }
+      { date: '2026-05-18', event: 'Initial inquiry received via WhatsApp', status: 'system' },
+      { date: '2026-05-20', event: 'Quotation of $350,000 sent with custom portfolio links', status: 'sent' }
     ]
   },
   {
     id: 'l2',
-    clientName: 'David Chen',
-    projectTitle: 'Chen Corporate Portrait',
-    estimatedValue: 1500,
+    clientName: 'Sneha Reddy',
+    projectTitle: 'Haldi & Mehendi Coverage in Bengaluru',
+    estimatedValue: 85000,
     eventDate: '2026-07-05',
     lastContacted: '2026-05-18',
     nextFollowUp: '2026-05-22', // Overdue
@@ -32,19 +32,19 @@ export const mockLeads: Lead[] = [
     stage: 'WARM',
     priority: 'medium',
     urgencyDays: -2,
-    sequenceName: 'Commercial Follow-up Sequence',
-    notes: 'Needs headshots for 15 board members. Requested clean solid grey backdrop.',
+    sequenceName: 'Intimate Event Sequence',
+    notes: 'Wants candid photography and short video reels for Instagram. Event at a resort near Nandi Hills. Total guest count is 150.',
     history: [
       { date: '2026-05-15', event: 'Inquiry submitted via website form', status: 'system' },
-      { date: '2026-05-16', event: 'Commercial packages sent', status: 'sent' },
+      { date: '2026-05-16', event: 'Haldi & Mehendi packages brochure sent', status: 'sent' },
       { date: '2026-05-18', event: 'Followed up via WhatsApp, client expressed positive interest', status: 'sent' }
     ]
   },
   {
     id: 'l3',
-    clientName: 'Rebecca Vance',
-    projectTitle: 'Vance Family Reunion',
-    estimatedValue: 950,
+    clientName: 'Rahul & Ananya',
+    projectTitle: 'Pre-wedding Shoot in Goa',
+    estimatedValue: 120000,
     eventDate: '2026-08-20',
     lastContacted: '2026-05-22',
     nextFollowUp: '2026-05-25', // Tomorrow
@@ -52,17 +52,17 @@ export const mockLeads: Lead[] = [
     stage: 'NEW_LEAD',
     priority: 'low',
     urgencyDays: 1,
-    sequenceName: 'Standard Family Portrait Sequence',
-    notes: 'Family reunion event. Total of 12 adults and 4 kids. Looking for relaxed, outdoor aesthetic.',
+    sequenceName: 'Pre-wedding Outdoor Sequence',
+    notes: 'Looking for a sunset beach session and a couple of outfit changes. Needs drone coverage and a cinematic teaser video.',
     history: [
-      { date: '2026-05-22', event: 'Inquiry received for family shoot', status: 'system' }
+      { date: '2026-05-22', event: 'Inquiry received for Goa beach pre-wedding shoot', status: 'system' }
     ]
   },
   {
     id: 'l4',
-    clientName: 'Marcus Brodie',
-    projectTitle: 'Brodie Engagement Shoot',
-    estimatedValue: 1200,
+    clientName: 'Rohit Sharma',
+    projectTitle: 'Corporate Headshots in Mumbai',
+    estimatedValue: 65000,
     eventDate: '2026-10-04',
     lastContacted: '2026-05-15',
     nextFollowUp: '2026-05-24', // Due today
@@ -70,19 +70,19 @@ export const mockLeads: Lead[] = [
     stage: 'NEGOTIATION',
     priority: 'high',
     urgencyDays: 0,
-    sequenceName: 'Engagement Portrait Sequence',
-    notes: 'Negotiating location options. Marcus wants a scenic mountain overlook but concerns about sunset timing.',
+    sequenceName: 'Commercial Headshot Sequence',
+    notes: 'Needs executive headshots for 25 board members at their BKC office. Negotiating group package rate and backdrop options.',
     history: [
-      { date: '2026-05-10', event: 'Inquiry submitted', status: 'system' },
-      { date: '2026-05-12', event: 'Price sheet and location guide sent', status: 'sent' },
-      { date: '2026-05-15', event: 'Consultation call completed', status: 'sent' }
+      { date: '2026-05-10', event: 'Corporate inquiry submitted', status: 'system' },
+      { date: '2026-05-12', event: 'Price sheet and backdrop options sent', status: 'sent' },
+      { date: '2026-05-15', event: 'Consultation call with HR completed', status: 'sent' }
     ]
   },
   {
     id: 'l5',
-    clientName: 'Laura Henderson',
-    projectTitle: 'Henderson Maternity Session',
-    estimatedValue: 800,
+    clientName: 'Karthik & Meera',
+    projectTitle: 'Engagement Ceremony in Chennai',
+    estimatedValue: 95000,
     eventDate: '2026-06-30',
     lastContacted: '2026-05-23',
     nextFollowUp: '2026-05-27',
@@ -90,19 +90,19 @@ export const mockLeads: Lead[] = [
     stage: 'FOLLOW_UP_PENDING',
     priority: 'medium',
     urgencyDays: 3,
-    sequenceName: 'Maternity/Newborn Sequence',
-    notes: 'Client is currently in her 28th week. Prefers a studio session with soft high-key lighting.',
+    sequenceName: 'Standard Rituals Sequence',
+    notes: 'Traditional South Indian style engagement. Client requested a quick turnaround for photo delivery to share with relatives abroad.',
     history: [
       { date: '2026-05-20', event: 'Inquiry received', status: 'system' },
-      { date: '2026-05-21', event: 'Pricing options sent', status: 'sent' },
-      { date: '2026-05-23', event: 'Scheduled follow-up email approved & sent', status: 'sent' }
+      { date: '2026-05-21', event: 'Engagement pricing packages sent', status: 'sent' },
+      { date: '2026-05-23', event: 'Follow-up email with client testimonials approved & sent', status: 'sent' }
     ]
   },
   {
     id: 'l6',
-    clientName: 'Amanda Ross',
-    projectTitle: 'Ross 30th Birthday',
-    estimatedValue: 1800,
+    clientName: 'Ayesha Khan',
+    projectTitle: 'Baby Shower Photography in Delhi',
+    estimatedValue: 55000,
     eventDate: '2026-06-15',
     lastContacted: '2026-05-10',
     nextFollowUp: '2026-05-20', // Overdue
@@ -111,17 +111,17 @@ export const mockLeads: Lead[] = [
     priority: 'high',
     urgencyDays: -4,
     sequenceName: 'Standard Event Sequence',
-    notes: 'Party venue booked in downtown rooftop. Needs coverage for 4 hours including speeches.',
+    notes: 'Family-only baby shower event in Delhi. Needs candid coverage, group photo portraits, and custom photo album.',
     history: [
-      { date: '2026-05-08', event: 'Party inquiry received', status: 'system' },
-      { date: '2026-05-10', event: 'Custom quote sent', status: 'sent' }
+      { date: '2026-05-08', event: 'Baby shower inquiry received', status: 'system' },
+      { date: '2026-05-10', event: 'Custom event quote sent', status: 'sent' }
     ]
   },
   {
     id: 'l7',
-    clientName: 'George Sterling',
-    projectTitle: 'Sterling Fashion Editorial',
-    estimatedValue: 3100,
+    clientName: 'Aditya & Kavya',
+    projectTitle: 'North Indian Wedding Film in Delhi',
+    estimatedValue: 450000,
     eventDate: '2026-08-15',
     lastContacted: '2026-05-22',
     nextFollowUp: 'Completed',
@@ -129,20 +129,20 @@ export const mockLeads: Lead[] = [
     stage: 'CONFIRMED',
     priority: 'high',
     urgencyDays: 99,
-    sequenceName: 'Commercial Editorial Sequence',
-    notes: 'Deposit paid. Contract signed. Moodboard finalized on Pinterest.',
+    sequenceName: 'Premium 3-Day Wedding Sequence',
+    notes: 'Advance deposit paid. Traditional Punjabi wedding with Baraat, Anand Karaj, and Reception coverage.',
     history: [
       { date: '2026-05-15', event: 'Inquiry received', status: 'system' },
-      { date: '2026-05-17', event: 'Quote sent', status: 'sent' },
+      { date: '2026-05-17', event: 'Cinematography & photography quote sent', status: 'sent' },
       { date: '2026-05-20', event: 'Contracts sent for signature', status: 'sent' },
       { date: '2026-05-22', event: 'Deposit paid & contract fully executed', status: 'system' }
     ]
   },
   {
     id: 'l8',
-    clientName: 'Elena Rostova',
-    projectTitle: 'Rostova Graduation Portrait',
-    estimatedValue: 600,
+    clientName: 'Vikram Rao',
+    projectTitle: 'Housewarming Event in Pune',
+    estimatedValue: 40000,
     eventDate: '2026-06-05',
     lastContacted: '2026-05-05',
     nextFollowUp: 'Archived',
@@ -150,12 +150,12 @@ export const mockLeads: Lead[] = [
     stage: 'LOST',
     priority: 'low',
     urgencyDays: 99,
-    sequenceName: 'Standard Portrait Sequence',
-    notes: 'Lost to competitor offering a lower price point.',
+    sequenceName: 'Standard Event Sequence',
+    notes: 'Lost to neighborhood photographer offering a cheaper basic package without editing.',
     history: [
       { date: '2026-05-01', event: 'Inquiry received', status: 'system' },
-      { date: '2026-05-03', event: 'Pricing brochure sent', status: 'sent' },
-      { date: '2026-05-05', event: 'Client responded they chose another provider', status: 'system' }
+      { date: '2026-05-03', event: 'Housewarming pricing brochure sent', status: 'sent' },
+      { date: '2026-05-05', event: 'Client responded that they chose a local freelancer', status: 'system' }
     ]
   }
 ];
@@ -166,7 +166,7 @@ export const mockSequenceSteps: SequenceStep[] = [
     delayDays: 0,
     channel: 'EMAIL',
     templateType: 'QUOTE_SENT',
-    goal: 'Deliver Quote & Portfolio Link',
+    goal: 'Deliver Custom Quote & Portfolio Link',
     active: true,
   },
   {
@@ -174,7 +174,7 @@ export const mockSequenceSteps: SequenceStep[] = [
     delayDays: 1,
     channel: 'WHATSAPP',
     templateType: 'SOFT_FOLLOW_UP',
-    goal: 'Quick Check-in / Question Answer',
+    goal: 'Quick WhatsApp Check-in / Package Clarifications',
     active: true,
   },
   {
@@ -182,7 +182,7 @@ export const mockSequenceSteps: SequenceStep[] = [
     delayDays: 3,
     channel: 'EMAIL',
     templateType: 'VALUE_FOLLOW_UP',
-    goal: 'Share Planning Tips / Value Guide',
+    goal: 'Share Indian Wedding Timeline Guide / Planning Tips',
     active: true,
   },
   {
@@ -190,7 +190,7 @@ export const mockSequenceSteps: SequenceStep[] = [
     delayDays: 6,
     channel: 'SMS',
     templateType: 'SCARCITY_FOLLOW_UP',
-    goal: 'Urgency Warning on Limited Slots',
+    goal: 'Urgency Alert on Wedding Season Booking Slots',
     active: true,
   },
   {
@@ -198,7 +198,7 @@ export const mockSequenceSteps: SequenceStep[] = [
     delayDays: 10,
     channel: 'MANUAL_CALL',
     templateType: 'FINAL_FOLLOW_UP',
-    goal: 'Final Polite Closure Check-in',
+    goal: 'Final Polite Call on Open Quotation Status',
     active: true,
   }
 ];
@@ -209,8 +209,8 @@ export const mockTemplates: MessageTemplate[] = [
     name: 'Quote Sent Email Template',
     channel: 'EMAIL',
     templateType: 'QUOTE_SENT',
-    subject: 'Your Photography Quotation from StudioOps',
-    body: 'Hi {{clientName}},\n\nThank you for reaching out to us! Attached you will find our custom quotation for {{projectTitle}} in the amount of ${{estimatedValue}}.\n\nWe have also put together a custom portfolio for you to review here: {{portfolioUrl}}.\n\nPlease let us know if you have any questions or would like to lock in your date.\n\nBest regards,\nStudioOps Team',
+    subject: 'Your Photography & Film Quotation from StudioOps',
+    body: 'Hi {{clientName}},\n\nThank you for reaching out to us! Attached you will find our custom quotation for {{projectTitle}} in the amount of ${{estimatedValue}}.\n\nWe have also put together a custom portfolio of wedding films and albums for you here: {{portfolioUrl}}.\n\nPlease let us know if you have any questions or would like to lock in your auspicious dates.\n\nBest regards,\nStudioOps Team',
     active: true,
   },
   {
@@ -218,7 +218,7 @@ export const mockTemplates: MessageTemplate[] = [
     name: 'Soft Whatsapp Follow-Up',
     channel: 'WHATSAPP',
     templateType: 'SOFT_FOLLOW_UP',
-    body: 'Hey {{clientName}}! Just wanted to make sure you received the quote we sent yesterday for ${{estimatedValue}}. Do you have any quick questions about the packages or the timeline? 😊',
+    body: 'Namaste {{clientName}}! Hope you are doing well. Just wanted to make sure you received the custom quotation for {{projectTitle}} we sent yesterday. Do you have any quick questions about the package inclusions or customized video editing? 😊',
     active: true,
   },
   {
@@ -226,8 +226,8 @@ export const mockTemplates: MessageTemplate[] = [
     name: 'Value Follow-up Email',
     channel: 'EMAIL',
     templateType: 'VALUE_FOLLOW_UP',
-    subject: '5 Wedding Schedule Mistakes to Avoid',
-    body: 'Hi {{clientName}},\n\nAs you plan your big day, scheduling details can make or break the photo coverage. We compiled a quick guide with the 5 most common wedding timeline mistakes we see couples make.\n\nCheck it out here: {{guideUrl}}\n\nHopefully this helps with your planning! We would love to capture these moments for you.\n\nWarmly,\nStudioOps Team',
+    subject: 'How to Plan Your Auspicious Indian Wedding Photography Timeline',
+    body: 'Hi {{clientName}},\n\nPlanning an Indian wedding involves coordinating multiple rituals (Baraat, Muhurtham, Phere, etc.). We compiled a quick guide with timeline tips to ensure your photography captures every beautiful moment stress-free.\n\nCheck out the planning guide here: {{guideUrl}}\n\nHopefully this helps with your planning! We would love to capture your celebrations.\n\nWarmly,\nStudioOps Team',
     active: true,
   },
   {
@@ -235,7 +235,7 @@ export const mockTemplates: MessageTemplate[] = [
     name: 'Scarcity SMS Alert',
     channel: 'SMS',
     templateType: 'SCARCITY_FOLLOW_UP',
-    body: 'Hi {{clientName}}! We just received another inquiry for {{eventDate}}. Since your quotation is still active, we wanted to check if you are ready to book so we can save your slot! Reply here to confirm.',
+    body: 'Hi {{clientName}}! We just received another inquiry for {{eventDate}} (peak wedding season). Since your quote is still active, we wanted to check if you are ready to book so we can save your slot! Reply here to confirm.',
     active: true,
   },
   {
@@ -243,7 +243,7 @@ export const mockTemplates: MessageTemplate[] = [
     name: 'Final Closure Call script',
     channel: 'MANUAL_CALL',
     templateType: 'FINAL_FOLLOW_UP',
-    body: 'Talking points:\n1. Re-introduce yourself friendly.\n2. Mention we are finalizing the calendar for {{eventDate}} and need to close out pending quotes.\n3. Ask if they decided on another provider or if they want to pause planning.\n4. Leave on a highly positive note, offering future assistance.',
+    body: 'Talking points:\n1. Friendly greeting and warm tone.\n2. Mention we are finalizing the calendar for {{eventDate}} and need to close out pending quotes.\n3. Ask if they chose another provider or want to adjust the package parameters.\n4. Leave on a highly positive note, offering future assistance.',
     active: true,
   }
 ];
@@ -252,43 +252,43 @@ export const mockPendingFollowUps: PendingFollowUp[] = [
   {
     id: 'p1',
     leadId: 'l1',
-    clientName: 'Sarah Jenkins',
-    projectTitle: 'Jenkins-Miller Wedding',
+    clientName: 'Priya & Arjun',
+    projectTitle: 'Telugu Wedding Photography in Hyderabad',
     channel: 'EMAIL',
     dueDate: '2026-05-24',
     dueStatus: 'due_today',
-    subject: 'Quick question regarding your wedding photography quote',
-    body: 'Hi Sarah,\n\nI wanted to confirm you received our quotation for $4,200. Do you have any initial questions or details you would like to adjust?\n\nLooking forward to hearing from you!',
+    subject: 'Quick question regarding your Telugu Wedding photography quote',
+    body: 'Hi Priya,\n\nI wanted to confirm you received our quotation of $350,000 for your wedding. Do you have any initial questions or details you would like to adjust?\n\nLooking forward to hearing from you!',
   },
   {
     id: 'p2',
     leadId: 'l2',
-    clientName: 'David Chen',
-    projectTitle: 'Chen Corporate Portrait',
+    clientName: 'Sneha Reddy',
+    projectTitle: 'Haldi & Mehendi Coverage in Bengaluru',
     channel: 'WHATSAPP',
     dueDate: '2026-05-22',
     dueStatus: 'overdue',
-    body: 'Hey David! Just checking in to see if you have any questions about the corporate headshot packages we sent over. We can customize the background and group discounts if needed! Let me know.',
+    body: 'Hey Sneha! Just checking in to see if you have any questions about the Haldi & Mehendi packages we sent over. We can customize the editing styles and reels output! Let me know.',
   },
   {
     id: 'p3',
     leadId: 'l6',
-    clientName: 'Amanda Ross',
-    projectTitle: 'Ross 30th Birthday',
+    clientName: 'Ayesha Khan',
+    projectTitle: 'Baby Shower Photography in Delhi',
     channel: 'EMAIL',
     dueDate: '2026-05-20',
     dueStatus: 'overdue',
-    subject: 'Still interested in birthday event photography?',
-    body: 'Hi Amanda,\n\nI wanted to check in one last time regarding the photography quote for your birthday celebration on June 15. Our weekend slots fill up fast, so let me know if you would like us to reserve the date!\n\nBest, StudioOps.',
+    subject: 'Still interested in baby shower photography?',
+    body: 'Hi Ayesha,\n\nI wanted to check in one last time regarding the baby shower photography quote we sent. Let us know if you would like to block the date!\n\nBest, StudioOps.',
   },
   {
     id: 'p4',
     leadId: 'l3',
-    clientName: 'Rebecca Vance',
-    projectTitle: 'Vance Family Reunion',
+    clientName: 'Rahul & Ananya',
+    projectTitle: 'Pre-wedding Shoot in Goa',
     channel: 'SMS',
     dueDate: '2026-05-25',
     dueStatus: 'upcoming',
-    body: 'Hi Rebecca! We sent you the family portrait quote earlier. Do you have any questions? We would love to capture your family gathering!',
+    body: 'Hi Rahul! We sent you the Goa pre-wedding quote earlier. Do you have any questions? We would love to capture your shoot!',
   }
 ];
