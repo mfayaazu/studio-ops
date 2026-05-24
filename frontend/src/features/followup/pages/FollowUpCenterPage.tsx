@@ -6,11 +6,13 @@ import { FollowUpTimeline } from '../components/FollowUpTimeline';
 import { TemplateCardGrid } from '../components/TemplateCardGrid';
 import { PendingFollowUpsPanel } from '../components/PendingFollowUpsPanel';
 import { LeadDetailDrawer } from '../components/LeadDetailDrawer';
-import type { Lead, FollowUpSequence, FollowUpStep, MessageTemplate } from '../types';
+import type { Lead, FollowUpSequence, FollowUpStep, MessageTemplate, FollowUpTask, CommunicationLog } from '../types';
 import { 
   fetchMessageTemplates, 
   fetchFollowUpSequences, 
-  fetchFollowUpSteps 
+  fetchFollowUpSteps,
+  fetchDueFollowUpTasks,
+  fetchCommunicationLogs
 } from '../api/followupApi';
 import { Sparkles, MessageSquare, Compass, LayoutGrid, CheckSquare, Loader2 } from 'lucide-react';
 
@@ -24,6 +26,9 @@ export const FollowUpCenterPage: React.FC = () => {
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [sequences, setSequences] = useState<FollowUpSequence[]>([]);
   const [steps, setSteps] = useState<FollowUpStep[]>([]);
+  const [dueTasks, setDueTasks] = useState<FollowUpTask[]>([]);
+  const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
+  
   const [apiStatus, setApiStatus] = useState<'connected' | 'offline' | 'empty'>('offline');
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -36,6 +41,15 @@ export const FollowUpCenterPage: React.FC = () => {
         setIsLoading(true);
         const fetchedTemplates = await fetchMessageTemplates();
         const fetchedSequences = await fetchFollowUpSequences();
+
+        let fetchedTasks: FollowUpTask[] = [];
+        let fetchedLogs: CommunicationLog[] = [];
+        try {
+          fetchedTasks = await fetchDueFollowUpTasks();
+          fetchedLogs = await fetchCommunicationLogs();
+        } catch (e) {
+          console.warn('Failed to fetch follow-up tasks or communication logs:', e);
+        }
 
         if (!active) return;
 
@@ -78,6 +92,11 @@ export const FollowUpCenterPage: React.FC = () => {
             }
           }
         }
+
+        if (active) {
+          setDueTasks(fetchedTasks);
+          setCommunicationLogs(fetchedLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        }
       } catch (err) {
         console.warn('Backend Follow-up API offline, using fallback mock data:', err);
         if (!active) return;
@@ -104,6 +123,8 @@ export const FollowUpCenterPage: React.FC = () => {
           description: 'Standard follow-up sequence after sending quotation.',
           active: true
         }]);
+        setDueTasks([]);
+        setCommunicationLogs([]);
       } finally {
         if (active) {
           setIsLoading(false);
@@ -117,6 +138,20 @@ export const FollowUpCenterPage: React.FC = () => {
     };
   }, []);
 
+  const handleActionSuccess = async () => {
+    // Re-fetch tasks and logs on action trigger to refresh values
+    if (apiStatus === 'connected' || apiStatus === 'empty') {
+      try {
+        const fetchedTasks = await fetchDueFollowUpTasks();
+        const fetchedLogs = await fetchCommunicationLogs();
+        setDueTasks(fetchedTasks);
+        setCommunicationLogs(fetchedLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      } catch (err) {
+        console.error('Failed to refetch pending tasks or logs:', err);
+      }
+    }
+  };
+
   // Find currently selected lead
   const selectedLead = leads.find((l) => l.id === selectedLeadId) || null;
 
@@ -125,14 +160,42 @@ export const FollowUpCenterPage: React.FC = () => {
     setLeads(leads.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
   };
 
+  // Determine fallback modes
+  const isBackendActive = apiStatus === 'connected' || apiStatus === 'empty';
+  const usingMockTasks = !isBackendActive || dueTasks.length === 0;
+
+  const getDueStatusHelper = (scheduledAt: string): 'due_today' | 'overdue' | 'upcoming' => {
+    const scheduledDate = new Date(scheduledAt);
+    const today = new Date();
+    const scheduledZero = new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate());
+    const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    const diffTime = scheduledZero.getTime() - todayZero.getTime();
+    if (diffTime < 0) {
+      return 'overdue';
+    } else if (diffTime === 0) {
+      return 'due_today';
+    } else {
+      return 'upcoming';
+    }
+  };
+
   // Calculate stats dynamically from state
   const openLeads = leads.filter((l) => l.stage !== 'CONFIRMED' && l.stage !== 'LOST');
   const leadsInFunnel = openLeads.length;
   
-  const dueTodayCount = mockPendingFollowUps.filter((p) => p.dueStatus === 'due_today').length;
-  const warmLeadsCount = leads.filter((l) => l.stage === 'WARM').length;
-  const overdueCount = mockPendingFollowUps.filter((p) => p.dueStatus === 'overdue').length;
+  const backendDueToday = dueTasks.filter(t => getDueStatusHelper(t.scheduledAt) === 'due_today').length;
+  const backendOverdue = dueTasks.filter(t => getDueStatusHelper(t.scheduledAt) === 'overdue').length;
+
+  const dueTodayCount = !usingMockTasks
+    ? backendDueToday
+    : mockPendingFollowUps.filter((p) => p.dueStatus === 'due_today').length;
+
+  const overdueCount = !usingMockTasks
+    ? backendOverdue
+    : mockPendingFollowUps.filter((p) => p.dueStatus === 'overdue').length;
   
+  const warmLeadsCount = leads.filter((l) => l.stage === 'WARM').length;
   const estimatedOpenValue = openLeads.reduce((sum, lead) => sum + lead.estimatedValue, 0);
 
   const formattedToday = new Date().toLocaleDateString(undefined, {
@@ -227,7 +290,7 @@ export const FollowUpCenterPage: React.FC = () => {
           {apiStatus === 'connected' && (
             <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Connected: loaded from backend
+              {dueTasks.length > 0 ? "Connected: loaded from backend" : "Connected: empty queue (showing mock data)"}
             </span>
           )}
           {apiStatus === 'offline' && (
@@ -272,7 +335,13 @@ export const FollowUpCenterPage: React.FC = () => {
           <TemplateCardGrid templates={templates} />
         )}
         {activeTab === 'approvals' && !isLoading && (
-          <PendingFollowUpsPanel initialTasks={mockPendingFollowUps} />
+          <PendingFollowUpsPanel 
+            initialTasks={mockPendingFollowUps} 
+            backendTasks={dueTasks}
+            communicationLogs={communicationLogs}
+            isBackendMode={!usingMockTasks}
+            onActionSuccess={handleActionSuccess}
+          />
         )}
       </div>
 

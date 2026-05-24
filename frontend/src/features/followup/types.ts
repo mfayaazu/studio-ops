@@ -81,3 +81,55 @@ export interface FollowUpStep {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export type FollowUpTaskStatus = 'PENDING_APPROVAL' | 'SCHEDULED' | 'SENT' | 'FAILED' | 'SKIPPED' | 'CANCELLED';
+
+export interface FollowUpTask {
+  id: string;
+  studioId: string;
+  projectId?: string;
+  clientId?: string;
+  sequenceId?: string;
+  stepId?: string;
+  templateId?: string;
+  channel: ChannelType;
+  scheduledAt: string;
+  status: FollowUpTaskStatus;
+  recipient?: string;
+  subject?: string;
+  messageBody: string;
+  approvedByUserId?: string;
+  sentAt?: string;
+  skippedAt?: string;
+  failureReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CommunicationDirection = 'OUTBOUND' | 'INBOUND';
+
+export type CommunicationProvider = 'MANUAL_DEMO' | 'SMTP' | 'GMAIL' | 'TWILIO' | 'META_WHATSAPP' | 'OTHER';
+
+export type CommunicationLogStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'SKIPPED' | 'CANCELLED';
+
+export interface CommunicationLog {
+  id: string;
+  studioId: string;
+  projectId?: string;
+  clientId?: string;
+  followUpTaskId?: string;
+  channel: ChannelType;
+  direction: CommunicationDirection;
+  recipient?: string;
+  subject?: string;
+  messageBody?: string;
+  provider?: CommunicationProvider;
+  providerMessageId?: string;
+  status: CommunicationLogStatus;
+  sentAt?: string;
+  deliveredAt?: string;
+  readAt?: string;
+  errorMessage?: string;
+  createdAt: string;
+}
+
