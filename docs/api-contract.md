@@ -1215,4 +1215,208 @@ Retrieves sent communication logs, filterable by `projectId` or `clientId`.
 ]
 ```
 
+---
+
+## 11. Leads and Inquiries
+
+### GET `/api/leads`
+Retrieves all lead records for the studio, optionally filtered by search text, pipeline stage, or lead source.
+**Request (Query Parameters - Optional):**
+- `search`: Filter by client name, email, phone, city, notes, event type, preferred channel, lead source, or pipeline stage (case-insensitive substring match).
+- `pipelineStage`: Filter by pipeline stage.
+- `leadSource`: Filter by lead source.
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "b30cf82a-bc91-4d37-88ea-d43806fbce40",
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+    "clientId": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+    "projectId": null,
+    "clientName": "Priya Reddy",
+    "phone": "+919876543210",
+    "email": "priya@example.in",
+    "preferredChannel": "WHATSAPP",
+    "eventType": "Wedding Photography",
+    "eventDate": "2026-09-12",
+    "city": "Hyderabad",
+    "estimatedValue": 350000.00,
+    "leadSource": "WEBSITE",
+    "pipelineStage": "NEW_LEAD",
+    "assignedUserId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+    "lastContactedAt": null,
+    "nextFollowUpAt": "2026-05-28T10:00:00Z",
+    "notes": "Requested traditional album.",
+    "lostReason": null,
+    "createdAt": "2026-05-25T17:00:00Z",
+    "updatedAt": "2026-05-25T17:00:00Z"
+  }
+]
 ```
+
+### GET `/api/leads/{id}`
+Retrieves a specific lead record by its ID.
+**Response (200 OK):**
+```json
+{
+  "id": "b30cf82a-bc91-4d37-88ea-d43806fbce40",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "clientId": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "projectId": null,
+  "clientName": "Priya Reddy",
+  "phone": "+919876543210",
+  "email": "priya@example.in",
+  "preferredChannel": "WHATSAPP",
+  "eventType": "Wedding Photography",
+  "eventDate": "2026-09-12",
+  "city": "Hyderabad",
+  "estimatedValue": 350000.00,
+  "leadSource": "WEBSITE",
+  "pipelineStage": "NEW_LEAD",
+  "assignedUserId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+  "lastContactedAt": null,
+  "nextFollowUpAt": "2026-05-28T10:00:00Z",
+  "notes": "Requested traditional album.",
+  "lostReason": null,
+  "createdAt": "2026-05-25T17:00:00Z",
+  "updatedAt": "2026-05-25T17:00:00Z"
+}
+```
+
+### POST `/api/leads`
+Creates a lead record. If `clientId` or `projectId` are supplied, the system validates they exist and belong to the same studio.
+**Request:**
+```json
+{
+  "clientId": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "projectId": null,
+  "clientName": "Priya Reddy",
+  "phone": "+919876543210",
+  "email": "priya@example.in",
+  "preferredChannel": "WHATSAPP",
+  "eventType": "Wedding Photography",
+  "eventDate": "2026-09-12",
+  "city": "Hyderabad",
+  "estimatedValue": 350000.00,
+  "leadSource": "WEBSITE",
+  "pipelineStage": "NEW_LEAD",
+  "assignedUserId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+  "nextFollowUpAt": "2026-05-28T10:00:00Z",
+  "notes": "Requested traditional album."
+}
+```
+**Response (201 Created):**
+```json
+{
+  "id": "b30cf82a-bc91-4d37-88ea-d43806fbce40",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "clientId": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "projectId": null,
+  "clientName": "Priya Reddy",
+  "phone": "+919876543210",
+  "email": "priya@example.in",
+  "preferredChannel": "WHATSAPP",
+  "eventType": "Wedding Photography",
+  "eventDate": "2026-09-12",
+  "city": "Hyderabad",
+  "estimatedValue": 350000.00,
+  "leadSource": "WEBSITE",
+  "pipelineStage": "NEW_LEAD",
+  "assignedUserId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+  "lastContactedAt": null,
+  "nextFollowUpAt": "2026-05-28T10:00:00Z",
+  "notes": "Requested traditional album.",
+  "lostReason": null,
+  "createdAt": "2026-05-25T17:00:00Z",
+  "updatedAt": "2026-05-25T17:00:00Z"
+}
+```
+
+### PUT `/api/leads/{id}`
+Updates an existing lead record.
+**Request:**
+```json
+{
+  "clientName": "Priya Reddy Updated",
+  "phone": "+919876543211",
+  "email": "priya.updated@example.in",
+  "preferredChannel": "EMAIL",
+  "eventType": "Pre-Wedding Shoot",
+  "eventDate": "2026-09-10",
+  "city": "Hyderabad",
+  "estimatedValue": 375000.00,
+  "leadSource": "INSTAGRAM",
+  "assignedUserId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+  "nextFollowUpAt": "2026-05-30T10:00:00Z",
+  "notes": "Prefers email update."
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "b30cf82a-bc91-4d37-88ea-d43806fbce40",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "clientId": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "projectId": null,
+  "clientName": "Priya Reddy Updated",
+  "phone": "+919876543211",
+  "email": "priya.updated@example.in",
+  "preferredChannel": "EMAIL",
+  "eventType": "Pre-Wedding Shoot",
+  "eventDate": "2026-09-10",
+  "city": "Hyderabad",
+  "estimatedValue": 375000.00,
+  "leadSource": "INSTAGRAM",
+  "pipelineStage": "NEW_LEAD",
+  "assignedUserId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+  "lastContactedAt": null,
+  "nextFollowUpAt": "2026-05-30T10:00:00Z",
+  "notes": "Prefers email update.",
+  "lostReason": null,
+  "createdAt": "2026-05-25T17:00:00Z",
+  "updatedAt": "2026-05-25T17:05:00Z"
+}
+```
+
+### POST `/api/leads/{id}/move-stage`
+Transitions a lead's pipeline stage. If transitioned to `LOST`, `lostReason` must be supplied. Moving away from `LOST` automatically clears `lostReason` in database.
+**Request:**
+```json
+{
+  "pipelineStage": "LOST",
+  "lostReason": "PRICE_TOO_HIGH",
+  "notes": "Decided competitor was more budget friendly."
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "b30cf82a-bc91-4d37-88ea-d43806fbce40",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "clientId": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "projectId": null,
+  "clientName": "Priya Reddy Updated",
+  "phone": "+919876543211",
+  "email": "priya.updated@example.in",
+  "preferredChannel": "EMAIL",
+  "eventType": "Pre-Wedding Shoot",
+  "eventDate": "2026-09-10",
+  "city": "Hyderabad",
+  "estimatedValue": 375000.00,
+  "leadSource": "INSTAGRAM",
+  "pipelineStage": "LOST",
+  "assignedUserId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+  "lastContactedAt": null,
+  "nextFollowUpAt": "2026-05-30T10:00:00Z",
+  "notes": "Decided competitor was more budget friendly.",
+  "lostReason": "PRICE_TOO_HIGH",
+  "createdAt": "2026-05-25T17:00:00Z",
+  "updatedAt": "2026-05-25T17:10:00Z"
+}
+```
+
+### DELETE `/api/leads/{id}`
+Deletes the lead record.
+**Response (204 No Content)**
+
