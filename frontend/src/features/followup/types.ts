@@ -31,6 +31,7 @@ export interface LeadResponse {
   nextFollowUpAt?: string;
   notes?: string;
   lostReason?: LeadLostReason;
+  convertedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,6 +73,7 @@ export interface Lead {
   clientId?: string;
   projectId?: string;
   studioId?: string;
+  convertedAt?: string;
 }
 
 export interface SequenceStep {
@@ -197,6 +199,25 @@ export interface LeadCreateRequest {
   nextFollowUpAt?: string;
   notes?: string;
   studioId?: string;
+}
+
+export interface LeadConvertToProjectRequest {
+  projectCode?: string;
+  title?: string;
+  projectType?: string;
+  bookingStatus?: string;
+  paymentStatus?: string;
+  status?: string;
+  notes?: string;
+}
+
+export interface LeadConvertToProjectResponse {
+  leadId: string;
+  clientId: string;
+  projectId: string;
+  pipelineStage: LeadPipelineStage;
+  convertedAt: string;
+  message: string;
 }
 
 

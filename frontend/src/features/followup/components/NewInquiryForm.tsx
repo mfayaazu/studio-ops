@@ -19,7 +19,8 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
   const [city, setCity] = useState('');
   const [estimatedValue, setEstimatedValue] = useState('');
   const [leadSource, setLeadSource] = useState<LeadSource>('WEBSITE');
-  const [nextFollowUpAt, setNextFollowUpAt] = useState('');
+  const [followUpDate, setFollowUpDate] = useState('');
+  const [followUpTime, setFollowUpTime] = useState('');
   const [notes, setNotes] = useState('');
 
   // UI state
@@ -50,6 +51,10 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
       }
     }
 
+    if (followUpTime && !followUpDate) {
+      errors.followUpDate = 'Please select a follow-up date as well.';
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -71,7 +76,13 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
         city: city.trim() || undefined,
         estimatedValue: estimatedValue.trim() ? parseFloat(estimatedValue) : undefined,
         leadSource,
-        nextFollowUpAt: nextFollowUpAt ? new Date(nextFollowUpAt).toISOString() : undefined,
+        nextFollowUpAt: (() => {
+          if (followUpDate) {
+            const timePart = followUpTime || '10:00';
+            return new Date(`${followUpDate}T${timePart}`).toISOString();
+          }
+          return undefined;
+        })(),
         notes: notes.trim() || undefined
       };
 
@@ -87,7 +98,8 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
       setCity('');
       setEstimatedValue('');
       setLeadSource('WEBSITE');
-      setNextFollowUpAt('');
+      setFollowUpDate('');
+      setFollowUpTime('');
       setNotes('');
       onClose();
     } catch (err: any) {
@@ -267,7 +279,8 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
                   type="date"
                   value={eventDate}
                   onChange={(e) => setEventDate(e.target.value)}
-                  className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all"
+                  placeholder="Select event date"
+                  className="w-full bg-[#0d1222]/40 border border-slate-800 hover:border-slate-700/80 cursor-pointer text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -308,18 +321,44 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
               </div>
             </div>
 
-            {/* Next Follow-up Date/Time */}
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-wider font-mono text-slate-400 flex items-center gap-1.5">
-                <Clock className="h-3 w-3 text-slate-500" />
-                <span>Next Follow-up Date & Time</span>
-              </label>
-              <input
-                type="datetime-local"
-                value={nextFollowUpAt}
-                onChange={(e) => setNextFollowUpAt(e.target.value)}
-                className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all"
-              />
+            {/* Next Follow-up Date & Time fields */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider font-mono text-slate-400 flex items-center gap-1.5">
+                    <Calendar className="h-3 w-3 text-slate-500" />
+                    <span>Next Follow-up Date</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={followUpDate}
+                    onChange={(e) => setFollowUpDate(e.target.value)}
+                    placeholder="Select follow-up date"
+                    className={`w-full bg-[#0d1222]/40 border ${
+                      validationErrors.followUpDate ? 'border-rose-500/50 focus:ring-rose-500' : 'border-slate-800 hover:border-slate-700/80'
+                    } cursor-pointer text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:outline-none transition-all`}
+                  />
+                  {validationErrors.followUpDate && (
+                    <span className="text-[10px] text-rose-400 block font-mono mt-0.5">{validationErrors.followUpDate}</span>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider font-mono text-slate-400 flex items-center gap-1.5">
+                    <Clock className="h-3 w-3 text-slate-500" />
+                    <span>Next Follow-up Time</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={followUpTime}
+                    onChange={(e) => setFollowUpTime(e.target.value)}
+                    className="w-full bg-[#0d1222]/40 border border-slate-800 hover:border-slate-700/80 cursor-pointer text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-500 font-mono">
+                Used to remind the team when this lead should be followed up.
+              </p>
             </div>
 
             {/* Notes */}

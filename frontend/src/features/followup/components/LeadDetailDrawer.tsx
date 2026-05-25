@@ -4,7 +4,8 @@ import { mockTemplates } from '../mockData';
 import { 
   X, Mail, MessageSquare, Phone, Smartphone, Calendar, 
   DollarSign, Clock, CheckCircle2, 
-  ChevronRight, ThumbsUp, Eye, Sparkles, Ban, Loader2
+  ChevronRight, ThumbsUp, Eye, Sparkles, Ban, Loader2,
+  FolderPlus, AlertCircle
 } from 'lucide-react';
 
 interface LeadDetailDrawerProps {
@@ -17,6 +18,7 @@ interface LeadDetailDrawerProps {
     lostReason?: LeadLostReason,
     notes?: string
   ) => Promise<void>;
+  onConvertToProject?: (leadId: string) => Promise<void>;
 }
 
 export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({ 
@@ -24,12 +26,21 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   isOpen, 
   onClose,
   onUpdateLead,
-  onMoveStage
+  onMoveStage,
+  onConvertToProject
 }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [simulationLog, setSimulationLog] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isConfirmingConvert, setIsConfirmingConvert] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
+
+  // Reset confirmation state when drawer lead changes or drawer closes
+  React.useEffect(() => {
+    setIsConfirmingConvert(false);
+    setIsConverting(false);
+  }, [lead?.id, isOpen]);
 
   if (!lead || !isOpen) return null;
 
@@ -169,6 +180,22 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
 
     setSimulationLog(`✗ Visual Simulation: Follow-up step skipped.`);
     setIsPreviewOpen(false);
+  };
+
+  const handleConvertToProject = async () => {
+    if (!lead || !onConvertToProject) return;
+    setErrorMessage(null);
+    setIsConverting(true);
+    try {
+      await onConvertToProject(lead.id);
+      setSimulationLog(`Successfully converted lead to project!`);
+      setIsConfirmingConvert(false);
+    } catch (err: any) {
+      console.error('Failed to convert lead to project:', err);
+      setErrorMessage(err?.message || 'Failed to convert lead to project. Please check network connection.');
+    } finally {
+      setIsConverting(false);
+    }
   };
 
   return (
@@ -338,6 +365,93 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               <div className="bg-[#0f172a]/40 border border-slate-850/60 p-3.5 rounded-xl text-xs text-slate-300 leading-relaxed font-sans">
                 {lead.notes}
               </div>
+            </div>
+          )}
+
+          {/* Project Conversion & Linkage Block */}
+          {lead.isBackendLead ? (
+            <div className="space-y-2.5">
+              <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Project Conversion</span>
+              
+              {lead.projectId ? (
+                // Already Converted Info Card
+                <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 space-y-2 animate-fadeIn">
+                  <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Project Linked & Converted</span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5 mt-2 bg-slate-950/40 p-3 rounded-lg border border-slate-900 text-xs">
+                    <div>
+                      <span className="text-[9px] font-mono uppercase text-slate-500 block">Project ID</span>
+                      <span className="text-slate-300 font-mono select-all block truncate mt-0.5" title="Double click to select all">
+                        {lead.projectId}
+                      </span>
+                    </div>
+                    {lead.convertedAt && (
+                      <div>
+                        <span className="text-[9px] font-mono uppercase text-slate-500 block">Converted At</span>
+                        <span className="text-slate-400 block mt-0.5">
+                          {new Date(lead.convertedAt).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                // Not Converted: Show Convert Button/Flow
+                <div className="bg-[#0f172a]/30 border border-slate-850/60 rounded-xl p-4 space-y-3">
+                  {!isConfirmingConvert ? (
+                    <button
+                      type="button"
+                      disabled={isConverting || isSaving}
+                      onClick={() => setIsConfirmingConvert(true)}
+                      className="w-full py-2.5 px-4 bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 text-violet-300 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2"
+                    >
+                      <FolderPlus className="h-4 w-4 text-violet-400" />
+                      <span>Convert to Project</span>
+                    </button>
+                  ) : (
+                    <div className="space-y-3 animate-fadeIn">
+                      <div className="flex gap-2 items-start text-slate-400 text-xs leading-relaxed">
+                        <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <p>Convert this lead into a client and project? This will register them in database and transition the stage.</p>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          type="button"
+                          disabled={isConverting}
+                          onClick={() => setIsConfirmingConvert(false)}
+                          className="py-1.5 px-3 bg-slate-850 hover:bg-slate-800 disabled:opacity-40 text-slate-400 rounded-lg text-xs font-semibold transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isConverting}
+                          onClick={handleConvertToProject}
+                          className="py-1.5 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-lg text-xs font-semibold transition-all shadow-md flex items-center justify-center gap-1.5"
+                        >
+                          {isConverting ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <span>Converting...</span>
+                            </>
+                          ) : (
+                            <span>Confirm Conversion</span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            // Mock Lead Info Card
+            <div className="bg-slate-900/10 border border-slate-900 rounded-xl p-3 text-center">
+              <span className="text-[10px] text-slate-500 font-semibold block">
+                Backend database lead required to convert to project
+              </span>
             </div>
           )}
 

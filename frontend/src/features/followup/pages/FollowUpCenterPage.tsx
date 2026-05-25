@@ -26,7 +26,8 @@ import {
   fetchCommunicationLogs,
   fetchLeads,
   moveLeadStage,
-  createLead
+  createLead,
+  convertLeadToProject
 } from '../api/followupApi';
 import { Sparkles, MessageSquare, Compass, LayoutGrid, CheckSquare, Loader2, Plus } from 'lucide-react';
 import { NewInquiryForm } from '../components/NewInquiryForm';
@@ -91,6 +92,7 @@ const mapLeadResponseToLead = (response: LeadResponse): Lead => {
     clientId: response.clientId,
     projectId: response.projectId,
     studioId: response.studioId,
+    convertedAt: response.convertedAt,
   };
 };
 
@@ -332,6 +334,21 @@ export const FollowUpCenterPage: React.FC = () => {
   const selectedLead = leads.find((l) => l.id === selectedLeadId) || null;
 
   // Handle lead update (e.g. status transition or sending message)
+  const handleConvertToProject = async (leadId: string): Promise<void> => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    // Send minimal payload as requested
+    const title = lead.projectTitle ? `${lead.projectTitle} - ${lead.clientName}` : `Event - ${lead.clientName}`;
+    const payload = {
+      title,
+      notes: lead.notes || undefined
+    };
+
+    await convertLeadToProject(leadId, payload);
+    await refreshLeads();
+  };
+
   const handleUpdateLead = (updatedLead: Lead) => {
     setLeads(leads.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
   };
@@ -563,6 +580,7 @@ export const FollowUpCenterPage: React.FC = () => {
         onClose={() => setSelectedLeadId(null)}
         onUpdateLead={handleUpdateLead}
         onMoveStage={(stage, lostReason, notes) => handleMoveLeadStage(selectedLeadId!, stage, lostReason, notes)}
+        onConvertToProject={handleConvertToProject}
       />
 
       {/* New Inquiry Drawer Form */}
