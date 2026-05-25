@@ -937,6 +937,143 @@ Removes a post-production task.
 
 ---
 
+## 7.2 Post-Production Subtasks
+
+### GET `/api/post-production-subtasks`
+Retrieves all post-production subtasks. Supports optional filters.
+**Parameters:**
+- `taskId` (UUID, optional)
+- `status` (PostProductionSubtaskStatus, optional)
+- `assignedEmployeeId` (UUID, optional)
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "fa80bcbd-1c4b-4b13-90d5-12cfcebce222",
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+    "taskId": "e3a890bd-1c4b-4b13-90d5-12cfcebce888",
+    "title": "Cull first half of event photos",
+    "description": "Cull raw images 001-250",
+    "status": "TODO",
+    "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+    "sortOrder": 0,
+    "completedAt": null,
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
+  }
+]
+```
+
+### GET `/api/post-production-subtasks/{id}`
+Retrieves a specific subtask by ID.
+**Response (200 OK):**
+```json
+{
+  "id": "fa80bcbd-1c4b-4b13-90d5-12cfcebce222",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "taskId": "e3a890bd-1c4b-4b13-90d5-12cfcebce888",
+  "title": "Cull first half of event photos",
+  "description": "Cull raw images 001-250",
+  "status": "TODO",
+  "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "sortOrder": 0,
+  "completedAt": null,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
+### POST `/api/post-production-subtasks`
+Creates a post-production subtask.
+**Request:**
+```json
+{
+  "taskId": "e3a890bd-1c4b-4b13-90d5-12cfcebce888",
+  "title": "Cull first half of event photos",
+  "description": "Cull raw images 001-250",
+  "status": "TODO",
+  "assignedEmployeeId": null,
+  "sortOrder": 0
+}
+```
+**Response (201 Created):**
+```json
+{
+  "id": "fa80bcbd-1c4b-4b13-90d5-12cfcebce222",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "taskId": "e3a890bd-1c4b-4b13-90d5-12cfcebce888",
+  "title": "Cull first half of event photos",
+  "description": "Cull raw images 001-250",
+  "status": "TODO",
+  "assignedEmployeeId": null,
+  "sortOrder": 0,
+  "completedAt": null,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
+### PUT `/api/post-production-subtasks/{id}`
+Updates an existing subtask.
+**Request:**
+```json
+{
+  "title": "Cull first half of event photos - Done",
+  "description": "Cull raw images 001-250 - completed",
+  "status": "DONE",
+  "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "sortOrder": 0
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "fa80bcbd-1c4b-4b13-90d5-12cfcebce222",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "taskId": "e3a890bd-1c4b-4b13-90d5-12cfcebce888",
+  "title": "Cull first half of event photos - Done",
+  "description": "Cull raw images 001-250 - completed",
+  "status": "DONE",
+  "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "sortOrder": 0,
+  "completedAt": "2026-05-21T10:00:00Z",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
+}
+```
+
+### POST `/api/post-production-subtasks/{id}/move-status`
+Updates only the status of a subtask.
+**Request:**
+```json
+{
+  "status": "DONE"
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "fa80bcbd-1c4b-4b13-90d5-12cfcebce222",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "taskId": "e3a890bd-1c4b-4b13-90d5-12cfcebce888",
+  "title": "Cull first half of event photos - Done",
+  "description": "Cull raw images 001-250 - completed",
+  "status": "DONE",
+  "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "sortOrder": 0,
+  "completedAt": "2026-05-21T10:00:00Z",
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
+}
+```
+
+### DELETE `/api/post-production-subtasks/{id}`
+Removes a post-production subtask.
+**Response (204 No Content)**
+
+---
+
 ## 8. Backup Records
 
 ### GET `/api/backups`
