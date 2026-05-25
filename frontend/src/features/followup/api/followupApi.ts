@@ -7,7 +7,8 @@ import type {
   FollowUpTaskStatus, 
   CommunicationLog,
   LeadResponse,
-  LeadMoveStageRequest
+  LeadMoveStageRequest,
+  LeadCreateRequest
 } from '../types';
 
 export const fetchMessageTemplates = async (): Promise<MessageTemplate[]> => {
@@ -85,4 +86,8 @@ export const fetchLead = async (id: string): Promise<LeadResponse> => {
 
 export const moveLeadStage = async (id: string, payload: LeadMoveStageRequest): Promise<LeadResponse> => {
   return ApiClient.post<LeadResponse>(`/api/leads/${id}/move-stage`, payload);
+};
+
+export const createLead = async (payload: LeadCreateRequest): Promise<LeadResponse> => {
+  return ApiClient.post<LeadResponse>('/api/leads', payload);
 };

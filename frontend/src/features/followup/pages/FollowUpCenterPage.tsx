@@ -25,9 +25,11 @@ import {
   fetchDueFollowUpTasks,
   fetchCommunicationLogs,
   fetchLeads,
-  moveLeadStage
+  moveLeadStage,
+  createLead
 } from '../api/followupApi';
-import { Sparkles, MessageSquare, Compass, LayoutGrid, CheckSquare, Loader2 } from 'lucide-react';
+import { Sparkles, MessageSquare, Compass, LayoutGrid, CheckSquare, Loader2, Plus } from 'lucide-react';
+import { NewInquiryForm } from '../components/NewInquiryForm';
 
 const mapLeadResponseToLead = (response: LeadResponse): Lead => {
   const eventDateStr = response.eventDate || '';
@@ -97,6 +99,7 @@ export const FollowUpCenterPage: React.FC = () => {
   const [leads, setLeads] = useState<Lead[]>(mockLeads);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pipeline' | 'sequence' | 'templates' | 'approvals'>('pipeline');
+  const [isInquiryFormOpen, setIsInquiryFormOpen] = useState(false);
 
   // Backend integration states
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
@@ -109,6 +112,26 @@ export const FollowUpCenterPage: React.FC = () => {
   const [leadApiStatus, setLeadApiStatus] = useState<'connected' | 'empty' | 'offline'>('offline');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLeadsLoading, setIsLeadsLoading] = useState<boolean>(true);
+
+  const refreshLeads = async () => {
+    setIsLeadsLoading(true);
+    try {
+      const fetchedLeads = await fetchLeads();
+      if (fetchedLeads && fetchedLeads.length > 0) {
+        setLeadApiStatus('connected');
+        setLeads(fetchedLeads.map(l => mapLeadResponseToLead(l)));
+      } else {
+        setLeadApiStatus('empty');
+        setLeads(mockLeads.map(l => ({ ...l, isBackendLead: false })));
+      }
+    } catch (e) {
+      console.warn('Failed to fetch leads from backend:', e);
+      setLeadApiStatus('offline');
+      setLeads(mockLeads.map(l => ({ ...l, isBackendLead: false })));
+    } finally {
+      setIsLeadsLoading(false);
+    }
+  };
 
   // Load configuration details from backend (fallback to mock data)
   useEffect(() => {
@@ -373,6 +396,13 @@ export const FollowUpCenterPage: React.FC = () => {
           <p className="text-slate-400 text-xs font-mono">{formattedToday}</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsInquiryFormOpen(true)}
+            className="py-2 px-3 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-semibold transition-all shadow-md flex items-center gap-1.5"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>New Inquiry</span>
+          </button>
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[11px] font-bold text-emerald-400">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
             Funnel Active
@@ -533,6 +563,16 @@ export const FollowUpCenterPage: React.FC = () => {
         onClose={() => setSelectedLeadId(null)}
         onUpdateLead={handleUpdateLead}
         onMoveStage={(stage, lostReason, notes) => handleMoveLeadStage(selectedLeadId!, stage, lostReason, notes)}
+      />
+
+      {/* New Inquiry Drawer Form */}
+      <NewInquiryForm
+        isOpen={isInquiryFormOpen}
+        onClose={() => setIsInquiryFormOpen(false)}
+        onSubmit={async (payload) => {
+          await createLead(payload);
+          await refreshLeads();
+        }}
       />
     </main>
   );

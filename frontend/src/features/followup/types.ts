@@ -180,3 +180,23 @@ export interface CommunicationLog {
   createdAt: string;
 }
 
+export interface LeadCreateRequest {
+  clientId?: string;
+  projectId?: string;
+  clientName: string;
+  phone?: string;
+  email?: string;
+  preferredChannel: LeadPreferredChannel;
+  eventType?: string;
+  eventDate?: string;
+  city?: string;
+  estimatedValue?: number;
+  leadSource: LeadSource;
+  pipelineStage?: LeadPipelineStage;
+  assignedUserId?: string;
+  nextFollowUpAt?: string;
+  notes?: string;
+  studioId?: string;
+}
+
+
