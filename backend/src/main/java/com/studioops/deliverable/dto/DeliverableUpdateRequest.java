@@ -1,11 +1,13 @@
 package com.studioops.deliverable.dto;
 import com.studioops.deliverable.DeliverableStatus;
 import com.studioops.deliverable.DeliverableType;
+import com.studioops.deliverable.DeliverablePriority;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
+import java.util.UUID;
 
 public class DeliverableUpdateRequest {
 
@@ -19,6 +21,10 @@ public class DeliverableUpdateRequest {
     @NotNull(message = "status is required")
     private DeliverableStatus status;
 
+    private DeliverablePriority priority;
+
+    private UUID assignedEmployeeId;
+
     @Size(max = 1000, message = "referenceUrl must not exceed 1000 characters")
     private String referenceUrl;
 
@@ -31,6 +37,16 @@ public class DeliverableUpdateRequest {
         this.name = name;
         this.deliverableType = deliverableType;
         this.status = status;
+        this.referenceUrl = referenceUrl;
+        this.dueDate = dueDate;
+    }
+
+    public DeliverableUpdateRequest(String name, DeliverableType deliverableType, DeliverableStatus status, DeliverablePriority priority, UUID assignedEmployeeId, String referenceUrl, LocalDate dueDate) {
+        this.name = name;
+        this.deliverableType = deliverableType;
+        this.status = status;
+        this.priority = priority;
+        this.assignedEmployeeId = assignedEmployeeId;
         this.referenceUrl = referenceUrl;
         this.dueDate = dueDate;
     }
@@ -57,6 +73,22 @@ public class DeliverableUpdateRequest {
 
     public void setStatus(DeliverableStatus status) {
         this.status = status;
+    }
+
+    public DeliverablePriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(DeliverablePriority priority) {
+        this.priority = priority;
+    }
+
+    public UUID getAssignedEmployeeId() {
+        return assignedEmployeeId;
+    }
+
+    public void setAssignedEmployeeId(UUID assignedEmployeeId) {
+        this.assignedEmployeeId = assignedEmployeeId;
     }
 
     public String getReferenceUrl() {

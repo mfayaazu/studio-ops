@@ -1,6 +1,7 @@
 package com.studioops.deliverable.dto;
 import com.studioops.deliverable.DeliverableStatus;
 import com.studioops.deliverable.DeliverableType;
+import com.studioops.deliverable.DeliverablePriority;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -14,6 +15,8 @@ public class DeliverableResponse {
     private String name;
     private DeliverableType deliverableType;
     private DeliverableStatus status;
+    private DeliverablePriority priority;
+    private UUID assignedEmployeeId;
     private String referenceUrl;
     private LocalDate dueDate;
     private Instant createdAt;
@@ -68,6 +71,22 @@ public class DeliverableResponse {
 
     public void setStatus(DeliverableStatus status) {
         this.status = status;
+    }
+
+    public DeliverablePriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(DeliverablePriority priority) {
+        this.priority = priority;
+    }
+
+    public UUID getAssignedEmployeeId() {
+        return assignedEmployeeId;
+    }
+
+    public void setAssignedEmployeeId(UUID assignedEmployeeId) {
+        this.assignedEmployeeId = assignedEmployeeId;
     }
 
     public String getReferenceUrl() {

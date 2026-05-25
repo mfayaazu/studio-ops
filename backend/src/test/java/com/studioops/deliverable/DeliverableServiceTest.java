@@ -4,6 +4,8 @@ import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
 import com.studioops.project.Project;
 import com.studioops.project.ProjectRepository;
+import com.studioops.employee.Employee;
+import com.studioops.employee.EmployeeRepository;
 import com.studioops.studio.StudioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,9 @@ class DeliverableServiceTest {
 
     @Mock
     private StudioRepository studioRepository;
+
+    @Mock
+    private EmployeeRepository employeeRepository;
 
     @InjectMocks
     private DeliverableService deliverableService;
@@ -265,5 +270,181 @@ class DeliverableServiceTest {
 
         assertThrows(ResourceNotFoundException.class, () -> deliverableService.deleteDeliverable(id));
         verify(deliverableRepository, never()).delete(any(Deliverable.class));
+    }
+
+    @Test
+    void createDeliverable_DefaultsPriorityToMedium_WhenPriorityMissing() {
+        DeliverableCreateRequest request = new DeliverableCreateRequest(
+                projectId, "Edited Photos", DeliverableType.PHOTOS, DeliverableStatus.NOT_STARTED,
+                "s3://bucket/photos.zip", LocalDate.of(2026, 6, 20)
+        );
+
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+
+        Deliverable deliverable = new Deliverable();
+        deliverable.setId(UUID.randomUUID());
+        deliverable.setProjectId(projectId);
+        deliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        deliverable.setName(request.getName());
+        deliverable.setDeliverableType(request.getDeliverableType());
+        deliverable.setStatus(request.getStatus());
+        deliverable.setPriority(DeliverablePriority.MEDIUM);
+
+        when(deliverableRepository.save(any(Deliverable.class))).thenReturn(deliverable);
+
+        DeliverableResponse response = deliverableService.createDeliverable(request);
+
+        assertNotNull(response);
+        assertEquals(DeliverablePriority.MEDIUM, response.getPriority());
+    }
+
+    @Test
+    void createDeliverable_AcceptsCustomPriorityAndDueDate() {
+        DeliverableCreateRequest request = new DeliverableCreateRequest(
+                projectId, "Edited Photos", DeliverableType.PHOTOS, DeliverableStatus.NOT_STARTED,
+                DeliverablePriority.HIGH, null, "s3://bucket/photos.zip", LocalDate.of(2026, 6, 20)
+        );
+
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+
+        Deliverable deliverable = new Deliverable();
+        deliverable.setId(UUID.randomUUID());
+        deliverable.setProjectId(projectId);
+        deliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        deliverable.setName(request.getName());
+        deliverable.setDeliverableType(request.getDeliverableType());
+        deliverable.setStatus(request.getStatus());
+        deliverable.setPriority(DeliverablePriority.HIGH);
+        deliverable.setDueDate(request.getDueDate());
+
+        when(deliverableRepository.save(any(Deliverable.class))).thenReturn(deliverable);
+
+        DeliverableResponse response = deliverableService.createDeliverable(request);
+
+        assertNotNull(response);
+        assertEquals(DeliverablePriority.HIGH, response.getPriority());
+        assertEquals(LocalDate.of(2026, 6, 20), response.getDueDate());
+    }
+
+    @Test
+    void createDeliverable_SameStudioEmployee_Success() {
+        UUID employeeId = UUID.randomUUID();
+        DeliverableCreateRequest request = new DeliverableCreateRequest(
+                projectId, "Edited Photos", DeliverableType.PHOTOS, DeliverableStatus.NOT_STARTED,
+                DeliverablePriority.LOW, employeeId, "s3://bucket/photos.zip", LocalDate.of(2026, 6, 20)
+        );
+
+        Employee employee = new Employee();
+        employee.setId(employeeId);
+        employee.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+        when(employeeRepository.findByIdAndStudioId(employeeId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(employee));
+
+        Deliverable deliverable = new Deliverable();
+        deliverable.setId(UUID.randomUUID());
+        deliverable.setProjectId(projectId);
+        deliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        deliverable.setName(request.getName());
+        deliverable.setDeliverableType(request.getDeliverableType());
+        deliverable.setStatus(request.getStatus());
+        deliverable.setPriority(DeliverablePriority.LOW);
+        deliverable.setAssignedEmployeeId(employeeId);
+
+        when(deliverableRepository.save(any(Deliverable.class))).thenReturn(deliverable);
+
+        DeliverableResponse response = deliverableService.createDeliverable(request);
+
+        assertNotNull(response);
+        assertEquals(employeeId, response.getAssignedEmployeeId());
+    }
+
+    @Test
+    void createDeliverable_DifferentStudioEmployee_ThrowsException() {
+        UUID employeeId = UUID.randomUUID();
+        DeliverableCreateRequest request = new DeliverableCreateRequest(
+                projectId, "Edited Photos", DeliverableType.PHOTOS, DeliverableStatus.NOT_STARTED,
+                DeliverablePriority.LOW, employeeId, "s3://bucket/photos.zip", LocalDate.of(2026, 6, 20)
+        );
+
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+        when(employeeRepository.findByIdAndStudioId(employeeId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> deliverableService.createDeliverable(request));
+        verify(deliverableRepository, never()).save(any(Deliverable.class));
+    }
+
+    @Test
+    void updateDeliverable_ChangesPriorityAndDueDate() {
+        UUID id = UUID.randomUUID();
+        Deliverable deliverable = new Deliverable();
+        deliverable.setId(id);
+        deliverable.setProjectId(projectId);
+        deliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        deliverable.setPriority(DeliverablePriority.MEDIUM);
+
+        DeliverableUpdateRequest request = new DeliverableUpdateRequest(
+                "Updated Name", DeliverableType.PHOTOS, DeliverableStatus.IN_PROGRESS,
+                DeliverablePriority.URGENT, null, "s3://new-url", LocalDate.of(2026, 7, 1)
+        );
+
+        when(deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(deliverable));
+        when(deliverableRepository.save(any(Deliverable.class))).thenReturn(deliverable);
+
+        DeliverableResponse response = deliverableService.updateDeliverable(id, request);
+
+        assertNotNull(response);
+        assertEquals(DeliverablePriority.URGENT, response.getPriority());
+        assertEquals(LocalDate.of(2026, 7, 1), response.getDueDate());
+    }
+
+    @Test
+    void updateDeliverable_SameStudioEmployee_Success() {
+        UUID id = UUID.randomUUID();
+        Deliverable deliverable = new Deliverable();
+        deliverable.setId(id);
+        deliverable.setProjectId(projectId);
+        deliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        UUID employeeId = UUID.randomUUID();
+        Employee employee = new Employee();
+        employee.setId(employeeId);
+        employee.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        DeliverableUpdateRequest request = new DeliverableUpdateRequest(
+                "Updated Name", DeliverableType.PHOTOS, DeliverableStatus.IN_PROGRESS,
+                DeliverablePriority.URGENT, employeeId, "s3://new-url", LocalDate.of(2026, 7, 1)
+        );
+
+        when(deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(deliverable));
+        when(employeeRepository.findByIdAndStudioId(employeeId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(employee));
+        when(deliverableRepository.save(any(Deliverable.class))).thenReturn(deliverable);
+
+        DeliverableResponse response = deliverableService.updateDeliverable(id, request);
+
+        assertNotNull(response);
+        assertEquals(employeeId, response.getAssignedEmployeeId());
+    }
+
+    @Test
+    void updateDeliverable_DifferentStudioEmployee_ThrowsException() {
+        UUID id = UUID.randomUUID();
+        Deliverable deliverable = new Deliverable();
+        deliverable.setId(id);
+        deliverable.setProjectId(projectId);
+        deliverable.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        UUID employeeId = UUID.randomUUID();
+
+        DeliverableUpdateRequest request = new DeliverableUpdateRequest(
+                "Updated Name", DeliverableType.PHOTOS, DeliverableStatus.IN_PROGRESS,
+                DeliverablePriority.URGENT, employeeId, "s3://new-url", LocalDate.of(2026, 7, 1)
+        );
+
+        when(deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(deliverable));
+        when(employeeRepository.findByIdAndStudioId(employeeId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> deliverableService.updateDeliverable(id, request));
+        verify(deliverableRepository, never()).save(any(Deliverable.class));
     }
 }

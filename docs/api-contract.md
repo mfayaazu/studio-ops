@@ -662,6 +662,8 @@ Retrieves all deliverables.
     "name": "Edited Retouched Photos",
     "deliverableType": "PHOTOS",
     "status": "READY_FOR_REVIEW",
+    "priority": "MEDIUM",
+    "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
     "referenceUrl": "s3://studioops-bucket/raw/retouched_jpg.zip",
     "dueDate": "2026-06-20",
     "createdAt": "2026-05-21T09:51:00Z",
@@ -680,6 +682,8 @@ Retrieves a specific deliverable by ID.
   "name": "Edited Retouched Photos",
   "deliverableType": "PHOTOS",
   "status": "READY_FOR_REVIEW",
+  "priority": "MEDIUM",
+  "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
   "referenceUrl": "s3://studioops-bucket/raw/retouched_jpg.zip",
   "dueDate": "2026-06-20",
   "createdAt": "2026-05-21T09:51:00Z",
@@ -696,6 +700,8 @@ Creates a deliverable entity. Returns the full created deliverable.
   "name": "Edited Retouched Photos",
   "deliverableType": "PHOTOS",
   "status": "NOT_STARTED",
+  "priority": "HIGH",
+  "assignedEmployeeId": null,
   "referenceUrl": null,
   "dueDate": "2026-06-20"
 }
@@ -708,6 +714,8 @@ Creates a deliverable entity. Returns the full created deliverable.
   "name": "Edited Retouched Photos",
   "deliverableType": "PHOTOS",
   "status": "NOT_STARTED",
+  "priority": "HIGH",
+  "assignedEmployeeId": null,
   "referenceUrl": null,
   "dueDate": "2026-06-20",
   "createdAt": "2026-05-21T09:51:00Z",
@@ -724,6 +732,8 @@ Updates an existing deliverable. Returns the updated deliverable representation.
   "name": "Edited Retouched Photos - Final Selection",
   "deliverableType": "PHOTOS",
   "status": "READY_FOR_REVIEW",
+  "priority": "URGENT",
+  "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
   "referenceUrl": "s3://studioops-bucket/raw/retouched_jpg.zip",
   "dueDate": "2026-06-22"
 }
@@ -736,6 +746,8 @@ Updates an existing deliverable. Returns the updated deliverable representation.
   "name": "Edited Retouched Photos - Final Selection",
   "deliverableType": "PHOTOS",
   "status": "READY_FOR_REVIEW",
+  "priority": "URGENT",
+  "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
   "referenceUrl": "s3://studioops-bucket/raw/retouched_jpg.zip",
   "dueDate": "2026-06-22",
   "createdAt": "2026-05-21T09:51:00Z",

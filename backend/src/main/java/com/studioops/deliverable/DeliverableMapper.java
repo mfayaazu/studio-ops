@@ -11,6 +11,8 @@ public class DeliverableMapper {
         deliverable.setName(request.getName());
         deliverable.setDeliverableType(request.getDeliverableType());
         deliverable.setStatus(request.getStatus());
+        deliverable.setPriority(request.getPriority() != null ? request.getPriority() : DeliverablePriority.MEDIUM);
+        deliverable.setAssignedEmployeeId(request.getAssignedEmployeeId());
         deliverable.setReferenceUrl(request.getReferenceUrl());
         deliverable.setDueDate(request.getDueDate());
         return deliverable;
@@ -24,6 +26,8 @@ public class DeliverableMapper {
         response.setName(entity.getName());
         response.setDeliverableType(entity.getDeliverableType());
         response.setStatus(entity.getStatus());
+        response.setPriority(entity.getPriority());
+        response.setAssignedEmployeeId(entity.getAssignedEmployeeId());
         response.setReferenceUrl(entity.getReferenceUrl());
         response.setDueDate(entity.getDueDate());
         response.setCreatedAt(entity.getCreatedAt());
@@ -35,6 +39,10 @@ public class DeliverableMapper {
         entity.setName(request.getName());
         entity.setDeliverableType(request.getDeliverableType());
         entity.setStatus(request.getStatus());
+        if (request.getPriority() != null) {
+            entity.setPriority(request.getPriority());
+        }
+        entity.setAssignedEmployeeId(request.getAssignedEmployeeId());
         entity.setReferenceUrl(request.getReferenceUrl());
         entity.setDueDate(request.getDueDate());
     }

@@ -31,6 +31,13 @@ public class Deliverable {
     @Column(name = "status", nullable = false, length = 100)
     private DeliverableStatus status = DeliverableStatus.NOT_STARTED;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority", nullable = false, length = 50)
+    private DeliverablePriority priority = DeliverablePriority.MEDIUM;
+
+    @Column(name = "assigned_employee_id")
+    private UUID assignedEmployeeId;
+
     @Column(name = "reference_url", length = 1000)
     private String referenceUrl;
 
@@ -103,6 +110,22 @@ public class Deliverable {
 
     public void setStatus(DeliverableStatus status) {
         this.status = status;
+    }
+
+    public DeliverablePriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(DeliverablePriority priority) {
+        this.priority = priority;
+    }
+
+    public UUID getAssignedEmployeeId() {
+        return assignedEmployeeId;
+    }
+
+    public void setAssignedEmployeeId(UUID assignedEmployeeId) {
+        this.assignedEmployeeId = assignedEmployeeId;
     }
 
     public String getReferenceUrl() {

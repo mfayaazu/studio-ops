@@ -2,6 +2,7 @@ package com.studioops.deliverable;
 
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
+import com.studioops.employee.EmployeeRepository;
 import com.studioops.project.ProjectRepository;
 import com.studioops.studio.StudioRepository;
 import org.springframework.stereotype.Service;
@@ -19,13 +20,16 @@ public class DeliverableService {
     private final DeliverableRepository deliverableRepository;
     private final ProjectRepository projectRepository;
     private final StudioRepository studioRepository;
+    private final EmployeeRepository employeeRepository;
 
     public DeliverableService(DeliverableRepository deliverableRepository,
                               ProjectRepository projectRepository,
-                              StudioRepository studioRepository) {
+                              StudioRepository studioRepository,
+                              EmployeeRepository employeeRepository) {
         this.deliverableRepository = deliverableRepository;
         this.projectRepository = projectRepository;
         this.studioRepository = studioRepository;
+        this.employeeRepository = employeeRepository;
     }
 
     public DeliverableResponse createDeliverable(DeliverableCreateRequest request) {
@@ -39,6 +43,16 @@ public class DeliverableService {
         // Validate project exists and belongs to the same studio
         projectRepository.findByIdAndStudioId(request.getProjectId(), studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + request.getProjectId()));
+
+        // Validate assigned employee belongs to the same studio
+        if (request.getAssignedEmployeeId() != null) {
+            employeeRepository.findByIdAndStudioId(request.getAssignedEmployeeId(), studioId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found in the same studio with id: " + request.getAssignedEmployeeId()));
+        }
+
+        if (request.getPriority() == null) {
+            request.setPriority(DeliverablePriority.MEDIUM);
+        }
 
         Deliverable deliverable = DeliverableMapper.toEntity(request);
         deliverable.setStudioId(studioId);
@@ -76,6 +90,12 @@ public class DeliverableService {
     public DeliverableResponse updateDeliverable(UUID id, DeliverableUpdateRequest request) {
         Deliverable deliverable = deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Deliverable not found with id: " + id));
+
+        // Validate assigned employee belongs to the same studio
+        if (request.getAssignedEmployeeId() != null) {
+            employeeRepository.findByIdAndStudioId(request.getAssignedEmployeeId(), deliverable.getStudioId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found in the same studio with id: " + request.getAssignedEmployeeId()));
+        }
 
         DeliverableMapper.updateEntity(deliverable, request);
         Deliverable saved = deliverableRepository.save(deliverable);

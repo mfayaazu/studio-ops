@@ -1,6 +1,7 @@
 package com.studioops.deliverable.dto;
 import com.studioops.deliverable.DeliverableStatus;
 import com.studioops.deliverable.DeliverableType;
+import com.studioops.deliverable.DeliverablePriority;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -25,6 +26,10 @@ public class DeliverableCreateRequest {
     @NotNull(message = "status is required")
     private DeliverableStatus status;
 
+    private DeliverablePriority priority;
+
+    private UUID assignedEmployeeId;
+
     @Size(max = 1000, message = "referenceUrl must not exceed 1000 characters")
     private String referenceUrl;
 
@@ -46,6 +51,17 @@ public class DeliverableCreateRequest {
         this.name = name;
         this.deliverableType = deliverableType;
         this.status = status;
+        this.referenceUrl = referenceUrl;
+        this.dueDate = dueDate;
+    }
+
+    public DeliverableCreateRequest(UUID projectId, String name, DeliverableType deliverableType, DeliverableStatus status, DeliverablePriority priority, UUID assignedEmployeeId, String referenceUrl, LocalDate dueDate) {
+        this.projectId = projectId;
+        this.name = name;
+        this.deliverableType = deliverableType;
+        this.status = status;
+        this.priority = priority;
+        this.assignedEmployeeId = assignedEmployeeId;
         this.referenceUrl = referenceUrl;
         this.dueDate = dueDate;
     }
@@ -80,6 +96,22 @@ public class DeliverableCreateRequest {
 
     public void setStatus(DeliverableStatus status) {
         this.status = status;
+    }
+
+    public DeliverablePriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(DeliverablePriority priority) {
+        this.priority = priority;
+    }
+
+    public UUID getAssignedEmployeeId() {
+        return assignedEmployeeId;
+    }
+
+    public void setAssignedEmployeeId(UUID assignedEmployeeId) {
+        this.assignedEmployeeId = assignedEmployeeId;
     }
 
     public String getReferenceUrl() {
