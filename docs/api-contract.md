@@ -761,6 +761,182 @@ Removes a deliverable entity.
 
 ---
 
+## 7.1 Post-Production Tasks
+
+### GET `/api/post-production-tasks`
+Retrieves all post-production tasks. Supports optional filters.
+**Parameters:**
+- `projectId` (UUID, optional)
+- `deliverableId` (UUID, optional)
+- `status` (PostProductionTaskStatus, optional)
+- `assignedEmployeeId` (UUID, optional)
+- `dueBefore` (LocalDate, optional)
+- `search` (String, optional)
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "e3a890bd-1c4b-4b13-90d5-12cfcebce888",
+    "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+    "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+    "deliverableId": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
+    "title": "Photo Culling",
+    "description": "Cull raw images to 500 selections",
+    "taskType": "PHOTO_CULLING",
+    "priority": "MEDIUM",
+    "status": "TODO",
+    "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+    "dueDate": "2026-06-15",
+    "estimatedHours": 4.0,
+    "actualHours": null,
+    "sortOrder": 0,
+    "createdAt": "2026-05-21T09:51:00Z",
+    "updatedAt": "2026-05-21T09:51:00Z"
+  }
+]
+```
+
+### GET `/api/post-production-tasks/{id}`
+Retrieves a specific task by ID.
+**Response (200 OK):**
+```json
+{
+  "id": "e3a890bd-1c4b-4b13-90d5-12cfcebce888",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "deliverableId": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
+  "title": "Photo Culling",
+  "description": "Cull raw images to 500 selections",
+  "taskType": "PHOTO_CULLING",
+  "priority": "MEDIUM",
+  "status": "TODO",
+  "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "dueDate": "2026-06-15",
+  "estimatedHours": 4.0,
+  "actualHours": null,
+  "sortOrder": 0,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
+### POST `/api/post-production-tasks`
+Creates a post-production task.
+**Request:**
+```json
+{
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "deliverableId": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
+  "title": "Photo Culling",
+  "description": "Cull raw images to 500 selections",
+  "taskType": "PHOTO_CULLING",
+  "priority": "MEDIUM",
+  "status": "TODO",
+  "assignedEmployeeId": null,
+  "dueDate": "2026-06-15",
+  "estimatedHours": 4.0,
+  "actualHours": null,
+  "sortOrder": 0
+}
+```
+**Response (201 Created):**
+```json
+{
+  "id": "e3a890bd-1c4b-4b13-90d5-12cfcebce888",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "deliverableId": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
+  "title": "Photo Culling",
+  "description": "Cull raw images to 500 selections",
+  "taskType": "PHOTO_CULLING",
+  "priority": "MEDIUM",
+  "status": "TODO",
+  "assignedEmployeeId": null,
+  "dueDate": "2026-06-15",
+  "estimatedHours": 4.0,
+  "actualHours": null,
+  "sortOrder": 0,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T09:51:00Z"
+}
+```
+
+### PUT `/api/post-production-tasks/{id}`
+Updates an existing task.
+**Request:**
+```json
+{
+  "title": "Photo Culling - Session 1 Completed",
+  "description": "Cull raw images to 500 selections - session 1",
+  "taskType": "PHOTO_CULLING",
+  "priority": "HIGH",
+  "status": "IN_PROGRESS",
+  "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "dueDate": "2026-06-18",
+  "estimatedHours": 4.0,
+  "actualHours": 2.0,
+  "sortOrder": 0
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "e3a890bd-1c4b-4b13-90d5-12cfcebce888",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "deliverableId": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
+  "title": "Photo Culling - Session 1 Completed",
+  "description": "Cull raw images to 500 selections - session 1",
+  "taskType": "PHOTO_CULLING",
+  "priority": "HIGH",
+  "status": "IN_PROGRESS",
+  "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "dueDate": "2026-06-18",
+  "estimatedHours": 4.0,
+  "actualHours": 2.0,
+  "sortOrder": 0,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:00:00Z"
+}
+```
+
+### POST `/api/post-production-tasks/{id}/move-status`
+Updates only the status of a task.
+**Request:**
+```json
+{
+  "status": "DONE"
+}
+```
+**Response (200 OK):**
+```json
+{
+  "id": "e3a890bd-1c4b-4b13-90d5-12cfcebce888",
+  "studioId": "d3b07384-d113-4952-b1cf-9a993710787e",
+  "projectId": "99351e3d-0d6c-4f7f-8ff3-1f19d2ff9033",
+  "deliverableId": "d05f32a8-0e31-4cb5-88aa-12dfcebce999",
+  "title": "Photo Culling - Session 1 Completed",
+  "description": "Cull raw images to 500 selections - session 1",
+  "taskType": "PHOTO_CULLING",
+  "priority": "HIGH",
+  "status": "DONE",
+  "assignedEmployeeId": "7488f2bc-f725-4b13-90d5-6b58849bf0cc",
+  "dueDate": "2026-06-18",
+  "estimatedHours": 4.0,
+  "actualHours": 2.0,
+  "sortOrder": 0,
+  "createdAt": "2026-05-21T09:51:00Z",
+  "updatedAt": "2026-05-21T10:05:00Z"
+}
+```
+
+### DELETE `/api/post-production-tasks/{id}`
+Removes a post-production task.
+**Response (204 No Content)**
+
+---
+
 ## 8. Backup Records
 
 ### GET `/api/backups`
