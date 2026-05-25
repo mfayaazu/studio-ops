@@ -6,9 +6,10 @@ interface CalendarPopoverProps {
   selectedDate: string;
   onChange: (dateStr: string) => void;
   onClose: () => void;
+  align?: 'left' | 'right';
 }
 
-const CalendarPopover: React.FC<CalendarPopoverProps> = ({ selectedDate, onChange, onClose }) => {
+const CalendarPopover: React.FC<CalendarPopoverProps> = ({ selectedDate, onChange, onClose, align = 'right' }) => {
   const initialDate = selectedDate ? new Date(selectedDate) : new Date();
   const [viewYear, setViewYear] = useState(initialDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(initialDate.getMonth());
@@ -49,7 +50,7 @@ const CalendarPopover: React.FC<CalendarPopoverProps> = ({ selectedDate, onChang
       setViewMonth(0);
       setViewYear(prev => prev + 1);
     } else {
-      setViewMonth(prev => prev - 1);
+      setViewMonth(prev => prev + 1);
     }
   };
 
@@ -85,14 +86,14 @@ const CalendarPopover: React.FC<CalendarPopoverProps> = ({ selectedDate, onChang
 
   return (
     <div 
-      className="absolute right-0 mt-1.5 p-3 bg-slate-905 border border-slate-800 rounded-xl shadow-2xl z-50 w-72 animate-fadeIn"
+      className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} mt-1.5 p-4 bg-[#070b14] border border-slate-700 rounded-xl shadow-2xl ring-1 ring-white/10 z-[100] w-[320px] max-w-[calc(100vw-2rem)] animate-fadeIn`}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-3">
         <button
           type="button"
           onClick={handlePrevMonth}
-          className="px-2 py-0.5 bg-slate-850 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded text-slate-400 hover:text-slate-205 transition-all text-[10px] font-bold font-mono cursor-pointer"
+          className="px-2 py-0.5 bg-slate-850 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded text-slate-400 hover:text-slate-200 transition-all text-[10px] font-bold font-mono cursor-pointer"
         >
           &lt;
         </button>
@@ -102,7 +103,7 @@ const CalendarPopover: React.FC<CalendarPopoverProps> = ({ selectedDate, onChang
         <button
           type="button"
           onClick={handleNextMonth}
-          className="px-2 py-0.5 bg-slate-850 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded text-slate-400 hover:text-slate-205 transition-all text-[10px] font-bold font-mono cursor-pointer"
+          className="px-2 py-0.5 bg-slate-850 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded text-slate-400 hover:text-slate-200 transition-all text-[10px] font-bold font-mono cursor-pointer"
         >
           &gt;
         </button>
@@ -116,10 +117,10 @@ const CalendarPopover: React.FC<CalendarPopoverProps> = ({ selectedDate, onChang
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center">
+      <div className="grid grid-cols-7 gap-1 justify-items-center">
         {daysArray.map((day, idx) => {
           if (day === null) {
-            return <div key={`empty-${idx}`} />;
+            return <div key={`empty-${idx}`} className="h-9 w-9" />;
           }
 
           const dayIsToday = isToday(day);
@@ -130,12 +131,12 @@ const CalendarPopover: React.FC<CalendarPopoverProps> = ({ selectedDate, onChang
               key={`day-${day}`}
               type="button"
               onClick={(e) => handleDayClick(day, e)}
-              className={`h-7 w-7 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition-all ${
+              className={`h-9 w-9 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition-all ${
                 dayIsSelected
                   ? 'bg-violet-600 text-white shadow-md'
                   : dayIsToday
                   ? 'border border-violet-500/50 text-violet-400 bg-violet-500/5'
-                  : 'text-slate-355 hover:bg-slate-800 hover:text-slate-100'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
               }`}
             >
               {day}
@@ -153,7 +154,7 @@ const CalendarPopover: React.FC<CalendarPopoverProps> = ({ selectedDate, onChang
             onChange('');
             onClose();
           }}
-          className="text-[10px] text-rose-400 hover:text-rose-350 font-semibold font-mono cursor-pointer"
+          className="text-[10px] text-rose-400 hover:text-rose-300 font-semibold font-mono cursor-pointer"
         >
           Clear
         </button>
@@ -177,51 +178,218 @@ interface TimePickerPopoverProps {
   selectedTime: string;
   onChange: (timeStr: string) => void;
   onClose: () => void;
+  align?: 'left' | 'right';
 }
 
-const TimePickerPopover: React.FC<TimePickerPopoverProps> = ({ selectedTime, onChange, onClose }) => {
-  const timeSlots = [
-    '09:00', '10:00', '11:00', '12:00',
-    '14:00', '15:00', '16:00', '17:00', '18:00'
-  ];
+const TimePickerPopover: React.FC<TimePickerPopoverProps> = ({ selectedTime, onChange, onClose, align = 'right' }) => {
+  const parseTime = (timeStr: string) => {
+    if (!timeStr) return { hour: 10, minute: 0, ampm: 'AM' as const };
+    const [hStr, mStr] = timeStr.split(':');
+    const h24 = Number(hStr);
+    const minute = Number(mStr);
+    
+    let hour = h24 % 12;
+    if (hour === 0) hour = 12;
+    const ampm = h24 >= 12 ? ('PM' as const) : ('AM' as const);
+    return { hour, minute, ampm };
+  };
 
-  const handleSlotClick = (slot: string, e: React.MouseEvent) => {
+  const parsed = parseTime(selectedTime);
+  const [pickerHour, setPickerHour] = useState(parsed.hour);
+  const [pickerMinute, setPickerMinute] = useState(parsed.minute);
+  const [period, setPeriod] = useState<'AM' | 'PM'>(parsed.ampm);
+  const [mode, setMode] = useState<'hours' | 'minutes'>('hours');
+
+  const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+  const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
+  const handleOk = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onChange(slot);
+    
+    let h24 = pickerHour % 12;
+    if (period === 'PM') {
+      h24 += 12;
+    }
+    const hh = String(h24).padStart(2, '0');
+    const mm = String(pickerMinute).padStart(2, '0');
+    onChange(`${hh}:${mm}`);
     onClose();
   };
 
+  // Dial hand calculations
+  const handLength = 64;
+  const handAngle = mode === 'hours' ? pickerHour * 30 : (pickerMinute / 5) * 30;
+  const handAngleRad = (handAngle - 90) * Math.PI / 180;
+  const endX = handLength * Math.cos(handAngleRad);
+  const endY = handLength * Math.sin(handAngleRad);
+
   return (
     <div 
-      className="absolute right-0 mt-1.5 p-3 bg-slate-905 border border-slate-800 rounded-xl shadow-2xl z-50 w-48 animate-fadeIn"
+      className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} mt-1.5 p-4 bg-[#070b14] border border-slate-700 rounded-xl shadow-2xl ring-1 ring-white/10 z-[100] w-[280px] animate-fadeIn`}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-2.5 font-mono">
-        Select Time Slot
-      </div>
-      
-      <div className="grid grid-cols-2 gap-1.5">
-        {timeSlots.map((slot) => {
-          const isSelected = selectedTime === slot;
-          return (
-            <button
-              key={slot}
-              type="button"
-              onClick={(e) => handleSlotClick(slot, e)}
-              className={`py-1.5 rounded-lg text-xs font-semibold text-center cursor-pointer transition-all ${
-                isSelected
-                  ? 'bg-violet-600 text-white shadow-md'
-                  : 'text-slate-355 bg-slate-850 hover:bg-slate-800 hover:text-slate-100'
-              }`}
-            >
-              {slot}
-            </button>
-          );
-        })}
+      {/* Header Section: Numbers & AM/PM */}
+      <div className="flex items-center justify-between gap-4 pb-3 border-b border-slate-800/80">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMode('hours');
+            }}
+            className={`px-3 py-2 rounded-lg text-xl font-extrabold font-mono transition-all cursor-pointer ${
+              mode === 'hours'
+                ? 'bg-violet-600/25 text-violet-400 border border-violet-500/30 shadow-inner'
+                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {String(pickerHour).padStart(2, '0')}
+          </button>
+          <span className="text-xl font-bold text-slate-500 font-mono">:</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMode('minutes');
+            }}
+            className={`px-3 py-2 rounded-lg text-xl font-extrabold font-mono transition-all cursor-pointer ${
+              mode === 'minutes'
+                ? 'bg-violet-600/25 text-violet-400 border border-violet-500/30 shadow-inner'
+                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {String(pickerMinute).padStart(2, '0')}
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setPeriod('AM');
+            }}
+            className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all cursor-pointer ${
+              period === 'AM'
+                ? 'bg-violet-600 text-white shadow-sm'
+                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            AM
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setPeriod('PM');
+            }}
+            className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all cursor-pointer ${
+              period === 'PM'
+                ? 'bg-violet-600 text-white shadow-sm'
+                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            PM
+          </button>
+        </div>
       </div>
 
-      <div className="mt-3 pt-2 border-t border-slate-800/80 flex justify-between">
+      {/* Clock circle area */}
+      <div className="relative w-48 h-48 mx-auto my-4 bg-slate-900/60 border border-slate-800 rounded-full flex items-center justify-center select-none">
+        {/* Center dot */}
+        <div className="absolute w-2 h-2 rounded-full bg-violet-500 z-20" />
+        
+        {/* Pointer line */}
+        <div 
+          className="absolute bottom-[50%] left-[50%] w-[1.5px] bg-violet-500 origin-bottom z-10 transition-transform duration-200"
+          style={{
+            height: '64px',
+            transform: `translateX(-50%) rotate(${handAngle}deg)`
+          }}
+        />
+
+        {/* Selected badge end circle */}
+        <div 
+          className="absolute w-6 h-6 rounded-full bg-violet-600/30 border border-violet-500/70 z-15 flex items-center justify-center pointer-events-none transition-all duration-200"
+          style={{
+            left: `calc(50% + ${endX}px)`,
+            top: `calc(50% + ${endY}px)`,
+            transform: 'translate(-50%, -50%)'
+          }}
+        />
+
+        {/* Dynamic circular numbers */}
+        {mode === 'hours' ? (
+          hours.map((h) => {
+            const angleRad = (h * 30 - 90) * Math.PI / 180;
+            const x = 72 * Math.cos(angleRad);
+            const y = 72 * Math.sin(angleRad);
+            const isSelected = pickerHour === h;
+            return (
+              <button
+                key={`hour-${h}`}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setPickerHour(h);
+                  setMode('minutes');
+                }}
+                className={`absolute h-7 w-7 rounded-full text-[10px] font-bold flex items-center justify-center transition-all cursor-pointer z-20 ${
+                  isSelected 
+                    ? 'bg-violet-600 text-white shadow-sm' 
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+                style={{
+                  left: `calc(50% + ${x}px)`,
+                  top: `calc(50% + ${y}px)`,
+                  transform: 'translate(-50%, -50%)'
+                }}
+              >
+                {h}
+              </button>
+            );
+          })
+        ) : (
+          minutes.map((m) => {
+            const angleRad = ((m / 5) * 30 - 90) * Math.PI / 180;
+            const x = 72 * Math.cos(angleRad);
+            const y = 72 * Math.sin(angleRad);
+            const isSelected = Math.round(pickerMinute / 5) * 5 % 60 === m;
+            return (
+              <button
+                key={`min-${m}`}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setPickerMinute(m);
+                }}
+                className={`absolute h-7 w-7 rounded-full text-[10px] font-bold flex items-center justify-center transition-all cursor-pointer z-20 ${
+                  isSelected 
+                    ? 'bg-violet-600 text-white shadow-sm' 
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+                style={{
+                  left: `calc(50% + ${x}px)`,
+                  top: `calc(50% + ${y}px)`,
+                  transform: 'translate(-50%, -50%)'
+                }}
+              >
+                {String(m).padStart(2, '0')}
+              </button>
+            );
+          })
+        )}
+      </div>
+
+      {/* Footer Controls */}
+      <div className="mt-3 pt-2 border-t border-slate-800/80 flex justify-between items-center gap-2">
         <button
           type="button"
           onClick={(e) => {
@@ -230,21 +398,30 @@ const TimePickerPopover: React.FC<TimePickerPopoverProps> = ({ selectedTime, onC
             onChange('');
             onClose();
           }}
-          className="text-[10px] text-rose-400 hover:text-rose-355 font-semibold font-mono cursor-pointer"
+          className="text-[10px] text-rose-400 hover:text-rose-300 font-bold font-mono cursor-pointer"
         >
           Clear
         </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onClose();
-          }}
-          className="text-[10px] text-slate-400 hover:text-slate-300 font-semibold font-mono cursor-pointer"
-        >
-          Close
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
+            className="text-[10px] text-slate-400 hover:text-slate-300 font-semibold font-mono cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleOk}
+            className="text-[10px] text-violet-400 hover:text-violet-300 font-bold font-mono cursor-pointer"
+          >
+            OK
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -564,6 +741,7 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
                     selectedDate={eventDate}
                     onChange={setEventDate}
                     onClose={() => setActivePopover(null)}
+                    align="right"
                   />
                 )}
               </div>
@@ -639,6 +817,7 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
                       selectedDate={followUpDate}
                       onChange={setFollowUpDate}
                       onClose={() => setActivePopover(null)}
+                      align="left"
                     />
                   )}
                 </div>
@@ -666,6 +845,7 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
                       selectedTime={followUpTime}
                       onChange={setFollowUpTime}
                       onClose={() => setActivePopover(null)}
+                      align="right"
                     />
                   )}
                 </div>
