@@ -4,6 +4,8 @@ import com.studioops.lead.dto.LeadCreateRequest;
 import com.studioops.lead.dto.LeadMoveStageRequest;
 import com.studioops.lead.dto.LeadResponse;
 import com.studioops.lead.dto.LeadUpdateRequest;
+import com.studioops.lead.dto.LeadConvertToProjectRequest;
+import com.studioops.lead.dto.LeadConvertToProjectResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -62,5 +64,13 @@ public class LeadController {
     public ResponseEntity<Void> deleteLead(@PathVariable("id") UUID id) {
         leadService.deleteLead(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/convert-to-project")
+    public ResponseEntity<LeadConvertToProjectResponse> convertToProject(
+            @PathVariable("id") UUID id,
+            @Valid @RequestBody LeadConvertToProjectRequest request) {
+        LeadConvertToProjectResponse response = leadService.convertLeadToProject(id, request);
+        return ResponseEntity.ok(response);
     }
 }

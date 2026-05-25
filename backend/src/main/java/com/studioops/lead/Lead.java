@@ -73,6 +73,9 @@ public class Lead {
     @Column(name = "lost_reason", length = 100)
     private LeadLostReason lostReason;
 
+    @Column(name = "converted_at")
+    private Instant convertedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -245,6 +248,14 @@ public class Lead {
 
     public void setLostReason(LeadLostReason lostReason) {
         this.lostReason = lostReason;
+    }
+
+    public Instant getConvertedAt() {
+        return convertedAt;
+    }
+
+    public void setConvertedAt(Instant convertedAt) {
+        this.convertedAt = convertedAt;
     }
 
     public Instant getCreatedAt() {

@@ -28,6 +28,7 @@ public class LeadMapper {
         response.setNextFollowUpAt(lead.getNextFollowUpAt());
         response.setNotes(lead.getNotes());
         response.setLostReason(lead.getLostReason());
+        response.setConvertedAt(lead.getConvertedAt());
         response.setCreatedAt(lead.getCreatedAt());
         response.setUpdatedAt(lead.getUpdatedAt());
         return response;

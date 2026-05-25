@@ -30,6 +30,7 @@ public class LeadResponse {
     private Instant nextFollowUpAt;
     private String notes;
     private LeadLostReason lostReason;
+    private Instant convertedAt;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -212,6 +213,14 @@ public class LeadResponse {
 
     public void setLostReason(LeadLostReason lostReason) {
         this.lostReason = lostReason;
+    }
+
+    public Instant getConvertedAt() {
+        return convertedAt;
+    }
+
+    public void setConvertedAt(Instant convertedAt) {
+        this.convertedAt = convertedAt;
     }
 
     public Instant getCreatedAt() {

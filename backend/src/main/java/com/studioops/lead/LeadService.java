@@ -3,14 +3,22 @@ package com.studioops.lead;
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
 import com.studioops.studio.StudioRepository;
+import com.studioops.client.Client;
 import com.studioops.client.ClientRepository;
+import com.studioops.project.Project;
 import com.studioops.project.ProjectRepository;
+import com.studioops.project.BookingStatus;
+import com.studioops.project.PaymentStatus;
+import com.studioops.project.ProjectStatus;
 import com.studioops.lead.dto.LeadCreateRequest;
 import com.studioops.lead.dto.LeadResponse;
 import com.studioops.lead.dto.LeadUpdateRequest;
 import com.studioops.lead.dto.LeadMoveStageRequest;
+import com.studioops.lead.dto.LeadConvertToProjectRequest;
+import com.studioops.lead.dto.LeadConvertToProjectResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -144,5 +152,116 @@ public class LeadService {
         Lead lead = leadRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
                 .orElseThrow(() -> new ResourceNotFoundException("Lead not found with id: " + id));
         leadRepository.delete(lead);
+    }
+
+    public LeadConvertToProjectResponse convertLeadToProject(UUID id, LeadConvertToProjectRequest request) {
+        Lead lead = leadRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+                .orElseThrow(() -> new ResourceNotFoundException("Lead not found with id: " + id));
+
+        // If the lead is already converted, return immediately
+        if (lead.getProjectId() != null) {
+            return new LeadConvertToProjectResponse(
+                    lead.getId(),
+                    lead.getClientId(),
+                    lead.getProjectId(),
+                    lead.getPipelineStage(),
+                    lead.getConvertedAt(),
+                    "Lead is already converted"
+            );
+        }
+
+        // 1. Resolve or Create Client
+        UUID resolvedClientId;
+        if (lead.getClientId() != null) {
+            clientRepository.findByIdAndStudioId(lead.getClientId(), lead.getStudioId())
+                    .orElseThrow(() -> new IllegalArgumentException("Client not found with id: " + lead.getClientId() + " for studio: " + lead.getStudioId()));
+            resolvedClientId = lead.getClientId();
+        } else {
+            Client client = new Client();
+            client.setStudioId(lead.getStudioId());
+            client.setFullName(lead.getClientName());
+            // Since Client.phone is required, we use "UNKNOWN" as a temporary fallback if lead.phone is null/empty.
+            String resolvedPhone = (lead.getPhone() != null && !lead.getPhone().trim().isEmpty())
+                    ? lead.getPhone().trim()
+                    : "UNKNOWN";
+            client.setPhone(resolvedPhone);
+            client.setEmail(lead.getEmail() != null ? lead.getEmail().trim() : null);
+            client.setNotes("Created from lead conversion");
+            Client savedClient = clientRepository.save(client);
+            resolvedClientId = savedClient.getId();
+        }
+
+        // 2. Create Project
+        Project project = new Project();
+        project.setStudioId(lead.getStudioId());
+        project.setClientId(resolvedClientId);
+
+        // Resolve Project Code
+        String projectCode;
+        if (request.getProjectCode() != null && !request.getProjectCode().trim().isEmpty()) {
+            projectCode = request.getProjectCode().trim();
+        } else {
+            projectCode = "PRJ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        }
+        if (projectRepository.findByProjectCode(projectCode).isPresent()) {
+            throw new IllegalArgumentException("Project code already exists: " + projectCode);
+        }
+        project.setProjectCode(projectCode);
+
+        // Resolve Title
+        String title;
+        if (request.getTitle() != null && !request.getTitle().trim().isEmpty()) {
+            title = request.getTitle().trim();
+        } else if (lead.getEventType() != null && !lead.getEventType().trim().isEmpty()) {
+            title = lead.getEventType().trim() + " - " + lead.getClientName();
+        } else {
+            title = "Event - " + lead.getClientName();
+        }
+        project.setTitle(title);
+
+        // Resolve Project Type
+        String projectType;
+        if (request.getProjectType() != null && !request.getProjectType().trim().isEmpty()) {
+            projectType = request.getProjectType().trim();
+        } else if (lead.getEventType() != null && !lead.getEventType().trim().isEmpty()) {
+            projectType = lead.getEventType().trim();
+        } else {
+            projectType = "General";
+        }
+        project.setProjectType(projectType);
+
+        // Resolve Enums
+        project.setBookingStatus(request.getBookingStatus() != null ? request.getBookingStatus() : BookingStatus.INQUIRY);
+        project.setPaymentStatus(request.getPaymentStatus() != null ? request.getPaymentStatus() : PaymentStatus.UNPAID);
+        project.setStatus(request.getStatus() != null ? request.getStatus() : ProjectStatus.LEAD);
+
+        project.setStartDate(lead.getEventDate());
+        project.setEndDate(lead.getEventDate());
+        
+        project.setNotes(request.getNotes() != null && !request.getNotes().trim().isEmpty() 
+                ? request.getNotes().trim() 
+                : lead.getNotes());
+
+        Project savedProject = projectRepository.save(project);
+
+        // 3. Update Lead
+        lead.setClientId(resolvedClientId);
+        lead.setProjectId(savedProject.getId());
+        lead.setPipelineStage(LeadPipelineStage.CONFIRMED);
+        lead.setLostReason(null);
+        lead.setConvertedAt(Instant.now());
+        Lead savedLead = leadRepository.save(lead);
+
+        // TODO: Cancel active follow-up tasks linked to lead once task-lead linkage is implemented.
+        // Currently, FollowUpTask doesn't have a leadId/projectId column and we avoid broad cancellation by clientId.
+
+        return new LeadConvertToProjectResponse(
+                savedLead.getId(),
+                resolvedClientId,
+                savedProject.getId(),
+                savedLead.getPipelineStage(),
+                savedLead.getConvertedAt(),
+                "Lead converted to project successfully"
+        );
     }
 }

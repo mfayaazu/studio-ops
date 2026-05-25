@@ -7,10 +7,15 @@ import com.studioops.client.ClientRepository;
 import com.studioops.client.Client;
 import com.studioops.project.ProjectRepository;
 import com.studioops.project.Project;
+import com.studioops.project.BookingStatus;
+import com.studioops.project.PaymentStatus;
+import com.studioops.project.ProjectStatus;
 import com.studioops.lead.dto.LeadCreateRequest;
 import com.studioops.lead.dto.LeadResponse;
 import com.studioops.lead.dto.LeadUpdateRequest;
 import com.studioops.lead.dto.LeadMoveStageRequest;
+import com.studioops.lead.dto.LeadConvertToProjectRequest;
+import com.studioops.lead.dto.LeadConvertToProjectResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -209,5 +214,228 @@ class LeadServiceTest {
         assertNotNull(response);
         assertEquals(LeadPipelineStage.CONFIRMED, response.getPipelineStage());
         assertNull(response.getLostReason());
+    }
+
+    @Test
+    void convertLeadToProject_Success_NewClient_NewProject() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = new Lead();
+        lead.setId(leadId);
+        lead.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        lead.setClientName("John Doe");
+        lead.setPhone("+1234567890");
+        lead.setEmail("john@example.com");
+        lead.setEventType("Wedding");
+        lead.setEventDate(LocalDate.of(2026, 10, 15));
+        lead.setNotes("First lead note");
+
+        LeadConvertToProjectRequest request = new LeadConvertToProjectRequest(
+                "CODE123", "Custom Project Title", "Wedding Photography",
+                BookingStatus.CONTRACT_SIGNED, PaymentStatus.PARTIALLY_PAID, ProjectStatus.CONFIRMED, "Project note"
+        );
+
+        when(leadRepository.findByIdAndStudioId(leadId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(lead));
+        when(projectRepository.findByProjectCode("CODE123")).thenReturn(Optional.empty());
+
+        // Mock saved Client
+        UUID mockClientId = UUID.randomUUID();
+        when(clientRepository.save(any(Client.class))).thenAnswer(invocation -> {
+            Client c = invocation.getArgument(0);
+            c.setId(mockClientId);
+            return c;
+        });
+
+        // Mock saved Project
+        UUID mockProjectId = UUID.randomUUID();
+        when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
+            Project p = invocation.getArgument(0);
+            p.setId(mockProjectId);
+            return p;
+        });
+
+        // Mock saved Lead
+        when(leadRepository.save(any(Lead.class))).thenReturn(lead);
+
+        LeadConvertToProjectResponse response = leadService.convertLeadToProject(leadId, request);
+
+        assertNotNull(response);
+        assertEquals(leadId, response.getLeadId());
+        assertEquals(mockClientId, response.getClientId());
+        assertEquals(mockProjectId, response.getProjectId());
+        assertEquals(LeadPipelineStage.CONFIRMED, response.getPipelineStage());
+        assertNotNull(response.getConvertedAt());
+        assertEquals("Lead converted to project successfully", response.getMessage());
+
+        // Verify correct properties mapped on created Client
+        verify(clientRepository, times(1)).save(argThat(client -> 
+            client.getFullName().equals("John Doe") &&
+            client.getPhone().equals("+1234567890") &&
+            client.getEmail().equals("john@example.com") &&
+            client.getStudioId().equals(TenantConstants.DEFAULT_STUDIO_ID)
+        ));
+
+        // Verify correct properties mapped on created Project
+        verify(projectRepository, times(1)).save(argThat(project -> 
+            project.getClientId().equals(mockClientId) &&
+            project.getProjectCode().equals("CODE123") &&
+            project.getTitle().equals("Custom Project Title") &&
+            project.getProjectType().equals("Wedding Photography") &&
+            project.getBookingStatus().equals(BookingStatus.CONTRACT_SIGNED) &&
+            project.getPaymentStatus().equals(PaymentStatus.PARTIALLY_PAID) &&
+            project.getStatus().equals(ProjectStatus.CONFIRMED) &&
+            project.getStartDate().equals(LocalDate.of(2026, 10, 15)) &&
+            project.getEndDate().equals(LocalDate.of(2026, 10, 15)) &&
+            project.getNotes().equals("Project note")
+        ));
+    }
+
+    @Test
+    void convertLeadToProject_Success_ExistingClient_DefaultValues() {
+        UUID leadId = UUID.randomUUID();
+        UUID existingClientId = UUID.randomUUID();
+
+        Lead lead = new Lead();
+        lead.setId(leadId);
+        lead.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        lead.setClientId(existingClientId);
+        lead.setClientName("Jane Doe");
+        lead.setPhone(""); // blank
+        lead.setEventType("Portrait");
+        lead.setEventDate(LocalDate.of(2026, 11, 20));
+
+        LeadConvertToProjectRequest request = new LeadConvertToProjectRequest(); // empty request
+
+        when(leadRepository.findByIdAndStudioId(leadId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(lead));
+        when(clientRepository.findByIdAndStudioId(existingClientId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(Optional.of(new Client()));
+        when(projectRepository.findByProjectCode(any(String.class))).thenReturn(Optional.empty());
+
+        UUID mockProjectId = UUID.randomUUID();
+        when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
+            Project p = invocation.getArgument(0);
+            p.setId(mockProjectId);
+            return p;
+        });
+        when(leadRepository.save(any(Lead.class))).thenReturn(lead);
+
+        LeadConvertToProjectResponse response = leadService.convertLeadToProject(leadId, request);
+
+        assertNotNull(response);
+        assertEquals(existingClientId, response.getClientId());
+        assertEquals(mockProjectId, response.getProjectId());
+
+        // Verify default mappings when request parameters are absent
+        verify(projectRepository, times(1)).save(argThat(project -> 
+            project.getClientId().equals(existingClientId) &&
+            project.getProjectCode().startsWith("PRJ-") &&
+            project.getTitle().equals("Portrait - Jane Doe") &&
+            project.getProjectType().equals("Portrait") &&
+            project.getBookingStatus().equals(BookingStatus.INQUIRY) &&
+            project.getPaymentStatus().equals(PaymentStatus.UNPAID) &&
+            project.getStatus().equals(ProjectStatus.LEAD) &&
+            project.getStartDate().equals(LocalDate.of(2026, 11, 20))
+        ));
+
+        // Client Repository save should not be called since client existed
+        verify(clientRepository, never()).save(any(Client.class));
+    }
+
+    @Test
+    void convertLeadToProject_PhoneFallback_Unknown() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = new Lead();
+        lead.setId(leadId);
+        lead.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        lead.setClientName("John Doe");
+        lead.setPhone(null); // null phone
+        lead.setEventType("Wedding");
+        lead.setEventDate(LocalDate.of(2026, 10, 15));
+
+        LeadConvertToProjectRequest request = new LeadConvertToProjectRequest();
+
+        when(leadRepository.findByIdAndStudioId(leadId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(lead));
+        when(projectRepository.findByProjectCode(any(String.class))).thenReturn(Optional.empty());
+
+        when(clientRepository.save(any(Client.class))).thenAnswer(invocation -> {
+            Client c = invocation.getArgument(0);
+            c.setId(UUID.randomUUID());
+            return c;
+        });
+        when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
+            Project p = invocation.getArgument(0);
+            p.setId(UUID.randomUUID());
+            return p;
+        });
+        when(leadRepository.save(any(Lead.class))).thenReturn(lead);
+
+        leadService.convertLeadToProject(leadId, request);
+
+        // Verify that because Client.phone is required, fallback "UNKNOWN" is passed
+        verify(clientRepository, times(1)).save(argThat(client -> 
+            client.getPhone().equals("UNKNOWN")
+        ));
+    }
+
+    @Test
+    void convertLeadToProject_AlreadyConverted_ReturnsEarly() {
+        UUID leadId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+        Instant convertedAt = Instant.now();
+
+        Lead lead = new Lead();
+        lead.setId(leadId);
+        lead.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        lead.setClientId(clientId);
+        lead.setProjectId(projectId);
+        lead.setPipelineStage(LeadPipelineStage.CONFIRMED);
+        lead.setConvertedAt(convertedAt);
+
+        LeadConvertToProjectRequest request = new LeadConvertToProjectRequest();
+
+        when(leadRepository.findByIdAndStudioId(leadId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(lead));
+
+        LeadConvertToProjectResponse response = leadService.convertLeadToProject(leadId, request);
+
+        assertNotNull(response);
+        assertEquals(leadId, response.getLeadId());
+        assertEquals(clientId, response.getClientId());
+        assertEquals(projectId, response.getProjectId());
+        assertEquals(LeadPipelineStage.CONFIRMED, response.getPipelineStage());
+        assertEquals(convertedAt, response.getConvertedAt());
+        assertEquals("Lead is already converted", response.getMessage());
+
+        verify(projectRepository, never()).save(any(Project.class));
+        verify(clientRepository, never()).save(any(Client.class));
+    }
+
+    @Test
+    void convertLeadToProject_DuplicateProjectCode_ThrowsException() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = new Lead();
+        lead.setId(leadId);
+        lead.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        lead.setClientName("John Doe");
+
+        LeadConvertToProjectRequest request = new LeadConvertToProjectRequest();
+        request.setProjectCode("EXISTS");
+
+        when(leadRepository.findByIdAndStudioId(leadId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(lead));
+        when(clientRepository.save(any(Client.class))).thenAnswer(invocation -> {
+            Client c = invocation.getArgument(0);
+            c.setId(UUID.randomUUID());
+            return c;
+        });
+        when(projectRepository.findByProjectCode("EXISTS")).thenReturn(Optional.of(new Project()));
+
+        assertThrows(IllegalArgumentException.class, () -> leadService.convertLeadToProject(leadId, request));
+    }
+
+    @Test
+    void convertLeadToProject_LeadNotFound_ThrowsException() {
+        UUID leadId = UUID.randomUUID();
+        when(leadRepository.findByIdAndStudioId(leadId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> leadService.convertLeadToProject(leadId, new LeadConvertToProjectRequest()));
     }
 }

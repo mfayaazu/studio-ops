@@ -8,6 +8,8 @@ import com.studioops.lead.dto.LeadCreateRequest;
 import com.studioops.lead.dto.LeadMoveStageRequest;
 import com.studioops.lead.dto.LeadResponse;
 import com.studioops.lead.dto.LeadUpdateRequest;
+import com.studioops.lead.dto.LeadConvertToProjectRequest;
+import com.studioops.lead.dto.LeadConvertToProjectResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -186,5 +188,34 @@ class LeadControllerIntegrationTest {
                 .andExpect(status().isNoContent());
 
         verify(leadService, times(1)).deleteLead(id);
+    }
+
+    @Test
+    void convertToProject_Success() throws Exception {
+        UUID leadId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+        Instant convertedAt = Instant.now();
+
+        LeadConvertToProjectRequest request = new LeadConvertToProjectRequest(
+                "CODE123", "Custom Project Title", "Wedding Photography",
+                null, null, null, "Project note"
+        );
+
+        LeadConvertToProjectResponse response = new LeadConvertToProjectResponse(
+                leadId, clientId, projectId, LeadPipelineStage.CONFIRMED, convertedAt, "Lead converted to project successfully"
+        );
+
+        when(leadService.convertLeadToProject(eq(leadId), any(LeadConvertToProjectRequest.class))).thenReturn(response);
+
+        mockMvc.perform(post("/api/leads/{id}/convert-to-project", leadId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.leadId").value(leadId.toString()))
+                .andExpect(jsonPath("$.clientId").value(clientId.toString()))
+                .andExpect(jsonPath("$.projectId").value(projectId.toString()))
+                .andExpect(jsonPath("$.pipelineStage").value("CONFIRMED"))
+                .andExpect(jsonPath("$.message").value("Lead converted to project successfully"));
     }
 }

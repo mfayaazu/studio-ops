@@ -1420,3 +1420,36 @@ Transitions a lead's pipeline stage. If transitioned to `LOST`, `lostReason` mus
 Deletes the lead record.
 **Response (204 No Content)**
 
+### POST `/api/leads/{id}/convert-to-project`
+Converts a lead into a client and a project.
+* If the lead already has a `clientId`, validates and reuses it. Otherwise, creates a new client.
+* Creates a new project using either parameters supplied in the request body or falls back to lead details.
+* Marks the lead pipeline stage as `CONFIRMED`, links the resolved client ID and created project ID, clears any `lostReason`, and records the conversion time in `convertedAt`.
+* If the lead is already converted (i.e. has a linked `projectId`), it returns the existing project reference immediately with the message `"Lead is already converted"`.
+
+**Request:**
+```json
+{
+  "projectCode": "PRJ-98765",
+  "title": "Custom Project Title",
+  "projectType": "Wedding Photography",
+  "bookingStatus": "CONTRACT_SIGNED",
+  "paymentStatus": "PARTIALLY_PAID",
+  "status": "CONFIRMED",
+  "notes": "Project specific instructions."
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "leadId": "b30cf82a-bc91-4d37-88ea-d43806fbce40",
+  "clientId": "e30cf82a-bc91-4d37-88ea-d43806fbce11",
+  "projectId": "f5b6b158-b649-411a-8b1b-6893701bc93c",
+  "pipelineStage": "CONFIRMED",
+  "convertedAt": "2026-05-25T17:45:00Z",
+  "message": "Lead converted to project successfully"
+}
+```
+
+
