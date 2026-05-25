@@ -6,15 +6,91 @@ import { FollowUpTimeline } from '../components/FollowUpTimeline';
 import { TemplateCardGrid } from '../components/TemplateCardGrid';
 import { PendingFollowUpsPanel } from '../components/PendingFollowUpsPanel';
 import { LeadDetailDrawer } from '../components/LeadDetailDrawer';
-import type { Lead, FollowUpSequence, FollowUpStep, MessageTemplate, FollowUpTask, CommunicationLog } from '../types';
+import type { 
+  Lead, 
+  FollowUpSequence, 
+  FollowUpStep, 
+  MessageTemplate, 
+  FollowUpTask, 
+  CommunicationLog,
+  LeadResponse,
+  LeadPipelineStage,
+  LeadLostReason,
+  ChannelType
+} from '../types';
 import { 
   fetchMessageTemplates, 
   fetchFollowUpSequences, 
   fetchFollowUpSteps,
   fetchDueFollowUpTasks,
-  fetchCommunicationLogs
+  fetchCommunicationLogs,
+  fetchLeads,
+  moveLeadStage
 } from '../api/followupApi';
 import { Sparkles, MessageSquare, Compass, LayoutGrid, CheckSquare, Loader2 } from 'lucide-react';
+
+const mapLeadResponseToLead = (response: LeadResponse): Lead => {
+  const eventDateStr = response.eventDate || '';
+  const nextFollowUpDateStr = response.nextFollowUpAt ? response.nextFollowUpAt.split('T')[0] : '';
+  const lastContactedDateStr = response.lastContactedAt ? response.lastContactedAt.split('T')[0] : '';
+  
+  // Calculate urgency days based on nextFollowUpAt vs today
+  let urgencyDays = 99; // Default for CONFIRMED/LOST
+  if (response.pipelineStage !== 'CONFIRMED' && response.pipelineStage !== 'LOST' && response.nextFollowUpAt) {
+    const nextDate = new Date(response.nextFollowUpAt);
+    const today = new Date();
+    const nextZero = new Date(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate());
+    const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const diffTime = nextZero.getTime() - todayZero.getTime();
+    urgencyDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  // Heuristically assign priority based on estimatedValue
+  let priority: 'low' | 'medium' | 'high' = 'low';
+  const val = response.estimatedValue || 0;
+  if (val >= 150000) {
+    priority = 'high';
+  } else if (val >= 75000) {
+    priority = 'medium';
+  }
+
+  // Heuristically map preferredChannel to ChannelType
+  let channel: ChannelType = 'EMAIL';
+  if (response.preferredChannel === 'WHATSAPP') channel = 'WHATSAPP';
+  else if (response.preferredChannel === 'SMS') channel = 'SMS';
+  else if (response.preferredChannel === 'PHONE_CALL') channel = 'MANUAL_CALL';
+  else if (response.preferredChannel === 'MANUAL') channel = 'MANUAL_CALL';
+
+  return {
+    id: response.id,
+    clientName: response.clientName,
+    projectTitle: response.eventType || 'Untitled Inquiry',
+    estimatedValue: response.estimatedValue || 0,
+    eventDate: eventDateStr,
+    lastContacted: lastContactedDateStr || 'N/A',
+    nextFollowUp: response.pipelineStage === 'CONFIRMED' ? 'Completed' : response.pipelineStage === 'LOST' ? 'Archived' : (nextFollowUpDateStr || 'N/A'),
+    channel,
+    stage: response.pipelineStage,
+    priority,
+    urgencyDays,
+    notes: response.notes,
+    sequenceName: 'Backend Sequence',
+    history: [], // History is not stored as array in backend lead currently, can keep empty
+    
+    // Original backend fields preserved
+    isBackendLead: true,
+    phone: response.phone,
+    email: response.email,
+    city: response.city,
+    leadSource: response.leadSource,
+    lostReason: response.lostReason,
+    lastContactedAt: response.lastContactedAt,
+    nextFollowUpAt: response.nextFollowUpAt,
+    clientId: response.clientId,
+    projectId: response.projectId,
+    studioId: response.studioId,
+  };
+};
 
 export const FollowUpCenterPage: React.FC = () => {
   // Leads & UI states
@@ -30,7 +106,9 @@ export const FollowUpCenterPage: React.FC = () => {
   const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
   
   const [apiStatus, setApiStatus] = useState<'connected' | 'offline' | 'empty'>('offline');
+  const [leadApiStatus, setLeadApiStatus] = useState<'connected' | 'empty' | 'offline'>('offline');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLeadsLoading, setIsLeadsLoading] = useState<boolean>(true);
 
   // Load configuration details from backend (fallback to mock data)
   useEffect(() => {
@@ -39,6 +117,7 @@ export const FollowUpCenterPage: React.FC = () => {
     const loadData = async () => {
       try {
         setIsLoading(true);
+        setIsLeadsLoading(true);
         const fetchedTemplates = await fetchMessageTemplates();
         const fetchedSequences = await fetchFollowUpSequences();
 
@@ -49,6 +128,26 @@ export const FollowUpCenterPage: React.FC = () => {
           fetchedLogs = await fetchCommunicationLogs();
         } catch (e) {
           console.warn('Failed to fetch follow-up tasks or communication logs:', e);
+        }
+
+        // Fetch Leads
+        try {
+          const fetchedLeads = await fetchLeads();
+          if (active) {
+            if (fetchedLeads && fetchedLeads.length > 0) {
+              setLeadApiStatus('connected');
+              setLeads(fetchedLeads.map(l => mapLeadResponseToLead(l)));
+            } else {
+              setLeadApiStatus('empty');
+              setLeads(mockLeads.map(l => ({ ...l, isBackendLead: false })));
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to fetch leads from backend:', e);
+          if (active) {
+            setLeadApiStatus('offline');
+            setLeads(mockLeads.map(l => ({ ...l, isBackendLead: false })));
+          }
         }
 
         if (!active) return;
@@ -101,6 +200,8 @@ export const FollowUpCenterPage: React.FC = () => {
         console.warn('Backend Follow-up API offline, using fallback mock data:', err);
         if (!active) return;
         setApiStatus('offline');
+        setLeadApiStatus('offline');
+        setLeads(mockLeads.map(l => ({ ...l, isBackendLead: false })));
         setTemplates(mockTemplates);
         // Map mock sequence steps
         const mockStepsMapped = mockSequenceSteps.map(step => ({
@@ -128,6 +229,7 @@ export const FollowUpCenterPage: React.FC = () => {
       } finally {
         if (active) {
           setIsLoading(false);
+          setIsLeadsLoading(false);
         }
       }
     };
@@ -137,6 +239,57 @@ export const FollowUpCenterPage: React.FC = () => {
       active = false;
     };
   }, []);
+
+  const handleMoveLeadStage = async (
+    leadId: string, 
+    stage: LeadPipelineStage, 
+    lostReason?: LeadLostReason, 
+    notes?: string
+  ): Promise<void> => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    if (lead.isBackendLead) {
+      // Call move-stage API
+      await moveLeadStage(leadId, {
+        pipelineStage: stage,
+        lostReason: lostReason || (stage === 'LOST' ? 'OTHER' : undefined),
+        notes
+      });
+      // After success, refetch leads
+      try {
+        const fetched = await fetchLeads();
+        setLeads(fetched.map(l => mapLeadResponseToLead(l)));
+        setLeadApiStatus(fetched.length > 0 ? 'connected' : 'empty');
+      } catch (err) {
+        console.error('Failed to refetch leads after stage move:', err);
+      }
+    } else {
+      // Fallback mock lead: update local React state only
+      const todayStr = new Date().toISOString().split('T')[0];
+      const newHistory = [
+        ...(lead.history || []),
+        { 
+          date: todayStr, 
+          event: `Moved stage to ${stage}`, 
+          status: 'system' as const 
+        }
+      ];
+
+      const updatedLead: Lead = {
+        ...lead,
+        stage: stage as any,
+        lostReason: lostReason as any,
+        notes: notes || lead.notes,
+        lastContacted: todayStr,
+        urgencyDays: stage === 'CONFIRMED' || stage === 'LOST' ? 99 : lead.urgencyDays,
+        nextFollowUp: stage === 'CONFIRMED' ? 'Completed' : stage === 'LOST' ? 'Archived' : lead.nextFollowUp,
+        history: newHistory
+      };
+      
+      handleUpdateLead(updatedLead);
+    }
+  };
 
   const handleActionSuccess = async () => {
     // Re-fetch tasks and logs on action trigger to refresh values
@@ -286,23 +439,44 @@ export const FollowUpCenterPage: React.FC = () => {
         </div>
 
         {/* API Integration Status Badge */}
-        <div className="flex items-center px-2 py-1">
+        <div className="flex flex-wrap items-center gap-2 px-2 py-1">
+          {/* Follow-up Automation Badge */}
           {apiStatus === 'connected' && (
             <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              {dueTasks.length > 0 ? "Connected: loaded from backend" : "Connected: empty queue (showing mock data)"}
+              Follow-ups: Connected
             </span>
           )}
           {apiStatus === 'offline' && (
             <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              Offline: using demo data
+              Follow-ups: Offline
             </span>
           )}
           {apiStatus === 'empty' && (
             <span className="px-2.5 py-1 bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-              Empty backend: showing demo data
+              Follow-ups: Empty
+            </span>
+          )}
+
+          {/* Leads API Status Badge */}
+          {leadApiStatus === 'connected' && (
+            <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Leads loaded from backend
+            </span>
+          )}
+          {leadApiStatus === 'empty' && (
+            <span className="px-2.5 py-1 bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
+              Empty backend: showing demo leads
+            </span>
+          )}
+          {leadApiStatus === 'offline' && (
+            <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              Offline: using demo leads
             </span>
           )}
         </div>
@@ -311,10 +485,17 @@ export const FollowUpCenterPage: React.FC = () => {
       {/* Active Tab Screen */}
       <div className="w-full">
         {activeTab === 'pipeline' && (
-          <FollowUpPipelineBoard 
-            leads={leads} 
-            onLeadClick={(leadId) => setSelectedLeadId(leadId)} 
-          />
+          isLeadsLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl">
+              <Loader2 className="h-5 w-5 text-violet-500 animate-spin" />
+              <span className="text-slate-400 text-xs font-semibold">Loading pipeline from database...</span>
+            </div>
+          ) : (
+            <FollowUpPipelineBoard 
+              leads={leads} 
+              onLeadClick={(leadId) => setSelectedLeadId(leadId)} 
+            />
+          )
         )}
         
         {activeTab !== 'pipeline' && isLoading && (
@@ -351,6 +532,7 @@ export const FollowUpCenterPage: React.FC = () => {
         isOpen={selectedLeadId !== null}
         onClose={() => setSelectedLeadId(null)}
         onUpdateLead={handleUpdateLead}
+        onMoveStage={(stage, lostReason, notes) => handleMoveLeadStage(selectedLeadId!, stage, lostReason, notes)}
       />
     </main>
   );

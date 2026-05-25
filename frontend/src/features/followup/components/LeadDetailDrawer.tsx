@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import type { Lead, LeadStage, MessageTemplate, ChannelType } from '../types';
+import type { Lead, LeadStage, MessageTemplate, ChannelType, LeadPipelineStage, LeadLostReason } from '../types';
 import { mockTemplates } from '../mockData';
 import { 
   X, Mail, MessageSquare, Phone, Smartphone, Calendar, 
   DollarSign, Clock, CheckCircle2, 
-  ChevronRight, ThumbsUp, Eye, Sparkles, Ban
+  ChevronRight, ThumbsUp, Eye, Sparkles, Ban, Loader2
 } from 'lucide-react';
 
 interface LeadDetailDrawerProps {
@@ -12,16 +12,24 @@ interface LeadDetailDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdateLead: (updatedLead: Lead) => void;
+  onMoveStage: (
+    stage: LeadPipelineStage,
+    lostReason?: LeadLostReason,
+    notes?: string
+  ) => Promise<void>;
 }
 
 export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({ 
   lead, 
   isOpen, 
   onClose,
-  onUpdateLead
+  onUpdateLead,
+  onMoveStage
 }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [simulationLog, setSimulationLog] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (!lead || !isOpen) return null;
 
@@ -91,53 +99,40 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   };
 
   // Handlers for stage movement
-  const handleMoveToNextStage = () => {
+  const handleMoveToNextStage = async () => {
     if (isTerminal || lead.stage === 'FOLLOW_UP_PENDING') return;
     const nextStage = FUNNEL_STAGES[currentStageIndex + 1];
-    
-    const todayStr = new Date().toISOString().split('T')[0];
-    const newHistory = [
-      ...(lead.history || []),
-      { 
-        date: todayStr, 
-        event: `Moved stage from ${getStageLabel(lead.stage)} to ${getStageLabel(nextStage)}`, 
-        status: 'system' as const 
-      }
-    ];
-
-    onUpdateLead({
-      ...lead,
-      stage: nextStage,
-      lastContacted: todayStr,
-      history: newHistory
-    });
-    
-    setSimulationLog(`Successfully progressed lead to: ${getStageLabel(nextStage)}`);
-    setIsPreviewOpen(false);
+    setErrorMessage(null);
+    setIsSaving(true);
+    try {
+      await onMoveStage(nextStage as LeadPipelineStage, undefined, lead.notes);
+      setSimulationLog(`Successfully progressed lead to: ${getStageLabel(nextStage)}`);
+      setIsPreviewOpen(false);
+    } catch (err: any) {
+      console.error('Failed to move stage:', err);
+      setErrorMessage(err?.message || 'Failed to update pipeline stage. Please check connection and try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleMarkTerminal = (targetTerminal: 'CONFIRMED' | 'LOST') => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const newHistory = [
-      ...(lead.history || []),
-      { 
-        date: todayStr, 
-        event: `Marked lead as ${getStageLabel(targetTerminal)}`, 
-        status: 'system' as const 
-      }
-    ];
-
-    onUpdateLead({
-      ...lead,
-      stage: targetTerminal,
-      urgencyDays: 99,
-      lastContacted: todayStr,
-      nextFollowUp: targetTerminal === 'CONFIRMED' ? 'Completed' : 'Archived',
-      history: newHistory
-    });
-
-    setSimulationLog(`Lead marked as ${targetTerminal === 'CONFIRMED' ? 'Confirmed (Won) 🎉' : 'Lost ✗'}`);
-    setIsPreviewOpen(false);
+  const handleMarkTerminal = async (targetTerminal: 'CONFIRMED' | 'LOST') => {
+    setErrorMessage(null);
+    setIsSaving(true);
+    try {
+      await onMoveStage(
+        targetTerminal as LeadPipelineStage,
+        targetTerminal === 'LOST' ? 'OTHER' : undefined,
+        lead.notes
+      );
+      setSimulationLog(`Lead marked as ${targetTerminal === 'CONFIRMED' ? 'Confirmed (Won) 🎉' : 'Lost ✗'}`);
+      setIsPreviewOpen(false);
+    } catch (err: any) {
+      console.error('Failed to update stage:', err);
+      setErrorMessage(err?.message || `Failed to mark lead as ${targetTerminal.toLowerCase()}.`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Handlers for visual-only follow-up buttons
@@ -195,12 +190,23 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
             </span>
             <h3 className="text-base font-bold text-white mt-0.5">{lead.clientName}</h3>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {lead.isBackendLead ? (
+              <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[9px] font-bold font-mono">
+                DATABASE
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full text-[9px] font-bold font-mono">
+                DEMO MOCK
+              </span>
+            )}
+            <button 
+              onClick={onClose}
+              className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Content Body */}
@@ -222,42 +228,106 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
             </div>
           )}
 
+          {/* Error Message */}
+          {errorMessage && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center justify-between gap-2 text-rose-300 text-xs font-mono">
+              <span>{errorMessage}</span>
+              <button 
+                onClick={() => setErrorMessage(null)} 
+                className="text-[10px] text-slate-500 hover:text-slate-300 uppercase tracking-wider font-semibold"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
           {/* Core Info Grid */}
-          <div className="grid grid-cols-2 gap-4 bg-slate-900/20 border border-slate-850 p-4 rounded-xl">
-            <div>
-              <span className="text-[9px] font-mono uppercase text-slate-500 block">Project Title</span>
-              <span className="text-xs font-bold text-slate-200 mt-1 block truncate">{lead.projectTitle}</span>
+          <div className="space-y-4">
+            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Lead Info</span>
+            <div className="grid grid-cols-2 gap-4 bg-slate-900/20 border border-slate-850 p-4 rounded-xl">
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Event Type</span>
+                <span className="text-xs font-bold text-slate-200 mt-1 block truncate">{lead.projectTitle}</span>
+              </div>
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Est. Deal Value</span>
+                <span className="text-xs font-bold text-emerald-400 mt-1 block flex items-center">
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span>{lead.estimatedValue.toLocaleString()}</span>
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Event Date</span>
+                <span className="text-xs font-semibold text-slate-300 mt-1 block flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                  <span>{lead.eventDate || 'N/A'}</span>
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">City</span>
+                <span className="text-xs font-semibold text-slate-300 mt-1 block">{lead.city || 'N/A'}</span>
+              </div>
             </div>
-            <div>
-              <span className="text-[9px] font-mono uppercase text-slate-500 block">Est. Deal Value</span>
-              <span className="text-xs font-bold text-emerald-400 mt-1 block flex items-center">
-                <DollarSign className="h-3.5 w-3.5" />
-                <span>{lead.estimatedValue.toLocaleString()}</span>
-              </span>
+          </div>
+
+          {/* Contact Details */}
+          <div className="space-y-4">
+            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Contact Info</span>
+            <div className="grid grid-cols-2 gap-4 bg-slate-900/20 border border-slate-850 p-4 rounded-xl">
+              <div className="col-span-2">
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Client Name</span>
+                <span className="text-xs font-bold text-slate-205 mt-1 block">{lead.clientName}</span>
+              </div>
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Phone</span>
+                <span className="text-xs font-semibold text-slate-300 mt-1 block flex items-center gap-1">
+                  <Phone className="h-3.5 w-3.5 text-slate-500" />
+                  <span>{lead.phone || 'N/A'}</span>
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Email</span>
+                <span className="text-xs font-semibold text-slate-300 mt-1 block flex items-center gap-1 truncate">
+                  <Mail className="h-3.5 w-3.5 text-slate-500" />
+                  <span className="truncate">{lead.email || 'N/A'}</span>
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="text-[9px] font-mono uppercase text-slate-500 block">Event Date</span>
-              <span className="text-xs font-semibold text-slate-300 mt-1 block flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5 text-slate-500" />
-                <span>{lead.eventDate}</span>
-              </span>
-            </div>
-            <div>
-              <span className="text-[9px] font-mono uppercase text-slate-500 block">Current Stage</span>
-              <span className="text-xs font-bold text-violet-400 mt-1 block">{getStageLabel(lead.stage)}</span>
-            </div>
-            <div>
-              <span className="text-[9px] font-mono uppercase text-slate-500 block">Channel Preference</span>
-              <span className="text-xs font-semibold text-slate-350 mt-1 block flex items-center gap-1">
-                <span className="text-slate-500">{getChannelIcon(lead.channel)}</span>
-                <span>{lead.channel}</span>
-              </span>
-            </div>
-            <div>
-              <span className="text-[9px] font-mono uppercase text-slate-500 block">Sequence Group</span>
-              <span className="text-xs font-mono font-bold text-fuchsia-400 mt-1 block truncate">
-                {lead.sequenceName || 'Default Pipeline'}
-              </span>
+          </div>
+
+          {/* Pipeline Details */}
+          <div className="space-y-4">
+            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Pipeline status</span>
+            <div className="grid grid-cols-2 gap-4 bg-slate-900/20 border border-slate-850 p-4 rounded-xl">
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Current Stage</span>
+                <span className="text-xs font-bold text-violet-400 mt-1 block">{getStageLabel(lead.stage)}</span>
+              </div>
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Channel Preference</span>
+                <span className="text-xs font-semibold text-slate-350 mt-1 block flex items-center gap-1">
+                  <span className="text-slate-500">{getChannelIcon(lead.channel)}</span>
+                  <span>{lead.channel}</span>
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Lead Source</span>
+                <span className="text-xs font-semibold text-slate-300 mt-1 block uppercase font-mono">{lead.leadSource || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Last Contacted</span>
+                <span className="text-xs font-semibold text-slate-300 mt-1 block">{lead.lastContacted || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Next Follow-up</span>
+                <span className="text-xs font-semibold text-slate-300 mt-1 block">{lead.nextFollowUp || 'N/A'}</span>
+              </div>
+              {lead.stage === 'LOST' && (
+                <div>
+                  <span className="text-[9px] font-mono uppercase text-rose-500 block">Lost Reason</span>
+                  <span className="text-xs font-bold text-rose-400 mt-1 block uppercase font-mono">{lead.lostReason || 'N/A'}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -276,28 +346,28 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
             <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Stage Movement Actions</span>
             <div className="grid grid-cols-3 gap-2">
               <button
-                disabled={isTerminal || lead.stage === 'FOLLOW_UP_PENDING'}
+                disabled={isTerminal || lead.stage === 'FOLLOW_UP_PENDING' || isSaving}
                 onClick={handleMoveToNextStage}
                 className="py-2.5 px-3 bg-violet-600/15 hover:bg-violet-600/25 border border-violet-500/20 disabled:opacity-40 disabled:hover:bg-violet-600/15 text-violet-300 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
                 title="Progress to next funnel stage"
               >
-                <ChevronRight className="h-4 w-4" />
+                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
                 <span>Next Stage</span>
               </button>
               <button
-                disabled={lead.stage === 'CONFIRMED'}
+                disabled={lead.stage === 'CONFIRMED' || isSaving}
                 onClick={() => handleMarkTerminal('CONFIRMED')}
                 className="py-2.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 disabled:opacity-40 text-emerald-400 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
               >
-                <CheckCircle2 className="h-4 w-4" />
+                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 <span>Mark Won</span>
               </button>
               <button
-                disabled={lead.stage === 'LOST'}
+                disabled={lead.stage === 'LOST' || isSaving}
                 onClick={() => handleMarkTerminal('LOST')}
                 className="py-2.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 disabled:opacity-40 text-rose-400 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
               >
-                <Ban className="h-4 w-4" />
+                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-4 w-4" />}
                 <span>Mark Lost</span>
               </button>
             </div>

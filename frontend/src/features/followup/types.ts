@@ -6,6 +6,41 @@ export type LeadStage = 'NEW_LEAD' | 'QUOTE_SENT' | 'WARM' | 'NEGOTIATION' | 'FO
 
 export type TaskStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'SENT' | 'CANCELLED';
 
+export type LeadPreferredChannel = 'EMAIL' | 'WHATSAPP' | 'SMS' | 'PHONE_CALL' | 'MANUAL';
+export type LeadSource = 'WEBSITE' | 'WHATSAPP' | 'INSTAGRAM' | 'REFERRAL' | 'WALK_IN' | 'PHONE_CALL' | 'EMAIL' | 'MANUAL' | 'IMPORT' | 'OTHER';
+export type LeadPipelineStage = 'NEW_LEAD' | 'QUOTE_SENT' | 'WARM' | 'NEGOTIATION' | 'FOLLOW_UP_PENDING' | 'CONFIRMED' | 'LOST';
+export type LeadLostReason = 'PRICE_TOO_HIGH' | 'BOOKED_COMPETITOR' | 'DATE_UNAVAILABLE' | 'NO_RESPONSE' | 'CLIENT_CANCELLED' | 'OTHER';
+
+export interface LeadResponse {
+  id: string;
+  studioId: string;
+  clientId?: string;
+  projectId?: string;
+  clientName: string;
+  phone?: string;
+  email?: string;
+  preferredChannel: LeadPreferredChannel;
+  eventType?: string;
+  eventDate?: string;
+  city?: string;
+  estimatedValue?: number;
+  leadSource: LeadSource;
+  pipelineStage: LeadPipelineStage;
+  assignedUserId?: string;
+  lastContactedAt?: string;
+  nextFollowUpAt?: string;
+  notes?: string;
+  lostReason?: LeadLostReason;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadMoveStageRequest {
+  pipelineStage: LeadPipelineStage;
+  lostReason?: LeadLostReason;
+  notes?: string;
+}
+
 export interface Lead {
   id: string;
   clientName: string;
@@ -25,6 +60,18 @@ export interface Lead {
     event: string;
     status: 'sent' | 'skipped' | 'system';
   }>;
+  // Backend integrations
+  isBackendLead?: boolean;
+  phone?: string;
+  email?: string;
+  city?: string;
+  leadSource?: LeadSource;
+  lostReason?: LeadLostReason;
+  lastContactedAt?: string;
+  nextFollowUpAt?: string;
+  clientId?: string;
+  projectId?: string;
+  studioId?: string;
 }
 
 export interface SequenceStep {

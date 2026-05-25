@@ -5,7 +5,9 @@ import type {
   FollowUpStep, 
   FollowUpTask, 
   FollowUpTaskStatus, 
-  CommunicationLog 
+  CommunicationLog,
+  LeadResponse,
+  LeadMoveStageRequest
 } from '../types';
 
 export const fetchMessageTemplates = async (): Promise<MessageTemplate[]> => {
@@ -57,4 +59,30 @@ export const fetchCommunicationLogs = async (params?: {
     url += `?${queryParts.join('&')}`;
   }
   return ApiClient.get<CommunicationLog[]>(url);
+};
+
+export const fetchLeads = async (params?: {
+  search?: string;
+  pipelineStage?: string;
+  leadSource?: string;
+}): Promise<LeadResponse[]> => {
+  let url = '/api/leads';
+  const queryParts: string[] = [];
+  if (params) {
+    if (params.search) queryParts.push(`search=${encodeURIComponent(params.search)}`);
+    if (params.pipelineStage) queryParts.push(`pipelineStage=${params.pipelineStage}`);
+    if (params.leadSource) queryParts.push(`leadSource=${params.leadSource}`);
+  }
+  if (queryParts.length > 0) {
+    url += `?${queryParts.join('&')}`;
+  }
+  return ApiClient.get<LeadResponse[]>(url);
+};
+
+export const fetchLead = async (id: string): Promise<LeadResponse> => {
+  return ApiClient.get<LeadResponse>(`/api/leads/${id}`);
+};
+
+export const moveLeadStage = async (id: string, payload: LeadMoveStageRequest): Promise<LeadResponse> => {
+  return ApiClient.post<LeadResponse>(`/api/leads/${id}/move-stage`, payload);
 };
