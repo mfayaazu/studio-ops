@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, AlertCircle, Sparkles, AlertTriangle, DollarSign } from 'lucide-react';
+import { Users, AlertCircle, Sparkles, AlertTriangle, IndianRupee } from 'lucide-react';
 
 interface FollowUpSummaryCardsProps {
   leadsInFunnel: number;
@@ -53,9 +53,9 @@ export const FollowUpSummaryCards: React.FC<FollowUpSummaryCardsProps> = ({
     },
     {
       title: 'Open Funnel Value',
-      value: `$${estimatedOpenValue.toLocaleString()}`,
+      value: new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(estimatedOpenValue),
       description: 'Total estimated deal value',
-      icon: DollarSign,
+      icon: IndianRupee,
       colorClass: 'bg-amber-500/10 text-amber-400 border-amber-500/25 hover:border-amber-500/50',
       iconColor: 'text-amber-400',
     },

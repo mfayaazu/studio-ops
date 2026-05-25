@@ -3,7 +3,7 @@ import type { Lead, LeadStage, MessageTemplate, ChannelType, LeadPipelineStage, 
 import { mockTemplates } from '../mockData';
 import { 
   X, Mail, MessageSquare, Phone, Smartphone, Calendar, 
-  DollarSign, Clock, CheckCircle2, 
+  IndianRupee, Clock, CheckCircle2, 
   ChevronRight, ThumbsUp, Eye, Sparkles, Ban, Loader2,
   FolderPlus, AlertCircle
 } from 'lucide-react';
@@ -103,7 +103,8 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
     return bodyText
       .replace(/\{\{clientName\}\}/g, lead.clientName)
       .replace(/\{\{projectTitle\}\}/g, lead.projectTitle)
-      .replace(/\{\{estimatedValue\}\}/g, lead.estimatedValue.toLocaleString())
+      .replace(/\$\{\{estimatedValue\}\}/g, `₹${new Intl.NumberFormat('en-IN').format(lead.estimatedValue)}`)
+      .replace(/\{\{estimatedValue\}\}/g, `₹${new Intl.NumberFormat('en-IN').format(lead.estimatedValue)}`)
       .replace(/\{\{eventDate\}\}/g, lead.eventDate)
       .replace(/\{\{portfolioUrl\}\}/g, 'studioops.photo/portfolio/wedding')
       .replace(/\{\{guideUrl\}\}/g, 'studioops.photo/guides/wedding-tips');
@@ -278,9 +279,9 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               </div>
               <div>
                 <span className="text-[9px] font-mono uppercase text-slate-500 block">Est. Deal Value</span>
-                <span className="text-xs font-bold text-emerald-400 mt-1 block flex items-center">
-                  <DollarSign className="h-3.5 w-3.5" />
-                  <span>{lead.estimatedValue.toLocaleString()}</span>
+                <span className="text-xs font-bold text-emerald-400 mt-1 block flex items-center gap-1">
+                  <IndianRupee className="h-3.5 w-3.5" />
+                  <span>{new Intl.NumberFormat('en-IN').format(lead.estimatedValue)}</span>
                 </span>
               </div>
               <div>

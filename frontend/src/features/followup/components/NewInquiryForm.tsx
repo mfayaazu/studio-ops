@@ -1,6 +1,265 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { LeadCreateRequest, LeadPreferredChannel, LeadSource } from '../types';
-import { X, Loader2, User, Phone, Mail, MapPin, DollarSign, Calendar, Clock, Sparkles } from 'lucide-react';
+import { X, Loader2, User, Phone, Mail, MapPin, IndianRupee, Calendar, Clock, Sparkles } from 'lucide-react';
+
+interface CalendarPopoverProps {
+  selectedDate: string;
+  onChange: (dateStr: string) => void;
+  onClose: () => void;
+}
+
+const CalendarPopover: React.FC<CalendarPopoverProps> = ({ selectedDate, onChange, onClose }) => {
+  const initialDate = selectedDate ? new Date(selectedDate) : new Date();
+  const [viewYear, setViewYear] = useState(initialDate.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initialDate.getMonth());
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const weekdayHeaders = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+  const getDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  const getFirstWeekday = (year: number, month: number) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
+  const firstWeekday = getFirstWeekday(viewYear, viewMonth);
+
+  const handlePrevMonth = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear(prev => prev - 1);
+    } else {
+      setViewMonth(prev => prev - 1);
+    }
+  };
+
+  const handleNextMonth = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear(prev => prev + 1);
+    } else {
+      setViewMonth(prev => prev - 1);
+    }
+  };
+
+  const isToday = (day: number) => {
+    const today = new Date();
+    return today.getDate() === day &&
+      today.getMonth() === viewMonth &&
+      today.getFullYear() === viewYear;
+  };
+
+  const isSelected = (day: number) => {
+    if (!selectedDate) return false;
+    const [selY, selM, selD] = selectedDate.split('-').map(Number);
+    return selY === viewYear && (selM - 1) === viewMonth && selD === day;
+  };
+
+  const handleDayClick = (day: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const formattedMonth = String(viewMonth + 1).padStart(2, '0');
+    const formattedDay = String(day).padStart(2, '0');
+    onChange(`${viewYear}-${formattedMonth}-${formattedDay}`);
+    onClose();
+  };
+
+  const daysArray: (number | null)[] = [];
+  for (let i = 0; i < firstWeekday; i++) {
+    daysArray.push(null);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    daysArray.push(d);
+  }
+
+  return (
+    <div 
+      className="absolute right-0 mt-1.5 p-3 bg-slate-905 border border-slate-800 rounded-xl shadow-2xl z-50 w-72 animate-fadeIn"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <button
+          type="button"
+          onClick={handlePrevMonth}
+          className="px-2 py-0.5 bg-slate-850 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded text-slate-400 hover:text-slate-205 transition-all text-[10px] font-bold font-mono cursor-pointer"
+        >
+          &lt;
+        </button>
+        <span className="text-xs font-bold text-slate-200 font-mono">
+          {monthNames[viewMonth]} {viewYear}
+        </span>
+        <button
+          type="button"
+          onClick={handleNextMonth}
+          className="px-2 py-0.5 bg-slate-850 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded text-slate-400 hover:text-slate-205 transition-all text-[10px] font-bold font-mono cursor-pointer"
+        >
+          &gt;
+        </button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 text-center mb-2">
+        {weekdayHeaders.map((day) => (
+          <span key={day} className="text-[9px] font-bold text-slate-500 uppercase font-mono">
+            {day}
+          </span>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {daysArray.map((day, idx) => {
+          if (day === null) {
+            return <div key={`empty-${idx}`} />;
+          }
+
+          const dayIsToday = isToday(day);
+          const dayIsSelected = isSelected(day);
+
+          return (
+            <button
+              key={`day-${day}`}
+              type="button"
+              onClick={(e) => handleDayClick(day, e)}
+              className={`h-7 w-7 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition-all ${
+                dayIsSelected
+                  ? 'bg-violet-600 text-white shadow-md'
+                  : dayIsToday
+                  ? 'border border-violet-500/50 text-violet-400 bg-violet-500/5'
+                  : 'text-slate-355 hover:bg-slate-800 hover:text-slate-100'
+              }`}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 pt-2 border-t border-slate-800/80 flex justify-between">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onChange('');
+            onClose();
+          }}
+          className="text-[10px] text-rose-400 hover:text-rose-350 font-semibold font-mono cursor-pointer"
+        >
+          Clear
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+          }}
+          className="text-[10px] text-slate-400 hover:text-slate-300 font-semibold font-mono cursor-pointer"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+};
+
+interface TimePickerPopoverProps {
+  selectedTime: string;
+  onChange: (timeStr: string) => void;
+  onClose: () => void;
+}
+
+const TimePickerPopover: React.FC<TimePickerPopoverProps> = ({ selectedTime, onChange, onClose }) => {
+  const timeSlots = [
+    '09:00', '10:00', '11:00', '12:00',
+    '14:00', '15:00', '16:00', '17:00', '18:00'
+  ];
+
+  const handleSlotClick = (slot: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onChange(slot);
+    onClose();
+  };
+
+  return (
+    <div 
+      className="absolute right-0 mt-1.5 p-3 bg-slate-905 border border-slate-800 rounded-xl shadow-2xl z-50 w-48 animate-fadeIn"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-2.5 font-mono">
+        Select Time Slot
+      </div>
+      
+      <div className="grid grid-cols-2 gap-1.5">
+        {timeSlots.map((slot) => {
+          const isSelected = selectedTime === slot;
+          return (
+            <button
+              key={slot}
+              type="button"
+              onClick={(e) => handleSlotClick(slot, e)}
+              className={`py-1.5 rounded-lg text-xs font-semibold text-center cursor-pointer transition-all ${
+                isSelected
+                  ? 'bg-violet-600 text-white shadow-md'
+                  : 'text-slate-355 bg-slate-850 hover:bg-slate-800 hover:text-slate-100'
+              }`}
+            >
+              {slot}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 pt-2 border-t border-slate-800/80 flex justify-between">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onChange('');
+            onClose();
+          }}
+          className="text-[10px] text-rose-400 hover:text-rose-355 font-semibold font-mono cursor-pointer"
+        >
+          Clear
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+          }}
+          className="text-[10px] text-slate-400 hover:text-slate-300 font-semibold font-mono cursor-pointer"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const formatDateDisplay = (dateStr: string) => {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-');
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  return date.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+};
 
 interface NewInquiryFormProps {
   isOpen: boolean;
@@ -27,6 +286,18 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  const [activePopover, setActivePopover] = useState<'eventDate' | 'followUpDate' | 'followUpTime' | null>(null);
+
+  useEffect(() => {
+    const handleDocumentClick = () => {
+      setActivePopover(null);
+    };
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -270,18 +541,31 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
                 />
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1 relative">
                 <label className="text-[10px] uppercase tracking-wider font-mono text-slate-400 flex items-center gap-1.5">
                   <Calendar className="h-3 w-3 text-slate-500" />
                   <span>Event Date</span>
                 </label>
-                <input
-                  type="date"
-                  value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
-                  placeholder="Select event date"
-                  className="w-full bg-[#0d1222]/40 border border-slate-800 hover:border-slate-700/80 cursor-pointer text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all"
-                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActivePopover(activePopover === 'eventDate' ? null : 'eventDate');
+                  }}
+                  className="w-full bg-[#0d1222]/40 border border-slate-800 hover:border-slate-700/80 cursor-pointer text-left text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all flex items-center justify-between"
+                >
+                  <span className={eventDate ? 'text-slate-200 font-medium' : 'text-slate-500'}>
+                    {eventDate ? formatDateDisplay(eventDate) : 'Select event date'}
+                  </span>
+                  <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                </button>
+                {activePopover === 'eventDate' && (
+                  <CalendarPopover
+                    selectedDate={eventDate}
+                    onChange={setEventDate}
+                    onClose={() => setActivePopover(null)}
+                  />
+                )}
               </div>
             </div>
 
@@ -303,20 +587,23 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
 
               <div className="space-y-1">
                 <label className="text-[10px] uppercase tracking-wider font-mono text-slate-400 flex items-center gap-1.5">
-                  <DollarSign className="h-3 w-3 text-slate-500" />
-                  <span>Estimated Deal Value</span>
+                  <IndianRupee className="h-3 w-3 text-slate-500" />
+                  <span>Estimated Value (INR)</span>
                 </label>
-                <input
-                  type="number"
-                  value={estimatedValue}
-                  onChange={(e) => setEstimatedValue(e.target.value)}
-                  placeholder="350000"
-                  className={`w-full bg-[#0d1222]/40 border ${
-                    validationErrors.estimatedValue ? 'border-rose-500/50 focus:ring-rose-500' : 'border-slate-800 focus:ring-violet-500'
-                  } text-slate-200 rounded-lg p-2.5 text-xs focus:ring-1 focus:outline-none transition-all`}
-                />
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 text-slate-500 text-xs font-semibold select-none">₹</span>
+                  <input
+                    type="number"
+                    value={estimatedValue}
+                    onChange={(e) => setEstimatedValue(e.target.value)}
+                    placeholder="150000"
+                    className={`w-full bg-[#0d1222]/40 border ${
+                      validationErrors.estimatedValue ? 'border-rose-500/50 focus:ring-rose-500' : 'border-slate-800 focus:ring-violet-500'
+                    } text-slate-200 rounded-lg py-2.5 pl-7 pr-2.5 text-xs focus:ring-1 focus:outline-none transition-all`}
+                  />
+                </div>
                 {validationErrors.estimatedValue && (
-                  <span className="text-[10px] text-rose-400 block font-mono">{validationErrors.estimatedValue}</span>
+                  <span className="text-[10px] text-rose-400 block font-mono mt-1">{validationErrors.estimatedValue}</span>
                 )}
               </div>
             </div>
@@ -324,36 +611,63 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
             {/* Next Follow-up Date & Time fields */}
             <div className="space-y-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
+                <div className="space-y-1 relative">
                   <label className="text-[10px] uppercase tracking-wider font-mono text-slate-400 flex items-center gap-1.5">
                     <Calendar className="h-3 w-3 text-slate-500" />
                     <span>Next Follow-up Date</span>
                   </label>
-                  <input
-                    type="date"
-                    value={followUpDate}
-                    onChange={(e) => setFollowUpDate(e.target.value)}
-                    placeholder="Select follow-up date"
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActivePopover(activePopover === 'followUpDate' ? null : 'followUpDate');
+                    }}
                     className={`w-full bg-[#0d1222]/40 border ${
                       validationErrors.followUpDate ? 'border-rose-500/50 focus:ring-rose-500' : 'border-slate-800 hover:border-slate-700/80'
-                    } cursor-pointer text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:outline-none transition-all`}
-                  />
+                    } cursor-pointer text-left text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:outline-none transition-all flex items-center justify-between`}
+                  >
+                    <span className={followUpDate ? 'text-slate-200 font-medium' : 'text-slate-500'}>
+                      {followUpDate ? formatDateDisplay(followUpDate) : 'Select follow-up date'}
+                    </span>
+                    <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                  </button>
                   {validationErrors.followUpDate && (
                     <span className="text-[10px] text-rose-400 block font-mono mt-0.5">{validationErrors.followUpDate}</span>
                   )}
+                  {activePopover === 'followUpDate' && (
+                    <CalendarPopover
+                      selectedDate={followUpDate}
+                      onChange={setFollowUpDate}
+                      onClose={() => setActivePopover(null)}
+                    />
+                  )}
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1 relative">
                   <label className="text-[10px] uppercase tracking-wider font-mono text-slate-400 flex items-center gap-1.5">
                     <Clock className="h-3 w-3 text-slate-500" />
                     <span>Next Follow-up Time</span>
                   </label>
-                  <input
-                    type="time"
-                    value={followUpTime}
-                    onChange={(e) => setFollowUpTime(e.target.value)}
-                    className="w-full bg-[#0d1222]/40 border border-slate-800 hover:border-slate-700/80 cursor-pointer text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all"
-                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActivePopover(activePopover === 'followUpTime' ? null : 'followUpTime');
+                    }}
+                    className="w-full bg-[#0d1222]/40 border border-slate-800 hover:border-slate-700/80 cursor-pointer text-left text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all flex items-center justify-between"
+                  >
+                    <span className={followUpTime ? 'text-slate-200 font-medium' : 'text-slate-505'}>
+                      {followUpTime || 'Select follow-up time'}
+                    </span>
+                    <Clock className="h-3.5 w-3.5 text-slate-500" />
+                  </button>
+                  {activePopover === 'followUpTime' && (
+                    <TimePickerPopover
+                      selectedTime={followUpTime}
+                      onChange={setFollowUpTime}
+                      onClose={() => setActivePopover(null)}
+                    />
+                  )}
                 </div>
               </div>
               <p className="text-[10px] text-slate-500 font-mono">

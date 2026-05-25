@@ -71,7 +71,13 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onClick }) => {
 
       {/* Mid Info Row */}
       <div className="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/40 pt-2">
-        <span className="font-mono text-slate-350 font-semibold">${lead.estimatedValue.toLocaleString()}</span>
+        <span className="font-mono text-slate-350 font-semibold">
+          {new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            maximumFractionDigits: 0
+          }).format(lead.estimatedValue)}
+        </span>
         <span className="text-[10px] text-slate-500">{lead.eventDate}</span>
       </div>
 
