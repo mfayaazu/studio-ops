@@ -1,5 +1,6 @@
 import React from 'react';
 import { Users, AlertCircle, Sparkles, AlertTriangle, IndianRupee } from 'lucide-react';
+import { formatNumber, formatCurrencyINR } from '../../../lib/formatters';
 
 interface FollowUpSummaryCardsProps {
   leadsInFunnel: number;
@@ -19,7 +20,7 @@ export const FollowUpSummaryCards: React.FC<FollowUpSummaryCardsProps> = ({
   const cards = [
     {
       title: 'Leads in Funnel',
-      value: leadsInFunnel,
+      value: formatNumber(leadsInFunnel),
       description: 'Active inquiries / negotiations',
       icon: Users,
       colorClass: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:border-indigo-500/40',
@@ -27,7 +28,7 @@ export const FollowUpSummaryCards: React.FC<FollowUpSummaryCardsProps> = ({
     },
     {
       title: 'Due Today',
-      value: dueTodayCount,
+      value: formatNumber(dueTodayCount),
       description: 'Pending tasks for today',
       icon: AlertCircle,
       colorClass: 'bg-sky-500/10 text-sky-400 border-sky-500/20 hover:border-sky-500/40',
@@ -35,7 +36,7 @@ export const FollowUpSummaryCards: React.FC<FollowUpSummaryCardsProps> = ({
     },
     {
       title: 'Warm Leads',
-      value: warmLeadsCount,
+      value: formatNumber(warmLeadsCount),
       description: 'Active client engagement',
       icon: Sparkles,
       colorClass: 'bg-violet-500/10 text-violet-400 border-violet-500/20 hover:border-violet-500/40',
@@ -43,7 +44,7 @@ export const FollowUpSummaryCards: React.FC<FollowUpSummaryCardsProps> = ({
     },
     {
       title: 'Overdue Follow-ups',
-      value: overdueCount,
+      value: formatNumber(overdueCount),
       description: 'Past due approval tasks',
       icon: AlertTriangle,
       colorClass: overdueCount > 0 
@@ -53,7 +54,7 @@ export const FollowUpSummaryCards: React.FC<FollowUpSummaryCardsProps> = ({
     },
     {
       title: 'Open Funnel Value',
-      value: new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(estimatedOpenValue),
+      value: formatCurrencyINR(estimatedOpenValue),
       description: 'Total estimated deal value',
       icon: IndianRupee,
       colorClass: 'bg-amber-500/10 text-amber-400 border-amber-500/25 hover:border-amber-500/50',

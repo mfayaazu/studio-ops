@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Lead } from '../types';
 import { Mail, MessageSquare, Phone, Smartphone, Clock } from 'lucide-react';
+import { formatCurrencyINR } from '../../../lib/formatters';
 
 interface LeadCardProps {
   lead: Lead;
@@ -49,6 +50,27 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onClick }) => {
     return 'bg-slate-800 text-slate-400 border-slate-700/50';
   };
 
+  const getStageLabel = (stage: string) => {
+    switch (stage) {
+      case 'NEW_LEAD': return 'New Inquiry';
+      case 'QUOTE_SENT': return 'Quote Sent';
+      case 'WARM': return 'Warm Lead';
+      case 'NEGOTIATION': return 'Negotiation';
+      case 'FOLLOW_UP_PENDING': return 'Follow-up Pending';
+      case 'CONFIRMED': return 'Confirmed';
+      case 'LOST': return 'Lost';
+      default: return stage;
+    }
+  };
+
+  const getStageBadgeClass = (stage: string) => {
+    switch (stage) {
+      case 'CONFIRMED': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      case 'LOST': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+      default: return 'bg-slate-800 text-slate-300 border-slate-700/50';
+    }
+  };
+
   return (
     <div
       onClick={onClick}
@@ -69,16 +91,14 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onClick }) => {
         </span>
       </div>
 
-      {/* Mid Info Row */}
-      <div className="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/40 pt-2">
-        <span className="font-mono text-slate-350 font-semibold">
-          {new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            maximumFractionDigits: 0
-          }).format(lead.estimatedValue)}
+      {/* Stage Badge & Value Row */}
+      <div className="flex items-center justify-between text-[11px] text-slate-450 border-t border-slate-800/40 pt-2">
+        <span className={`px-2 py-0.5 rounded border text-[9px] font-semibold ${getStageBadgeClass(lead.stage)}`}>
+          {getStageLabel(lead.stage)}
         </span>
-        <span className="text-[10px] text-slate-500">{lead.eventDate}</span>
+        <span className="font-mono text-slate-350 font-semibold">
+          {formatCurrencyINR(lead.estimatedValue)}
+        </span>
       </div>
 
       {/* Bottom Status Row */}

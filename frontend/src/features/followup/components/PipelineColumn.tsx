@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Lead, LeadStage } from '../types';
 import { LeadCard } from './LeadCard';
+import { formatCurrencyINR } from '../../../lib/formatters';
 
 interface PipelineColumnProps {
   stage: LeadStage;
@@ -62,7 +63,7 @@ export const PipelineColumn: React.FC<PipelineColumnProps> = ({ stage, leads, on
             {getStageLabel(stage)}
           </h3>
           <span className="text-[10px] text-slate-500 font-mono font-semibold mt-0.5 block">
-            ${totalValue.toLocaleString()} Value
+            {formatCurrencyINR(totalValue)} Value
           </span>
         </div>
         <span className="h-5 min-w-5 px-1.5 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 text-[10px] font-bold font-mono">

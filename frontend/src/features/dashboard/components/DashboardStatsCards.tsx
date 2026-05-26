@@ -1,5 +1,6 @@
 import React from 'react';
 import { Briefcase, Calendar, ClipboardCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { formatNumber } from '../../../lib/formatters';
 
 interface DashboardStatsCardsProps {
   totalProjects: number;
@@ -21,7 +22,7 @@ export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({
   const cards = [
     {
       title: 'Active Projects',
-      value: totalProjects,
+      value: formatNumber(totalProjects),
       description: 'Total ongoing pipelines',
       icon: Briefcase,
       colorClass: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:border-indigo-500/40',
@@ -30,7 +31,7 @@ export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({
     },
     {
       title: 'Upcoming Shoots',
-      value: upcomingEventsCount,
+      value: formatNumber(upcomingEventsCount),
       description: 'Scheduled shoots & events',
       icon: Calendar,
       colorClass: 'bg-sky-500/10 text-sky-400 border-sky-500/20 hover:border-sky-500/40',
@@ -39,7 +40,7 @@ export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({
     },
     {
       title: 'Pending Deliverables',
-      value: pendingDeliverablesCount,
+      value: formatNumber(pendingDeliverablesCount),
       description: 'In editing or review',
       icon: ClipboardCheck,
       colorClass: 'bg-violet-500/10 text-violet-400 border-violet-500/20 hover:border-violet-500/40',
@@ -48,7 +49,7 @@ export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({
     },
     {
       title: 'Backup Risks',
-      value: backupIssuesCount,
+      value: formatNumber(backupIssuesCount),
       description: 'Low redundancy or failed',
       icon: ShieldAlert,
       colorClass: backupIssuesCount > 0 
@@ -59,7 +60,7 @@ export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({
     },
     {
       title: 'Schedule Conflicts',
-      value: conflictWarningsCount,
+      value: formatNumber(conflictWarningsCount),
       description: 'Double-booking warnings',
       icon: AlertTriangle,
       colorClass: conflictWarningsCount > 0 
