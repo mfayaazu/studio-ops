@@ -10,6 +10,7 @@ interface DeliverableFormProps {
   onCancel: () => void;
   isSubmitting: boolean;
   submitError?: string | null;
+  onDelete?: (id: string) => void;
 }
 
 const DELIVERABLE_TYPES: { value: DeliverableType; label: string }[] = [
@@ -39,6 +40,7 @@ export const DeliverableForm: React.FC<DeliverableFormProps> = ({
   onCancel,
   isSubmitting,
   submitError,
+  onDelete,
 }) => {
   const [projectId, setProjectId] = useState('');
   const [name, setName] = useState('');
@@ -211,6 +213,16 @@ export const DeliverableForm: React.FC<DeliverableFormProps> = ({
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-4 border-t border-slate-850">
+        {initialData && onDelete && (
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={() => onDelete(initialData.id)}
+            className="mr-auto px-4 py-2 bg-rose-900/40 hover:bg-rose-900/60 border border-rose-500/20 text-rose-350 rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+          >
+            Delete
+          </button>
+        )}
         <button
           type="button"
           disabled={isSubmitting}

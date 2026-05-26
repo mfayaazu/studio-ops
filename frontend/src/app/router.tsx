@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type AppRoute = 'dashboard' | 'clients' | 'projects' | 'employees' | 'events' | 'availability' | 'backups' | 'deliverables' | 'follow-up-center';
+export type AppRoute = 'dashboard' | 'clients' | 'projects' | 'employees' | 'events' | 'availability' | 'backups' | 'deliverables' | 'follow-up-center' | 'post-production';
 
 interface RouterContextType {
   currentRoute: AppRoute;
@@ -15,8 +15,9 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Sync hash changes if user uses browser history (optional but useful)
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.replace('#/', '') as AppRoute;
-      const validRoutes: AppRoute[] = ['dashboard', 'clients', 'projects', 'employees', 'events', 'availability', 'backups', 'deliverables', 'follow-up-center'];
+      const rawHash = window.location.hash.replace('#/', '');
+      const hash = rawHash.split('?')[0].replace(/\/$/, '') as AppRoute;
+      const validRoutes: AppRoute[] = ['dashboard', 'clients', 'projects', 'employees', 'events', 'availability', 'backups', 'deliverables', 'follow-up-center', 'post-production'];
       if (validRoutes.includes(hash)) {
         setCurrentRoute(hash);
       }

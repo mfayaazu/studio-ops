@@ -1,7 +1,6 @@
 import React from 'react';
 import type { Project, ProjectStatus, BookingStatus, PaymentStatus } from '../types';
 import type { ClientResponse } from '../../clients/types';
-import { Edit3, Trash2 } from 'lucide-react';
 import { formatDate } from '../../../lib/utils';
 
 interface ProjectListProps {
@@ -15,7 +14,6 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   projects,
   clients,
   onEdit,
-  onDelete,
 }) => {
   const getClientName = (id: string) => {
     const client = clients.find((c) => c.id === id);
@@ -89,17 +87,20 @@ export const ProjectList: React.FC<ProjectListProps> = ({
             <th className="px-6 py-4">Payment</th>
             <th className="px-6 py-4">Pipeline Status</th>
             <th className="px-6 py-4">Created Date</th>
-            <th className="px-6 py-4 text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800/50 text-slate-300">
           {projects.map((proj) => (
-            <tr key={proj.id} className="hover:bg-slate-800/10 transition-colors">
+            <tr
+              key={proj.id}
+              onClick={() => onEdit(proj)}
+              className="hover:bg-slate-800/20 hover:text-white transition-all cursor-pointer select-none"
+            >
               <td className="px-6 py-4">
                 <div className="font-mono text-xs text-violet-400 font-semibold">
                   {proj.projectCode}
                 </div>
-                <div className="font-bold text-white text-sm mt-0.5">
+                <div className="font-bold text-slate-200 group-hover:text-white text-sm mt-0.5">
                   {proj.title}
                 </div>
                 <div className="text-[11px] text-slate-500 mt-0.5">
@@ -136,24 +137,6 @@ export const ProjectList: React.FC<ProjectListProps> = ({
               </td>
               <td className="px-6 py-4 text-xs text-slate-400 text-nowrap">
                 {formatDate(proj.createdAt)}
-              </td>
-              <td className="px-6 py-4 text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => onEdit(proj)}
-                    className="p-1.5 rounded bg-slate-850 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                    title="Edit Project"
-                  >
-                    <Edit3 className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => onDelete(proj.id, proj.projectCode)}
-                    className="p-1.5 rounded bg-rose-500/5 hover:bg-rose-500/10 text-rose-500/80 hover:text-rose-400 transition-colors cursor-pointer"
-                    title="Delete Project"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
               </td>
             </tr>
           ))}

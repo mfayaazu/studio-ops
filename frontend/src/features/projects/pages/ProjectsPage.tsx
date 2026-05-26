@@ -204,6 +204,7 @@ export const ProjectsPage: React.FC = () => {
                 onCancel={() => setIsModalOpen(false)}
                 isSubmitting={isSubmitting}
                 submitError={formError}
+                onDelete={handleDeleteProject}
               />
             </div>
           </div>

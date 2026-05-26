@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Plus, LayoutGrid, List, AlertTriangle, Search, X } from 'lucide-react';
 import { deliverablesApi } from '../api/deliverablesApi';
 import { projectsApi } from '../../projects/api/projectsApi';
+import { fetchEmployees } from '../../employees/api/employeesApi';
 import type { Deliverable, DeliverableCreateRequest, DeliverableUpdateRequest, DeliverableType, DeliverableStatus } from '../types';
 import type { Project } from '../../projects/types';
+import type { Employee } from '../../employees/types';
 import { DeliverableSummary } from '../components/DeliverableSummary';
 import { DeliverableBoard } from '../components/DeliverableBoard';
 import { DeliverableList } from '../components/DeliverableList';
@@ -32,6 +34,7 @@ const DELIVERABLE_STATUSES: { value: DeliverableStatus; label: string }[] = [
 export const DeliverablesPage: React.FC = () => {
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,12 +57,17 @@ export const DeliverablesPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [deliverablesList, projectsList] = await Promise.all([
+      const [deliverablesList, projectsList, employeesList] = await Promise.all([
         deliverablesApi.list(),
         projectsApi.list(),
+        fetchEmployees().catch(e => {
+          console.warn('Failed to fetch employees for deliverable lookup:', e);
+          return [] as Employee[];
+        }),
       ]);
       setDeliverables(deliverablesList);
       setProjects(projectsList);
+      setEmployees(employeesList);
     } catch (err: any) {
       setError(err?.message || 'Failed to load deliverables data.');
     } finally {
@@ -299,6 +307,7 @@ export const DeliverablesPage: React.FC = () => {
               <DeliverableBoard
                 deliverables={filteredDeliverables}
                 projects={projects}
+                employees={employees}
                 onEdit={openEditModal}
                 onDelete={handleDeleteRecord}
               />
@@ -340,6 +349,7 @@ export const DeliverablesPage: React.FC = () => {
                 onCancel={() => setIsModalOpen(false)}
                 isSubmitting={isSaving}
                 submitError={saveError}
+                onDelete={handleDeleteRecord}
               />
             </div>
           </div>

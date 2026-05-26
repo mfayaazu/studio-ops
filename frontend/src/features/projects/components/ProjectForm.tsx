@@ -10,6 +10,7 @@ interface ProjectFormProps {
   onCancel: () => void;
   isSubmitting: boolean;
   submitError?: string | null;
+  onDelete?: (id: string, code: string) => void;
 }
 
 export const ProjectForm: React.FC<ProjectFormProps> = ({
@@ -18,7 +19,8 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
   onSubmit,
   onCancel,
   isSubmitting,
-  submitError
+  submitError,
+  onDelete
 }) => {
   const [clientId, setClientId] = useState('');
   const [projectCode, setProjectCode] = useState('');
@@ -301,6 +303,16 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-4 border-t border-slate-850">
+        {initialData && onDelete && (
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={() => onDelete(initialData.id, initialData.projectCode)}
+            className="mr-auto px-4 py-2 bg-rose-900/40 hover:bg-rose-900/60 border border-rose-500/20 text-rose-350 rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+          >
+            Delete
+          </button>
+        )}
         <button
           type="button"
           disabled={isSubmitting}

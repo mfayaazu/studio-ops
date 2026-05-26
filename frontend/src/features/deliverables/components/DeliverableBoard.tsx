@@ -1,11 +1,13 @@
 import React from 'react';
-import { Edit2, Trash2, Calendar, Link, AlertCircle } from 'lucide-react';
+import { Calendar, Link, AlertCircle, User } from 'lucide-react';
 import type { Deliverable, DeliverableStatus } from '../types';
 import type { Project } from '../../projects/types';
+import type { Employee } from '../../employees/types';
 
 interface DeliverableBoardProps {
   deliverables: Deliverable[];
   projects: Project[];
+  employees: Employee[];
   onEdit: (deliverable: Deliverable) => void;
   onDelete: (id: string) => void;
 }
@@ -28,11 +30,21 @@ const formatDeliverableType = (type: string) => {
     .join(' ');
 };
 
+const getPriorityColorClass = (priority: string): string => {
+  switch (priority) {
+    case 'LOW': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    case 'MEDIUM': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    case 'HIGH': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+    case 'URGENT': return 'bg-rose-500/15 text-rose-400 border-rose-500/30 font-bold';
+    default: return 'bg-slate-800 text-slate-400 border-slate-700/50';
+  }
+};
+
 export const DeliverableBoard: React.FC<DeliverableBoardProps> = ({
   deliverables,
   projects,
+  employees,
   onEdit,
-  onDelete,
 }) => {
   const todayStr = (() => {
     const today = new Date();
@@ -45,8 +57,8 @@ export const DeliverableBoard: React.FC<DeliverableBoardProps> = ({
   const getProjectDetails = (projectId: string) => {
     const project = projects.find(p => p.id === projectId);
     return project
-      ? { code: project.projectCode, title: project.title }
-      : { code: 'N/A', title: 'Unknown Project' };
+      ? { code: project.projectCode, title: project.title || (project as any).name || 'Untitled Project' }
+      : { code: `ID: ${projectId.substring(0, 8)}`, title: 'Unknown Project' };
   };
 
   const isOverdue = (item: Deliverable) => {
@@ -54,12 +66,6 @@ export const DeliverableBoard: React.FC<DeliverableBoardProps> = ({
     const isPast = item.dueDate < todayStr;
     const isDone = item.status === 'DELIVERED' || item.status === 'COMPLETED';
     return isPast && !isDone;
-  };
-
-  const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete deliverable "${name}"?`)) {
-      onDelete(id);
-    }
   };
 
   return (
@@ -111,24 +117,32 @@ export const DeliverableBoard: React.FC<DeliverableBoardProps> = ({
                 columnDeliverables.map(item => {
                   const project = getProjectDetails(item.projectId);
                   const overdue = isOverdue(item);
+                  const priority = (item as any).priority;
+                  const empId = (item as any).assignedEmployeeId;
+                  const employee = empId ? employees.find(e => e.id === empId) : null;
+                  const editorName = employee
+                    ? employee.fullName
+                    : (empId ? `Editor (${empId.substring(0, 8)})` : null);
 
                   return (
                     <div
                       key={item.id}
-                      className={`bg-slate-900/80 border rounded-xl p-3.5 shadow-md transition-all hover:border-slate-700 hover:bg-slate-900 hover:-translate-y-0.5 duration-200 group relative ${
+                      onClick={() => onEdit(item)}
+                      className={`bg-slate-900/80 border rounded-xl p-3.5 shadow-md transition-all hover:border-slate-700 hover:bg-slate-900/95 hover:-translate-y-0.5 duration-200 group relative cursor-pointer select-none space-y-2.5 ${
                         overdue ? 'border-rose-500/30' : 'border-slate-800'
                       }`}
                     >
-                      {/* Project Header */}
-                      <div className="flex justify-between items-start gap-2 mb-1.5">
-                        <span className="text-[10px] font-mono text-indigo-400 font-bold shrink-0">
-                          {project.code}
+                      {/* Project context top line */}
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-[10px] text-slate-400 font-semibold truncate flex-grow">
+                          {project.title}
                         </span>
                         {item.referenceUrl && (
                           <a
                             href={item.referenceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="text-slate-500 hover:text-white transition-colors shrink-0"
                             title="Open Reference URL"
                           >
@@ -137,16 +151,26 @@ export const DeliverableBoard: React.FC<DeliverableBoardProps> = ({
                         )}
                       </div>
 
-                      {/* Name & Type */}
-                      <h4 className="text-white font-medium text-xs line-clamp-2 leading-relaxed mb-2">
+                      {/* Main Title */}
+                      <h4 className="text-white font-bold text-xs leading-normal line-clamp-2">
                         {item.name}
                       </h4>
 
-                      <div className="flex flex-wrap items-center gap-1.5 mb-3.5">
-                        <span className="bg-slate-800 text-slate-300 text-[9px] font-semibold px-2 py-0.5 rounded">
+                      {/* Badges row */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {project.code && (
+                          <span className="bg-slate-900 text-indigo-400 border border-slate-850 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
+                            {project.code}
+                          </span>
+                        )}
+                        <span className="bg-slate-800/80 text-slate-300 text-[9px] font-semibold px-2 py-0.5 rounded border border-slate-800/50">
                           {formatDeliverableType(item.deliverableType)}
                         </span>
-
+                        {priority && (
+                          <span className={`px-1.5 py-0.5 rounded-full border text-[8px] font-extrabold tracking-wide uppercase flex-shrink-0 ${getPriorityColorClass(priority)}`}>
+                            {priority}
+                          </span>
+                        )}
                         {overdue && (
                           <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
                             <AlertCircle className="h-3 w-3 shrink-0" />
@@ -155,31 +179,21 @@ export const DeliverableBoard: React.FC<DeliverableBoardProps> = ({
                         )}
                       </div>
 
-                      {/* Bottom row: Due Date and Actions */}
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 mt-1">
-                        <div className="flex items-center space-x-1 text-slate-500">
-                          <Calendar className="h-3.5 w-3.5" />
-                          <span className="text-[10px] font-mono">
+                      {/* Editor & Due date footer */}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/40 mt-1 text-[10px] text-slate-450 font-semibold">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                          <span className="font-mono">
                             {item.dueDate ? item.dueDate : 'No Date'}
                           </span>
                         </div>
 
-                        <div className="flex items-center space-x-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => onEdit(item)}
-                            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-850 transition-colors"
-                            title="Edit deliverable"
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id, item.name)}
-                            className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                            title="Delete deliverable"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
+                        {editorName && (
+                          <div className="flex items-center gap-1 text-[9px] text-slate-400 truncate max-w-[120px]">
+                            <User className="h-3 w-3 text-slate-500" />
+                            <span className="truncate">{editorName}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

@@ -13,7 +13,8 @@ import {
   Clock,
   Database,
   LogOut,
-  MessageSquare
+  MessageSquare,
+  LayoutGrid
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { APP_VERSION } from '../../lib/constants';
@@ -32,6 +33,7 @@ export const Sidebar: React.FC = () => {
     { id: 'deliverables' as AppRoute, label: 'Deliverables', icon: Layers },
     { id: 'backups' as AppRoute, label: 'Backup Center', icon: Database },
     { id: 'follow-up-center' as AppRoute, label: 'Follow-up Center', icon: MessageSquare },
+    { id: 'post-production' as AppRoute, label: 'Post Production', icon: LayoutGrid },
   ];
 
   return (
