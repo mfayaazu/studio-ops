@@ -2,6 +2,7 @@ package com.studioops.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.studioops.auth.dto.LoginRequest;
+import com.studioops.auth.dto.SignupRequest;
 import com.studioops.studio.Studio;
 import com.studioops.studio.StudioRepository;
 import com.studioops.studio.StudioStatus;
@@ -172,5 +173,61 @@ class AuthControllerIntegrationTest {
     void logout_SafeWithoutSession() throws Exception {
         mockMvc.perform(post("/api/auth/logout"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void signup_And_Approve_Success() throws Exception {
+        SignupRequest signupRequest = new SignupRequest(
+                "Onboarding Test Studio",
+                "Test Onboarding Owner",
+                "onboarding@test.local",
+                "Password123!",
+                "123456",
+                "Sweden"
+        );
+
+        // 1. Signup
+        mockMvc.perform(post("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(signupRequest)))
+                .andExpect(status().isOk());
+
+        // Verify user and studio created
+        User user = userRepository.findByEmail("onboarding@test.local")
+                .orElseThrow(() -> new AssertionError("User should have been created"));
+        org.junit.jupiter.api.Assertions.assertNotNull(user.getStudioId());
+        
+        Studio studio = studioRepository.findById(user.getStudioId())
+                .orElseThrow(() -> new AssertionError("Studio should have been created"));
+        org.junit.jupiter.api.Assertions.assertEquals("Onboarding Test Studio", studio.getName());
+        org.junit.jupiter.api.Assertions.assertEquals(StudioStatus.PENDING_APPROVAL, studio.getStatus());
+
+        // 2. Login as pending user
+        LoginRequest loginRequest = new LoginRequest("onboarding@test.local", "Password123!");
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
+                .andExpect(jsonPath("$.user.studioStatus").value("PENDING_APPROVAL"))
+                .andExpect(jsonPath("$.user.studioName").value("Onboarding Test Studio"))
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) result.getRequest().getSession();
+
+        // 3. Approve studio
+        mockMvc.perform(post("/api/studios/" + studio.getId() + "/approve"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("BETA_ACTIVE"));
+
+        // 4. Verify me endpoint returns BETA_ACTIVE now
+        mockMvc.perform(get("/api/auth/me").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.authenticated").value(true))
+                .andExpect(jsonPath("$.user.studioStatus").value("BETA_ACTIVE"));
+
+        // Clean up
+        userRepository.delete(user);
+        studioRepository.delete(studio);
     }
 }

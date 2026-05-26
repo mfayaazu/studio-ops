@@ -47,6 +47,12 @@ public class StudioController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<StudioResponse> approveStudio(@PathVariable("id") UUID id) {
+        StudioResponse response = studioService.approveStudio(id);
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteStudio(@PathVariable("id") UUID id) {
         studioService.deleteStudio(id);

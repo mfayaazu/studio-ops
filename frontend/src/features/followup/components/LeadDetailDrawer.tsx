@@ -6,8 +6,11 @@ import {
   X, Mail, MessageSquare, Phone, Smartphone, Calendar, 
   Clock, CheckCircle2, 
   ChevronRight, ThumbsUp, Eye, Sparkles, Ban, Loader2,
-  FolderPlus, AlertCircle
+  FolderPlus, AlertCircle, Plus
 } from 'lucide-react';
+import type { Quotation } from '../../quotations/types';
+import { QuotationStatusBadge } from '../../quotations/components/QuotationStatusBadge';
+
 
 interface LeadDetailDrawerProps {
   lead: Lead | null;
@@ -20,6 +23,9 @@ interface LeadDetailDrawerProps {
     notes?: string
   ) => Promise<void>;
   onConvertToProject?: (leadId: string) => Promise<void>;
+  quotations?: Quotation[];
+  onCreateQuotation?: (lead: Lead) => void;
+  onEditQuotation?: (qtn: Quotation) => void;
 }
 
 export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({ 
@@ -28,7 +34,10 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   onClose,
   onUpdateLead,
   onMoveStage,
-  onConvertToProject
+  onConvertToProject,
+  quotations = [],
+  onCreateQuotation,
+  onEditQuotation
 }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [simulationLog, setSimulationLog] = useState<string | null>(null);
@@ -44,6 +53,9 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   }, [lead?.id, isOpen]);
 
   if (!lead || !isOpen) return null;
+
+  const leadQuotations = quotations.filter((q) => q.leadId === lead.id);
+  const hasAcceptedQuotation = leadQuotations.some((q) => q.status === 'ACCEPTED');
 
   const FUNNEL_STAGES: LeadStage[] = [
     'NEW_LEAD',
@@ -368,6 +380,67 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               </div>
             </div>
           )}
+          
+          {/* Quotations Section */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Proposal Estimates</span>
+              {onCreateQuotation && (
+                <button
+                  type="button"
+                  onClick={() => onCreateQuotation(lead)}
+                  className="text-[10px] font-bold text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>Create Quote</span>
+                </button>
+              )}
+            </div>
+
+            {leadQuotations.length === 0 ? (
+              <div className="bg-[#0f172a]/20 border border-slate-850 p-4 rounded-xl text-center">
+                <span className="text-xs text-slate-500">No quotation created yet for this lead.</span>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {leadQuotations.map((qtn) => (
+                  <div
+                    key={qtn.id}
+                    onClick={() => onEditQuotation && onEditQuotation(qtn)}
+                    className="group bg-[#0d1424]/60 hover:bg-[#121b2f] border border-slate-850 hover:border-violet-500/30 rounded-xl p-3.5 flex flex-col gap-2.5 transition-all duration-200 cursor-pointer relative"
+                  >
+                    <div className="absolute top-0 right-0 h-16 w-16 bg-gradient-to-br from-violet-600/5 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <span className="text-[9px] font-bold text-violet-400 font-mono tracking-wider block">
+                          {qtn.quotationNumber}
+                        </span>
+                        <h4 className="text-xs font-semibold text-slate-200 group-hover:text-white line-clamp-1">
+                          {qtn.title}
+                        </h4>
+                      </div>
+                      <QuotationStatusBadge status={qtn.status} />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-455 font-mono border-t border-slate-900 pt-2">
+                      <span>{formatCurrencyINR(qtn.totalAmount)}</span>
+                      {qtn.validUntil ? (
+                        <span className="text-slate-500 text-[10px]">Valid: {qtn.validUntil}</span>
+                      ) : (
+                        <span className="text-slate-650 text-[10px] italic">No validity</span>
+                      )}
+                    </div>
+                    {qtn.status === 'SENT' && (
+                      <div className="text-[10px] text-amber-405/90 font-mono mt-1 border-t border-slate-900/60 pt-2 flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                        <span>Follow-up automation trigger will be connected in AUTO-001.</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Project Conversion & Linkage Block */}
           {lead.isBackendLead ? (
@@ -401,19 +474,29 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               ) : (
                 // Not Converted: Show Convert Button/Flow
                 <div className="bg-[#0f172a]/30 border border-slate-850/60 rounded-xl p-4 space-y-3">
+                  {hasAcceptedQuotation && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-2.5 rounded-lg text-xs flex items-center gap-2 mb-2 font-medium">
+                      <Sparkles className="h-4 w-4 text-emerald-400 flex-shrink-0 animate-pulse" />
+                      <span>Accepted Quote Found! Ready to convert.</span>
+                    </div>
+                  )}
                   {!isConfirmingConvert ? (
                     <button
                       type="button"
                       disabled={isConverting || isSaving}
                       onClick={() => setIsConfirmingConvert(true)}
-                      className="w-full py-2.5 px-4 bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 text-violet-300 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2"
+                      className={`w-full py-2.5 px-4 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+                        hasAcceptedQuotation
+                          ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-500/20 text-white shadow-md'
+                          : 'bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 text-violet-300'
+                      }`}
                     >
-                      <FolderPlus className="h-4 w-4 text-violet-400" />
-                      <span>Convert to Project</span>
+                      <FolderPlus className="h-4 w-4" />
+                      <span>{hasAcceptedQuotation ? 'Create Project from Accepted Quote' : 'Convert to Project'}</span>
                     </button>
                   ) : (
                     <div className="space-y-3 animate-fadeIn">
-                      <div className="flex gap-2 items-start text-slate-400 text-xs leading-relaxed">
+                      <div className="flex gap-2 items-start text-slate-455 text-xs leading-relaxed">
                         <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
                         <p>Convert this lead into a client and project? This will register them in database and transition the stage.</p>
                       </div>
@@ -422,7 +505,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                           type="button"
                           disabled={isConverting}
                           onClick={() => setIsConfirmingConvert(false)}
-                          className="py-1.5 px-3 bg-slate-850 hover:bg-slate-800 disabled:opacity-40 text-slate-400 rounded-lg text-xs font-semibold transition-colors"
+                          className="py-1.5 px-3 bg-slate-850 hover:bg-slate-800 disabled:opacity-40 text-slate-450 rounded-lg text-xs font-semibold transition-colors"
                         >
                           Cancel
                         </button>

@@ -29,8 +29,15 @@ import {
   createLead,
   convertLeadToProject
 } from '../api/followupApi';
-import { Sparkles, MessageSquare, Compass, LayoutGrid, CheckSquare, Loader2, Plus } from 'lucide-react';
+import { Sparkles, MessageSquare, Compass, LayoutGrid, CheckSquare, Loader2, Plus, X } from 'lucide-react';
 import { NewInquiryForm } from '../components/NewInquiryForm';
+import { fetchClients } from '../../clients/api/clientsApi';
+import type { ClientResponse } from '../../clients/types';
+import { fetchProjects } from '../../projects/api/projectsApi';
+import type { ProjectResponse } from '../../projects/types';
+import { QuotationForm } from '../../quotations/components/QuotationForm';
+import { quotationsApi } from '../../quotations/api/quotationsApi';
+import type { Quotation, QuotationCreateRequest, QuotationStatus } from '../../quotations/types';
 
 const mapLeadResponseToLead = (response: LeadResponse): Lead => {
   const eventDateStr = response.eventDate || '';
@@ -115,6 +122,17 @@ export const FollowUpCenterPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLeadsLoading, setIsLeadsLoading] = useState<boolean>(true);
 
+  // Quotations, Clients, Projects integration states
+  const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [clients, setClients] = useState<ClientResponse[]>([]);
+  const [projects, setProjects] = useState<ProjectResponse[]>([]);
+  
+  // Quotation form modal states
+  const [isQuotationModalOpen, setIsQuotationModalOpen] = useState(false);
+  const [editingQuotation, setEditingQuotation] = useState<Partial<Quotation> | null>(null);
+  const [isQuotationSaving, setIsQuotationSaving] = useState(false);
+  const [quotationFormError, setQuotationFormError] = useState<string | null>(null);
+
   const refreshLeads = async () => {
     setIsLeadsLoading(true);
     try {
@@ -132,6 +150,135 @@ export const FollowUpCenterPage: React.FC = () => {
       setLeads(mockLeads.map(l => ({ ...l, isBackendLead: false })));
     } finally {
       setIsLeadsLoading(false);
+    }
+  };
+
+  const refreshQuotations = async () => {
+    try {
+      const list = await quotationsApi.list();
+      setQuotations(list);
+    } catch (e) {
+      console.warn('Failed to fetch quotations:', e);
+    }
+  };
+
+  const syncLeadStage = async (leadId: string, status: QuotationStatus) => {
+    let targetStage: LeadPipelineStage | null = null;
+    let lostReason: LeadLostReason | undefined;
+    
+    if (status === 'SENT') {
+      targetStage = 'QUOTE_SENT';
+    } else if (status === 'ACCEPTED') {
+      targetStage = 'CONFIRMED';
+    } else if (status === 'REJECTED') {
+      const isNegotiation = window.confirm(
+        "Quotation has been rejected. Move the linked lead to NEGOTIATION stage?\n(Click Cancel to mark as LOST)"
+      );
+      targetStage = isNegotiation ? 'NEGOTIATION' : 'LOST';
+      if (!isNegotiation) {
+        lostReason = 'OTHER';
+      }
+    }
+
+    if (targetStage) {
+      try {
+        /* TODO: Backend automation should eventually enforce lead stage transition on quotation status changes. */
+        await handleMoveLeadStage(
+          leadId, 
+          targetStage, 
+          lostReason, 
+          `Lead stage updated automatically via quotation status change to ${status}.`
+        );
+      } catch (err) {
+        console.warn('Failed to sync lead stage with quotation status:', err);
+      }
+    }
+  };
+
+  const handleCreateQuotationForLead = (lead: Lead) => {
+    setQuotationFormError(null);
+    
+    const suggestedTitle = lead.projectTitle 
+      ? `${lead.projectTitle} Proposal` 
+      : 'Estimate Proposal';
+      
+    const prefilledData: Partial<Quotation> = {
+      title: suggestedTitle,
+      leadId: lead.id,
+      clientId: lead.clientId || undefined,
+      subtotal: lead.estimatedValue || 0,
+      currency: 'INR',
+      status: 'DRAFT'
+    };
+    
+    setEditingQuotation(prefilledData);
+    setIsQuotationModalOpen(true);
+  };
+
+  const handleEditQuotationForLead = (qtn: Quotation) => {
+    setQuotationFormError(null);
+    setEditingQuotation(qtn);
+    setIsQuotationModalOpen(true);
+  };
+
+  const handleSaveQuotation = async (payload: QuotationCreateRequest) => {
+    setQuotationFormError(null);
+    setIsQuotationSaving(true);
+    try {
+      let savedQuotation: Quotation;
+      if (editingQuotation && 'id' in editingQuotation && editingQuotation.id) {
+        savedQuotation = await quotationsApi.update(editingQuotation.id, payload);
+      } else {
+        savedQuotation = await quotationsApi.create(payload);
+      }
+      
+      if (savedQuotation.leadId) {
+        await syncLeadStage(savedQuotation.leadId, savedQuotation.status);
+      }
+
+      setIsQuotationModalOpen(false);
+      await Promise.all([refreshLeads(), refreshQuotations()]);
+    } catch (err: any) {
+      setQuotationFormError(err.message || 'Error occurred while saving quotation.');
+    } finally {
+      setIsQuotationSaving(false);
+    }
+  };
+
+  const handleUpdateQuotationStatus = async (status: QuotationStatus) => {
+    if (!editingQuotation || !('id' in editingQuotation) || !editingQuotation.id) return;
+    setQuotationFormError(null);
+    setIsQuotationSaving(true);
+    try {
+      const updated = await quotationsApi.updateStatus(editingQuotation.id, status);
+      setEditingQuotation(updated);
+      
+      if (updated.leadId) {
+        await syncLeadStage(updated.leadId, status);
+      }
+
+      await Promise.all([refreshLeads(), refreshQuotations()]);
+    } catch (err: any) {
+      setQuotationFormError(err.message || 'Failed to update quotation status.');
+    } finally {
+      setIsQuotationSaving(false);
+    }
+  };
+
+  const handleDeleteQuotation = async (id: string, quotationNumber: string) => {
+    if (!window.confirm(`Are you sure you want to delete quotation ${quotationNumber || 'this quotation'}?`)) {
+      return;
+    }
+    setQuotationFormError(null);
+    setIsQuotationSaving(true);
+    try {
+      await quotationsApi.delete(id);
+      setIsQuotationModalOpen(false);
+      await Promise.all([refreshLeads(), refreshQuotations()]);
+    } catch (err: any) {
+      setQuotationFormError(err.message || 'Failed to delete quotation.');
+    } finally {
+      setIsQuotationSaving(false);
     }
   };
 
@@ -153,6 +300,22 @@ export const FollowUpCenterPage: React.FC = () => {
           fetchedLogs = await fetchCommunicationLogs();
         } catch (e) {
           console.warn('Failed to fetch follow-up tasks or communication logs:', e);
+        }
+
+        // Fetch Quotations, Clients, and Projects
+        try {
+          const [qtns, clts, prjs] = await Promise.all([
+            quotationsApi.list(),
+            fetchClients(),
+            fetchProjects()
+          ]);
+          if (active) {
+            setQuotations(qtns);
+            setClients(clts);
+            setProjects(prjs);
+          }
+        } catch (e) {
+          console.warn('Failed to fetch quotations, clients, or projects on mount:', e);
         }
 
         // Fetch Leads
@@ -581,7 +744,50 @@ export const FollowUpCenterPage: React.FC = () => {
         onUpdateLead={handleUpdateLead}
         onMoveStage={(stage, lostReason, notes) => handleMoveLeadStage(selectedLeadId!, stage, lostReason, notes)}
         onConvertToProject={handleConvertToProject}
+        quotations={quotations}
+        onCreateQuotation={handleCreateQuotationForLead}
+        onEditQuotation={handleEditQuotationForLead}
       />
+
+      {/* Quotation Form modal */}
+      {isQuotationModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#0d1424] border border-slate-850 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-850 flex items-center justify-between bg-slate-900/20 flex-shrink-0">
+              <h3 className="text-white font-semibold text-base">
+                {editingQuotation && 'id' in editingQuotation && editingQuotation.id ? 'Modify Proposal' : 'New Estimate Proposal'}
+              </h3>
+              <button
+                onClick={() => setIsQuotationModalOpen(false)}
+                className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Container */}
+            <div className="p-6 overflow-y-auto flex-1">
+              <QuotationForm
+                initialData={editingQuotation as Quotation}
+                clients={clients}
+                projects={projects}
+                leads={leads.map(l => ({
+                  id: l.id,
+                  clientName: l.clientName,
+                  eventType: l.projectTitle
+                })) as any}
+                onSubmit={handleSaveQuotation}
+                onUpdateStatus={handleUpdateQuotationStatus}
+                onCancel={() => setIsQuotationModalOpen(false)}
+                isSubmitting={isQuotationSaving}
+                submitError={quotationFormError}
+                onDelete={handleDeleteQuotation}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New Inquiry Drawer Form */}
       <NewInquiryForm

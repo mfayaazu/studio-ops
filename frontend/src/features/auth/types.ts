@@ -11,6 +11,9 @@ export interface UserResponse {
   createdAt: string;
   updatedAt: string;
   lastLoginAt: string | null;
+  studioId?: string;
+  studioName?: string;
+  studioStatus?: string;
 }
 
 export interface LoginResponse {

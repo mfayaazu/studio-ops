@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthProvider';
 import { Mail, Lock, AlertTriangle, Layers, Loader2 } from 'lucide-react';
+import { RegisterPage } from './RegisterPage';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -9,6 +10,11 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  if (isRegistering) {
+    return <RegisterPage onBackToLogin={() => setIsRegistering(false)} />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,6 +153,14 @@ export const LoginPage: React.FC = () => {
               ) : (
                 <span>Sign In to Workspace</span>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsRegistering(true)}
+              disabled={isLoading}
+              className="w-full text-slate-400 hover:text-white text-xs font-semibold py-2 text-center transition-colors cursor-pointer block mt-3"
+            >
+              Request Beta Access
             </button>
           </form>
 

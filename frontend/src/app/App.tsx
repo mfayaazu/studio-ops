@@ -4,6 +4,7 @@ import { useRouter } from './router';
 import { MainLayout } from '../components/layout/MainLayout';
 import { useAuth } from '../features/auth/AuthProvider';
 import { LoginPage } from '../features/auth/pages/LoginPage';
+import { PendingApprovalPage } from '../features/auth/pages/PendingApprovalPage';
 import { Loader2 } from 'lucide-react';
 
 // Page components
@@ -30,7 +31,7 @@ interface HealthResponse {
 
 const AppContent: React.FC = () => {
   const { currentRoute } = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   
   const [health, setHealth] = useState<{
     status: 'connecting' | 'online' | 'offline';
@@ -118,6 +119,10 @@ const AppContent: React.FC = () => {
 
   if (!isAuthenticated) {
     return <LoginPage />;
+  }
+
+  if (user && user.studioStatus === 'PENDING_APPROVAL') {
+    return <PendingApprovalPage />;
   }
 
   return (

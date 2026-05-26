@@ -3,6 +3,7 @@ package com.studioops.auth;
 import com.studioops.auth.dto.CurrentUserResponse;
 import com.studioops.auth.dto.LoginRequest;
 import com.studioops.auth.dto.LoginResponse;
+import com.studioops.auth.dto.SignupRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -17,6 +18,12 @@ public class AuthController {
 
     public AuthController(AuthService authService) {
         this.authService = authService;
+    }
+
+    @PostMapping("/signup")
+    public ResponseEntity<Void> signup(@Valid @RequestBody SignupRequest request) {
+        authService.signup(request);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/login")

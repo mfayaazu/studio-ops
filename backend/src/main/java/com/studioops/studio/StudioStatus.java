@@ -3,5 +3,7 @@ package com.studioops.studio;
 public enum StudioStatus {
     ACTIVE,
     INACTIVE,
-    SUSPENDED
+    SUSPENDED,
+    PENDING_APPROVAL,
+    BETA_ACTIVE
 }

@@ -5,8 +5,8 @@ import { fetchClients } from '../../clients/api/clientsApi';
 import type { ClientResponse } from '../../clients/types';
 import { fetchProjects } from '../../projects/api/projectsApi';
 import type { ProjectResponse } from '../../projects/types';
-import { fetchLeads } from '../../followup/api/followupApi';
-import type { LeadResponse } from '../../followup/types';
+import { fetchLeads, moveLeadStage } from '../../followup/api/followupApi';
+import type { LeadResponse, LeadPipelineStage, LeadLostReason } from '../../followup/types';
 import { QuotationForm } from '../components/QuotationForm';
 import { QuotationList } from '../components/QuotationList';
 import { formatCurrencyINR } from '../../../lib/formatters';
@@ -66,15 +66,56 @@ export const QuotationsPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const syncLeadStage = async (leadId: string, status: QuotationStatus) => {
+    let targetStage: LeadPipelineStage | null = null;
+    let lostReason: LeadLostReason | undefined;
+    
+    if (status === 'SENT') {
+      targetStage = 'QUOTE_SENT';
+    } else if (status === 'ACCEPTED') {
+      targetStage = 'CONFIRMED';
+    } else if (status === 'REJECTED') {
+      const isNegotiation = window.confirm(
+        "Quotation has been rejected. Move the linked lead to NEGOTIATION stage?\n(Click Cancel to mark as LOST)"
+      );
+      targetStage = isNegotiation ? 'NEGOTIATION' : 'LOST';
+      if (!isNegotiation) {
+        lostReason = 'OTHER';
+      }
+    }
+
+    if (targetStage) {
+      try {
+        /* TODO: Backend automation should eventually enforce lead stage transition on quotation status changes. */
+        const leadExists = leads.some(l => l.id === leadId);
+        if (leadExists) {
+          await moveLeadStage(leadId, {
+            pipelineStage: targetStage,
+            lostReason,
+            notes: `Lead stage updated automatically via quotation status change to ${status}.`
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to sync lead stage with quotation status:', err);
+      }
+    }
+  };
+
   const handleSaveQuotation = async (payload: QuotationCreateRequest) => {
     setFormError(null);
     setIsSaving(true);
     try {
+      let saved: Quotation;
       if (editingQuotation) {
-        await quotationsApi.update(editingQuotation.id, payload);
+        saved = await quotationsApi.update(editingQuotation.id, payload);
       } else {
-        await quotationsApi.create(payload);
+        saved = await quotationsApi.create(payload);
       }
+      
+      if (saved.leadId) {
+        await syncLeadStage(saved.leadId, saved.status);
+      }
+
       setIsModalOpen(false);
       fetchData();
     } catch (err: any) {
@@ -91,6 +132,11 @@ export const QuotationsPage: React.FC = () => {
     try {
       const updated = await quotationsApi.updateStatus(editingQuotation.id, status);
       setEditingQuotation(updated);
+      
+      if (updated.leadId) {
+        await syncLeadStage(updated.leadId, status);
+      }
+
       fetchData();
     } catch (err: any) {
       setFormError(err.message || 'Failed to update quotation status.');

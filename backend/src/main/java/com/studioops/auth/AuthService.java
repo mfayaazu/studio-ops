@@ -19,17 +19,37 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Service;
 import jakarta.servlet.http.HttpSession;
+import com.studioops.studio.StudioRepository;
+import com.studioops.studio.Studio;
+import com.studioops.auth.dto.SignupRequest;
+import com.studioops.user.UserRepository;
+import com.studioops.user.UserRole;
+import com.studioops.studio.StudioStatus;
+import com.studioops.studio.SubscriptionPlan;
+import com.studioops.studio.SubscriptionStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
 
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
+    private final StudioRepository studioRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 
-    public AuthService(AuthenticationManager authenticationManager, UserService userService) {
+    public AuthService(AuthenticationManager authenticationManager, 
+                       UserService userService, 
+                       StudioRepository studioRepository,
+                       UserRepository userRepository,
+                       PasswordEncoder passwordEncoder) {
         this.authenticationManager = authenticationManager;
         this.userService = userService;
+        this.studioRepository = studioRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public LoginResponse login(LoginRequest request, HttpServletRequest servletRequest,
@@ -56,7 +76,7 @@ public class AuthService {
         userService.updateLastLogin(request.getEmail());
 
         User updatedUser = userService.findUserByEmail(request.getEmail());
-        return new LoginResponse("SUCCESS", UserResponse.fromUser(updatedUser));
+        return new LoginResponse("SUCCESS", mapToUserResponse(updatedUser));
     }
 
     public void logout(HttpServletRequest request) {
@@ -83,6 +103,68 @@ public class AuthService {
         }
 
         User user = userService.findUserByEmail(email);
-        return new CurrentUserResponse(true, UserResponse.fromUser(user));
+        return new CurrentUserResponse(true, mapToUserResponse(user));
+    }
+
+    private UserResponse mapToUserResponse(User user) {
+        UserResponse response = UserResponse.fromUser(user);
+        if (response != null && user.getStudioId() != null) {
+            studioRepository.findById(user.getStudioId()).ifPresent(studio -> {
+                response.setStudioName(studio.getName());
+                response.setStudioStatus(studio.getStatus().name());
+            });
+        }
+        return response;
+    }
+
+    @Transactional
+    public void signup(SignupRequest request) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new IllegalArgumentException("Email is already registered");
+        }
+
+        // Create Studio
+        Studio studio = new Studio();
+        studio.setName(request.getStudioName());
+        studio.setSlug(generateSlug(request.getStudioName()));
+        studio.setBusinessEmail(request.getEmail());
+        studio.setPhone(request.getPhone());
+        studio.setCountry(request.getCountry());
+        studio.setStatus(StudioStatus.PENDING_APPROVAL);
+        studio.setSubscriptionPlan(SubscriptionPlan.STARTER);
+        studio.setSubscriptionStatus(SubscriptionStatus.TRIAL);
+        
+        Studio savedStudio = studioRepository.save(studio);
+
+        // Create User
+        User user = new User();
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setDisplayName(request.getOwnerName());
+        user.setRole(UserRole.OWNER);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setStudioId(savedStudio.getId());
+
+        userRepository.save(user);
+    }
+
+    private String generateSlug(String studioName) {
+        String baseSlug = studioName.toLowerCase()
+                .replaceAll("[^a-z0-9\\s-]", "")
+                .replaceAll("\\s+", "-")
+                .replaceAll("-+", "-")
+                .trim();
+        if (baseSlug.isEmpty()) {
+            baseSlug = "studio";
+        }
+        
+        // Ensure uniqueness
+        String slug = baseSlug;
+        int counter = 1;
+        while (studioRepository.existsBySlug(slug)) {
+            slug = baseSlug + "-" + counter;
+            counter++;
+        }
+        return slug;
     }
 }

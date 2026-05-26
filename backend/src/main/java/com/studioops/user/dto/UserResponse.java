@@ -16,6 +16,8 @@ public class UserResponse {
     private Instant createdAt;
     private Instant updatedAt;
     private Instant lastLoginAt;
+    private String studioName;
+    private String studioStatus;
 
     public UserResponse() {
     }
@@ -109,5 +111,21 @@ public class UserResponse {
 
     public void setStudioId(UUID studioId) {
         this.studioId = studioId;
+    }
+
+    public String getStudioName() {
+        return studioName;
+    }
+
+    public void setStudioName(String studioName) {
+        this.studioName = studioName;
+    }
+
+    public String getStudioStatus() {
+        return studioStatus;
+    }
+
+    public void setStudioStatus(String studioStatus) {
+        this.studioStatus = studioStatus;
     }
 }

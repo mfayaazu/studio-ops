@@ -107,6 +107,14 @@ public class StudioService {
         return StudioMapper.toResponse(updated);
     }
 
+    public StudioResponse approveStudio(UUID id) {
+        Studio studio = studioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Studio not found with id: " + id));
+        studio.setStatus(StudioStatus.BETA_ACTIVE);
+        Studio updated = studioRepository.save(studio);
+        return StudioMapper.toResponse(updated);
+    }
+
     public void deleteStudio(UUID id) {
         Studio studio = studioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Studio not found with id: " + id));
