@@ -2,6 +2,7 @@ package com.studioops.lead;
 
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.studio.StudioRepository;
 import com.studioops.client.ClientRepository;
 import com.studioops.client.Client;
@@ -42,6 +43,8 @@ class LeadServiceTest {
     private ClientRepository clientRepository;
     @Mock
     private ProjectRepository projectRepository;
+    @Mock
+    private TenantContext tenantContext;
 
     @InjectMocks
     private LeadService leadService;
@@ -50,6 +53,7 @@ class LeadServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
     }
 
     @Test
@@ -85,6 +89,7 @@ class LeadServiceTest {
     @Test
     void createLead_StudioNotFound_ThrowsException() {
         UUID nonExistentStudio = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(nonExistentStudio);
         LeadCreateRequest request = new LeadCreateRequest(
                 nonExistentStudio, null, null, "Priya", null, null,
                 LeadPreferredChannel.EMAIL, null, null, null, null,
@@ -438,4 +443,44 @@ class LeadServiceTest {
 
         assertThrows(ResourceNotFoundException.class, () -> leadService.convertLeadToProject(leadId, new LeadConvertToProjectRequest()));
     }
+
+    @Test
+    void leadTenantIsolationTest() {
+        UUID studioA = UUID.randomUUID();
+        UUID studioB = UUID.randomUUID();
+        UUID leadId = UUID.randomUUID();
+
+        // 1. Authenticate as Studio A
+        when(tenantContext.getCurrentStudioId()).thenReturn(studioA);
+
+        Lead leadA = new Lead();
+        leadA.setId(leadId);
+        leadA.setStudioId(studioA);
+        leadA.setClientName("Lead of Studio A");
+
+        // Mock database
+        when(leadRepository.findByIdAndStudioId(leadId, studioA)).thenReturn(Optional.of(leadA));
+        when(leadRepository.findByIdAndStudioId(leadId, studioB)).thenReturn(Optional.empty());
+
+        // Fetching under Studio A should work
+        LeadResponse response = leadService.getLeadById(leadId);
+        assertEquals("Lead of Studio A", response.getClientName());
+        assertEquals(studioA, response.getStudioId());
+
+        // 2. Switch context to Studio B
+        when(tenantContext.getCurrentStudioId()).thenReturn(studioB);
+
+        // Fetching under Studio B should throw ResourceNotFoundException
+        assertThrows(ResourceNotFoundException.class, () -> leadService.getLeadById(leadId));
+
+        // Creating lead under Studio B but specifying Studio A ID in payload should fail
+        LeadCreateRequest request = new LeadCreateRequest(
+                studioA, null, null, "Client Name", "+919876543210", "client@example.com",
+                LeadPreferredChannel.EMAIL, "Wedding", LocalDate.of(2026, 9, 12),
+                "Hyderabad", BigDecimal.valueOf(10000), LeadSource.WEBSITE, null,
+                null, null, null, "Notes"
+        );
+        assertThrows(IllegalArgumentException.class, () -> leadService.createLead(request));
+    }
 }
+

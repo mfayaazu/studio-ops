@@ -1,7 +1,7 @@
 package com.studioops.employee;
 
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.studio.StudioRepository;
 import com.studioops.employee.dto.EmployeeCreateRequest;
 import com.studioops.employee.dto.EmployeeResponse;
@@ -18,14 +18,21 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final StudioRepository studioRepository;
+    private final TenantContext tenantContext;
 
-    public EmployeeService(EmployeeRepository employeeRepository, StudioRepository studioRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository, StudioRepository studioRepository, TenantContext tenantContext) {
         this.employeeRepository = employeeRepository;
         this.studioRepository = studioRepository;
+        this.tenantContext = tenantContext;
     }
 
     public EmployeeResponse createEmployee(EmployeeCreateRequest request) {
-        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        UUID currentStudioId = tenantContext.getCurrentStudioId();
+        if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
+            throw new IllegalArgumentException("Mismatched studio ID provided");
+        }
+        UUID studioId = currentStudioId;
+
         if (!studioRepository.existsById(studioId)) {
             throw new IllegalArgumentException("Studio not found with id: " + studioId);
         }
@@ -56,7 +63,7 @@ public class EmployeeService {
 
     @Transactional(readOnly = true)
     public List<EmployeeResponse> listEmployees(String search) {
-        return listEmployeesForStudio(TenantConstants.DEFAULT_STUDIO_ID, search);
+        return listEmployeesForStudio(tenantContext.getCurrentStudioId(), search);
     }
 
     @Transactional(readOnly = true)
@@ -74,13 +81,13 @@ public class EmployeeService {
 
     @Transactional(readOnly = true)
     public EmployeeResponse getEmployeeById(UUID id) {
-        Employee employee = employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Employee employee = employeeRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
         return EmployeeMapper.toResponse(employee);
     }
 
     public EmployeeResponse updateEmployee(UUID id, EmployeeUpdateRequest request) {
-        Employee employee = employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Employee employee = employeeRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
 
         String trimmedEmail = request.getEmail().trim().toLowerCase();
@@ -107,7 +114,7 @@ public class EmployeeService {
     }
 
     public void deleteEmployee(UUID id) {
-        Employee employee = employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Employee employee = employeeRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
         employeeRepository.delete(employee);
     }

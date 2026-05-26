@@ -1,5 +1,8 @@
 package com.studioops.event;
 
+import com.studioops.common.tenant.TenantContext;
+import com.studioops.common.tenant.TenantConstants;
+
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
 import com.studioops.project.Project;
@@ -25,6 +28,9 @@ import com.studioops.event.dto.EventResponse;
 import com.studioops.event.dto.EventUpdateRequest;
 
 class EventServiceTest {
+    @Mock
+    private TenantContext tenantContext;
+
 
     @Mock
     private EventRepository eventRepository;
@@ -43,6 +49,7 @@ class EventServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
         projectId = UUID.randomUUID();
         lenient().when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
     }
@@ -107,6 +114,7 @@ class EventServiceTest {
     @Test
     void createEvent_InvalidStudioId_ThrowsException() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         EventCreateRequest request = new EventCreateRequest(
                 projectId, "Wedding Shoot", EventType.WEDDING, LocalDate.of(2026, 6, 5),
                 LocalTime.of(9, 0), LocalTime.of(17, 0), "Grand Ballroom", "Stockholm",
@@ -123,6 +131,7 @@ class EventServiceTest {
     @Test
     void createEvent_ProjectDifferentStudio_ThrowsException() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         EventCreateRequest request = new EventCreateRequest(
                 projectId, "Wedding Shoot", EventType.WEDDING, LocalDate.of(2026, 6, 5),
                 LocalTime.of(9, 0), LocalTime.of(17, 0), "Grand Ballroom", "Stockholm",

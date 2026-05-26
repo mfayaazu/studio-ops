@@ -1,5 +1,8 @@
 package com.studioops.employee;
 
+import com.studioops.common.tenant.TenantContext;
+import com.studioops.common.tenant.TenantConstants;
+
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
 import com.studioops.studio.StudioRepository;
@@ -19,6 +22,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class EmployeeServiceTest {
+    @Mock
+    private TenantContext tenantContext;
+
 
     @Mock
     private EmployeeRepository employeeRepository;
@@ -32,6 +38,7 @@ class EmployeeServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
         // Default mock behavior: studios exist
         when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
     }
@@ -71,6 +78,7 @@ class EmployeeServiceTest {
     @Test
     void createEmployee_WithCustomStudioId_Success() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         EmployeeCreateRequest request = new EmployeeCreateRequest(
                 null, "Alice Smith", "alice@example.com", "123456", "Lead Photographer", "Colorist", EmployeeStatus.ACTIVE, customStudioId
         );
@@ -98,6 +106,7 @@ class EmployeeServiceTest {
     @Test
     void createEmployee_StudioNotFound_ThrowsException() {
         UUID nonExistentStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(nonExistentStudioId);
         EmployeeCreateRequest request = new EmployeeCreateRequest(
                 null, "Alice Smith", "alice@example.com", "123456", "Lead Photographer", "Colorist", EmployeeStatus.ACTIVE, nonExistentStudioId
         );
@@ -160,6 +169,7 @@ class EmployeeServiceTest {
     @Test
     void listEmployeesForStudio_CustomStudio_ReturnsMatching() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         Employee emp = new Employee();
         emp.setEmail("emp@example.com");
         emp.setStudioId(customStudioId);

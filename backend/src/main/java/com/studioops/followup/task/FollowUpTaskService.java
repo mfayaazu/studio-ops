@@ -1,7 +1,7 @@
 package com.studioops.followup.task;
 
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.studio.StudioRepository;
 import com.studioops.project.ProjectRepository;
 import com.studioops.client.ClientRepository;
@@ -34,6 +34,7 @@ public class FollowUpTaskService {
     private final FollowUpStepRepository followUpStepRepository;
     private final MessageTemplateRepository messageTemplateRepository;
     private final CommunicationLogService communicationLogService;
+    private final TenantContext tenantContext;
 
     public FollowUpTaskService(
             FollowUpTaskRepository followUpTaskRepository,
@@ -43,7 +44,8 @@ public class FollowUpTaskService {
             FollowUpSequenceRepository followUpSequenceRepository,
             FollowUpStepRepository followUpStepRepository,
             MessageTemplateRepository messageTemplateRepository,
-            CommunicationLogService communicationLogService) {
+            CommunicationLogService communicationLogService,
+            TenantContext tenantContext) {
         this.followUpTaskRepository = followUpTaskRepository;
         this.studioRepository = studioRepository;
         this.projectRepository = projectRepository;
@@ -52,10 +54,16 @@ public class FollowUpTaskService {
         this.followUpStepRepository = followUpStepRepository;
         this.messageTemplateRepository = messageTemplateRepository;
         this.communicationLogService = communicationLogService;
+        this.tenantContext = tenantContext;
     }
 
     public FollowUpTaskResponse createTask(FollowUpTaskCreateRequest request) {
-        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        UUID currentStudioId = tenantContext.getCurrentStudioId();
+        if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
+            throw new IllegalArgumentException("Mismatched studio ID provided");
+        }
+        UUID studioId = currentStudioId;
+
         if (!studioRepository.existsById(studioId)) {
             throw new IllegalArgumentException("Studio not found with id: " + studioId);
         }
@@ -106,14 +114,15 @@ public class FollowUpTaskService {
     @Transactional(readOnly = true)
     public List<FollowUpTaskResponse> listTasks(FollowUpTaskStatus status, UUID projectId, UUID clientId) {
         List<FollowUpTask> tasks;
+        UUID studioId = tenantContext.getCurrentStudioId();
         if (status != null) {
-            tasks = followUpTaskRepository.findByStudioIdAndStatus(TenantConstants.DEFAULT_STUDIO_ID, status);
+            tasks = followUpTaskRepository.findByStudioIdAndStatus(studioId, status);
         } else if (projectId != null) {
-            tasks = followUpTaskRepository.findByProjectIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID);
+            tasks = followUpTaskRepository.findByProjectIdAndStudioId(projectId, studioId);
         } else if (clientId != null) {
-            tasks = followUpTaskRepository.findByClientIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID);
+            tasks = followUpTaskRepository.findByClientIdAndStudioId(clientId, studioId);
         } else {
-            tasks = followUpTaskRepository.findAllByStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+            tasks = followUpTaskRepository.findAllByStudioId(studioId);
         }
         return tasks.stream()
                 .map(FollowUpTaskMapper::toResponse)
@@ -123,7 +132,7 @@ public class FollowUpTaskService {
     @Transactional(readOnly = true)
     public List<FollowUpTaskResponse> getDueTasks() {
         return followUpTaskRepository.findByStudioIdAndScheduledAtLessThanEqualAndStatus(
-                TenantConstants.DEFAULT_STUDIO_ID,
+                tenantContext.getCurrentStudioId(),
                 Instant.now(),
                 FollowUpTaskStatus.PENDING_APPROVAL
         ).stream()
@@ -133,13 +142,13 @@ public class FollowUpTaskService {
 
     @Transactional(readOnly = true)
     public FollowUpTaskResponse getTaskById(UUID id) {
-        FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Follow-up task not found with id: " + id));
         return FollowUpTaskMapper.toResponse(task);
     }
 
     public FollowUpTaskResponse updateTask(UUID id, FollowUpTaskUpdateRequest request) {
-        FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Follow-up task not found with id: " + id));
 
         if (task.getStatus() == FollowUpTaskStatus.SENT || task.getStatus() == FollowUpTaskStatus.SKIPPED || task.getStatus() == FollowUpTaskStatus.CANCELLED) {
@@ -156,13 +165,13 @@ public class FollowUpTaskService {
     }
 
     public void deleteTask(UUID id) {
-        FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Follow-up task not found with id: " + id));
         followUpTaskRepository.delete(task);
     }
 
     public FollowUpTaskResponse approveTask(UUID id) {
-        FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Follow-up task not found with id: " + id));
 
         if (task.getStatus() == FollowUpTaskStatus.SENT) {
@@ -197,7 +206,7 @@ public class FollowUpTaskService {
     }
 
     public FollowUpTaskResponse skipTask(UUID id) {
-        FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Follow-up task not found with id: " + id));
 
         if (task.getStatus() == FollowUpTaskStatus.SENT || task.getStatus() == FollowUpTaskStatus.SKIPPED || task.getStatus() == FollowUpTaskStatus.CANCELLED) {
@@ -229,7 +238,7 @@ public class FollowUpTaskService {
     }
 
     public FollowUpTaskResponse cancelTask(UUID id) {
-        FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Follow-up task not found with id: " + id));
 
         if (task.getStatus() == FollowUpTaskStatus.SENT || task.getStatus() == FollowUpTaskStatus.SKIPPED || task.getStatus() == FollowUpTaskStatus.CANCELLED) {

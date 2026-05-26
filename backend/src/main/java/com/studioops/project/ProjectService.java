@@ -2,7 +2,7 @@ package com.studioops.project;
 
 import com.studioops.client.ClientRepository;
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.studio.StudioRepository;
 import com.studioops.project.dto.ProjectCreateRequest;
 import com.studioops.project.dto.ProjectResponse;
@@ -20,15 +20,22 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ClientRepository clientRepository;
     private final StudioRepository studioRepository;
+    private final TenantContext tenantContext;
 
-    public ProjectService(ProjectRepository projectRepository, ClientRepository clientRepository, StudioRepository studioRepository) {
+    public ProjectService(ProjectRepository projectRepository, ClientRepository clientRepository, StudioRepository studioRepository, TenantContext tenantContext) {
         this.projectRepository = projectRepository;
         this.clientRepository = clientRepository;
         this.studioRepository = studioRepository;
+        this.tenantContext = tenantContext;
     }
 
     public ProjectResponse createProject(ProjectCreateRequest request) {
-        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        UUID currentStudioId = tenantContext.getCurrentStudioId();
+        if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
+            throw new IllegalArgumentException("Mismatched studio ID provided");
+        }
+        UUID studioId = currentStudioId;
+
         if (!studioRepository.existsById(studioId)) {
             throw new IllegalArgumentException("Studio not found with id: " + studioId);
         }
@@ -72,7 +79,7 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public List<ProjectResponse> listProjects(String search) {
-        return listProjectsForStudio(TenantConstants.DEFAULT_STUDIO_ID, search);
+        return listProjectsForStudio(tenantContext.getCurrentStudioId(), search);
     }
 
     @Transactional(readOnly = true)
@@ -90,13 +97,13 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public ProjectResponse getProjectById(UUID id) {
-        Project project = projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Project project = projectRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
         return ProjectMapper.toResponse(project);
     }
 
     public ProjectResponse updateProject(UUID id, ProjectUpdateRequest request) {
-        Project project = projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Project project = projectRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
 
         // Validate client belongs to the same studio
@@ -136,7 +143,7 @@ public class ProjectService {
     }
 
     public void deleteProject(UUID id) {
-        Project project = projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Project project = projectRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
         projectRepository.delete(project);
     }

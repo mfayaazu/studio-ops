@@ -1,5 +1,8 @@
 package com.studioops.quotation;
 
+import com.studioops.common.tenant.TenantContext;
+import com.studioops.common.tenant.TenantConstants;
+
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
 import com.studioops.studio.StudioRepository;
@@ -30,6 +33,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class QuotationServiceTest {
+    @Mock
+    private TenantContext tenantContext;
+
 
     @Mock
     private QuotationRepository quotationRepository;
@@ -48,6 +54,7 @@ class QuotationServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
         when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
     }
 
@@ -88,6 +95,7 @@ class QuotationServiceTest {
     @Test
     void createQuotation_StudioNotFound_ThrowsException() {
         UUID nonExistentStudio = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(nonExistentStudio);
         QuotationCreateRequest request = new QuotationCreateRequest();
         request.setStudioId(nonExistentStudio);
         request.setTitle("Fail");
@@ -257,4 +265,41 @@ class QuotationServiceTest {
         assertDoesNotThrow(() -> quotationService.deleteQuotation(id));
         verify(quotationRepository, times(1)).delete(q);
     }
+
+    @Test
+    void quotationTenantIsolationTest() {
+        UUID studioA = UUID.randomUUID();
+        UUID studioB = UUID.randomUUID();
+        UUID quotationId = UUID.randomUUID();
+
+        // 1. Authenticate as Studio A
+        when(tenantContext.getCurrentStudioId()).thenReturn(studioA);
+
+        Quotation quotationA = new Quotation();
+        quotationA.setId(quotationId);
+        quotationA.setStudioId(studioA);
+        quotationA.setTitle("Quotation of Studio A");
+
+        // Mock database
+        when(quotationRepository.findByIdAndStudioId(quotationId, studioA)).thenReturn(Optional.of(quotationA));
+        when(quotationRepository.findByIdAndStudioId(quotationId, studioB)).thenReturn(Optional.empty());
+
+        // Fetching under Studio A should work
+        QuotationResponse response = quotationService.getQuotationById(quotationId);
+        assertEquals("Quotation of Studio A", response.getTitle());
+        assertEquals(studioA, response.getStudioId());
+
+        // 2. Switch context to Studio B
+        when(tenantContext.getCurrentStudioId()).thenReturn(studioB);
+
+        // Fetching under Studio B should throw ResourceNotFoundException
+        assertThrows(ResourceNotFoundException.class, () -> quotationService.getQuotationById(quotationId));
+
+        // Creating quotation under Studio B but specifying Studio A ID in payload should fail
+        QuotationCreateRequest request = new QuotationCreateRequest();
+        request.setStudioId(studioA);
+        request.setTitle("Title");
+        assertThrows(IllegalArgumentException.class, () -> quotationService.createQuotation(request));
+    }
 }
+

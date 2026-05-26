@@ -1,7 +1,7 @@
 package com.studioops.lead;
 
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.studio.StudioRepository;
 import com.studioops.client.Client;
 import com.studioops.client.ClientRepository;
@@ -30,20 +30,28 @@ public class LeadService {
     private final StudioRepository studioRepository;
     private final ClientRepository clientRepository;
     private final ProjectRepository projectRepository;
+    private final TenantContext tenantContext;
 
     public LeadService(
             LeadRepository leadRepository,
             StudioRepository studioRepository,
             ClientRepository clientRepository,
-            ProjectRepository projectRepository) {
+            ProjectRepository projectRepository,
+            TenantContext tenantContext) {
         this.leadRepository = leadRepository;
         this.studioRepository = studioRepository;
         this.clientRepository = clientRepository;
         this.projectRepository = projectRepository;
+        this.tenantContext = tenantContext;
     }
 
     public LeadResponse createLead(LeadCreateRequest request) {
-        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        UUID currentStudioId = tenantContext.getCurrentStudioId();
+        if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
+            throw new IllegalArgumentException("Mismatched studio ID provided");
+        }
+        UUID studioId = currentStudioId;
+
         if (!studioRepository.existsById(studioId)) {
             throw new IllegalArgumentException("Studio not found with id: " + studioId);
         }
@@ -85,14 +93,15 @@ public class LeadService {
     @Transactional(readOnly = true)
     public List<LeadResponse> listLeads(String search, LeadPipelineStage pipelineStage, LeadSource leadSource) {
         List<Lead> leads;
+        UUID studioId = tenantContext.getCurrentStudioId();
         if (search != null && !search.trim().isEmpty()) {
-            leads = leadRepository.searchByStudioId(TenantConstants.DEFAULT_STUDIO_ID, search.trim());
+            leads = leadRepository.searchByStudioId(studioId, search.trim());
         } else if (pipelineStage != null) {
-            leads = leadRepository.findByStudioIdAndPipelineStage(TenantConstants.DEFAULT_STUDIO_ID, pipelineStage);
+            leads = leadRepository.findByStudioIdAndPipelineStage(studioId, pipelineStage);
         } else if (leadSource != null) {
-            leads = leadRepository.findByStudioIdAndLeadSource(TenantConstants.DEFAULT_STUDIO_ID, leadSource);
+            leads = leadRepository.findByStudioIdAndLeadSource(studioId, leadSource);
         } else {
-            leads = leadRepository.findAllByStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+            leads = leadRepository.findAllByStudioId(studioId);
         }
         return leads.stream()
                 .map(LeadMapper::toResponse)
@@ -101,13 +110,13 @@ public class LeadService {
 
     @Transactional(readOnly = true)
     public LeadResponse getLeadById(UUID id) {
-        Lead lead = leadRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Lead lead = leadRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lead not found with id: " + id));
         return LeadMapper.toResponse(lead);
     }
 
     public LeadResponse updateLead(UUID id, LeadUpdateRequest request) {
-        Lead lead = leadRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Lead lead = leadRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lead not found with id: " + id));
 
         lead.setClientName(request.getClientName().trim());
@@ -129,7 +138,7 @@ public class LeadService {
     }
 
     public LeadResponse moveStage(UUID id, LeadMoveStageRequest request) {
-        Lead lead = leadRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Lead lead = leadRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lead not found with id: " + id));
 
         lead.setPipelineStage(request.getPipelineStage());
@@ -149,13 +158,13 @@ public class LeadService {
     }
 
     public void deleteLead(UUID id) {
-        Lead lead = leadRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Lead lead = leadRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lead not found with id: " + id));
         leadRepository.delete(lead);
     }
 
     public LeadConvertToProjectResponse convertLeadToProject(UUID id, LeadConvertToProjectRequest request) {
-        Lead lead = leadRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Lead lead = leadRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lead not found with id: " + id));
 
         // If the lead is already converted, return immediately

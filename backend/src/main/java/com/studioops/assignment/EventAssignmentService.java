@@ -5,7 +5,7 @@ import com.studioops.employee.EmployeeRepository;
 import com.studioops.event.Event;
 import com.studioops.event.EventRepository;
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.studio.StudioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,19 +27,26 @@ public class EventAssignmentService {
     private final EventRepository eventRepository;
     private final EmployeeRepository employeeRepository;
     private final StudioRepository studioRepository;
+    private final TenantContext tenantContext;
 
     public EventAssignmentService(EventAssignmentRepository eventAssignmentRepository,
                                   EventRepository eventRepository,
                                   EmployeeRepository employeeRepository,
-                                  StudioRepository studioRepository) {
+                                  StudioRepository studioRepository,
+                                  TenantContext tenantContext) {
         this.eventAssignmentRepository = eventAssignmentRepository;
         this.eventRepository = eventRepository;
         this.employeeRepository = employeeRepository;
         this.studioRepository = studioRepository;
+        this.tenantContext = tenantContext;
     }
 
     public EventAssignmentResponse createAssignment(EventAssignmentCreateRequest request) {
-        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        UUID currentStudioId = tenantContext.getCurrentStudioId();
+        if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
+            throw new IllegalArgumentException("Mismatched studio ID provided");
+        }
+        UUID studioId = currentStudioId;
 
         // Validate studio exists
         if (!studioRepository.existsById(studioId)) {
@@ -71,14 +78,14 @@ public class EventAssignmentService {
     @Transactional(readOnly = true)
     public List<EventAssignmentResponse> listAssignments(UUID eventId, UUID employeeId) {
         List<EventAssignment> assignments;
-        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+        UUID studioId = tenantContext.getCurrentStudioId();
         if (eventId != null) {
-            // Validate event belongs to default studio
+            // Validate event belongs to studio
             eventRepository.findByIdAndStudioId(eventId, studioId)
                     .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + eventId));
             assignments = eventAssignmentRepository.findByEventIdAndStudioId(eventId, studioId);
         } else if (employeeId != null) {
-            // Validate employee belongs to default studio
+            // Validate employee belongs to studio
             employeeRepository.findByIdAndStudioId(employeeId, studioId)
                     .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + employeeId));
             assignments = eventAssignmentRepository.findByEmployeeIdAndStudioId(employeeId, studioId);
@@ -93,13 +100,13 @@ public class EventAssignmentService {
 
     @Transactional(readOnly = true)
     public EventAssignmentResponse getAssignmentById(UUID id) {
-        EventAssignment assignment = eventAssignmentRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        EventAssignment assignment = eventAssignmentRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + id));
         return toResponseWithConflictCheck(assignment);
     }
 
     public EventAssignmentResponse updateAssignment(UUID id, EventAssignmentUpdateRequest request) {
-        EventAssignment assignment = eventAssignmentRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        EventAssignment assignment = eventAssignmentRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + id));
 
         assignment.setAssignmentRole(request.getAssignmentRole());
@@ -112,7 +119,7 @@ public class EventAssignmentService {
     }
 
     public void deleteAssignment(UUID id) {
-        EventAssignment assignment = eventAssignmentRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        EventAssignment assignment = eventAssignmentRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + id));
         eventAssignmentRepository.delete(assignment);
     }

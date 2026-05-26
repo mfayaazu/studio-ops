@@ -1,5 +1,8 @@
 package com.studioops.deliverable;
 
+import com.studioops.common.tenant.TenantContext;
+import com.studioops.common.tenant.TenantConstants;
+
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
 import com.studioops.project.Project;
@@ -25,6 +28,9 @@ import com.studioops.deliverable.dto.DeliverableResponse;
 import com.studioops.deliverable.dto.DeliverableUpdateRequest;
 
 class DeliverableServiceTest {
+    @Mock
+    private TenantContext tenantContext;
+
 
     @Mock
     private DeliverableRepository deliverableRepository;
@@ -47,6 +53,7 @@ class DeliverableServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
         projectId = UUID.randomUUID();
         project = new Project();
         project.setId(projectId);
@@ -114,6 +121,7 @@ class DeliverableServiceTest {
     @Test
     void createDeliverable_Fails_WhenStudioIdDoesNotExist() {
         UUID nonExistentStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(nonExistentStudioId);
         DeliverableCreateRequest request = new DeliverableCreateRequest(
                 projectId, "Edited Photos", DeliverableType.PHOTOS, DeliverableStatus.NOT_STARTED,
                 "s3://bucket/photos.zip", LocalDate.of(2026, 6, 20)
@@ -142,6 +150,7 @@ class DeliverableServiceTest {
     @Test
     void createDeliverable_ProjectDoesNotBelongToSameStudio() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         DeliverableCreateRequest request = new DeliverableCreateRequest(
                 projectId, "Edited Photos", DeliverableType.PHOTOS, DeliverableStatus.NOT_STARTED,
                 null, null

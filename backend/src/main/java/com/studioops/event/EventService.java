@@ -1,7 +1,7 @@
 package com.studioops.event;
 
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.project.ProjectRepository;
 import com.studioops.studio.StudioRepository;
 import org.springframework.stereotype.Service;
@@ -20,15 +20,21 @@ public class EventService {
     private final EventRepository eventRepository;
     private final ProjectRepository projectRepository;
     private final StudioRepository studioRepository;
+    private final TenantContext tenantContext;
 
-    public EventService(EventRepository eventRepository, ProjectRepository projectRepository, StudioRepository studioRepository) {
+    public EventService(EventRepository eventRepository, ProjectRepository projectRepository, StudioRepository studioRepository, TenantContext tenantContext) {
         this.eventRepository = eventRepository;
         this.projectRepository = projectRepository;
         this.studioRepository = studioRepository;
+        this.tenantContext = tenantContext;
     }
 
     public EventResponse createEvent(EventCreateRequest request) {
-        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        UUID currentStudioId = tenantContext.getCurrentStudioId();
+        if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
+            throw new IllegalArgumentException("Mismatched studio ID provided");
+        }
+        UUID studioId = currentStudioId;
 
         // Validate studio exists
         if (!studioRepository.existsById(studioId)) {
@@ -67,14 +73,15 @@ public class EventService {
     public List<EventResponse> listEvents(String search, LocalDate fromDate, LocalDate toDate) {
         String trimmedSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
         List<Event> events;
+        UUID studioId = tenantContext.getCurrentStudioId();
         if (fromDate != null && toDate != null) {
-            events = eventRepository.searchEventsWithDateRangeByStudio(TenantConstants.DEFAULT_STUDIO_ID, trimmedSearch, fromDate, toDate);
+            events = eventRepository.searchEventsWithDateRangeByStudio(studioId, trimmedSearch, fromDate, toDate);
         } else if (fromDate != null) {
-            events = eventRepository.searchEventsWithFromDateByStudio(TenantConstants.DEFAULT_STUDIO_ID, trimmedSearch, fromDate);
+            events = eventRepository.searchEventsWithFromDateByStudio(studioId, trimmedSearch, fromDate);
         } else if (toDate != null) {
-            events = eventRepository.searchEventsWithToDateByStudio(TenantConstants.DEFAULT_STUDIO_ID, trimmedSearch, toDate);
+            events = eventRepository.searchEventsWithToDateByStudio(studioId, trimmedSearch, toDate);
         } else {
-            events = eventRepository.searchEventsWithoutDatesByStudio(TenantConstants.DEFAULT_STUDIO_ID, trimmedSearch);
+            events = eventRepository.searchEventsWithoutDatesByStudio(studioId, trimmedSearch);
         }
         return events.stream()
                 .map(EventMapper::toResponse)
@@ -83,24 +90,25 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public EventResponse getEventById(UUID id) {
-        Event event = eventRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Event event = eventRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
         return EventMapper.toResponse(event);
     }
 
     @Transactional(readOnly = true)
     public List<EventResponse> getEventsByProjectId(UUID projectId) {
-        if (projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID).isEmpty()) {
+        UUID studioId = tenantContext.getCurrentStudioId();
+        if (projectRepository.findByIdAndStudioId(projectId, studioId).isEmpty()) {
             throw new ResourceNotFoundException("Project not found with id: " + projectId);
         }
-        List<Event> events = eventRepository.findByProjectIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID);
+        List<Event> events = eventRepository.findByProjectIdAndStudioId(projectId, studioId);
         return events.stream()
                 .map(EventMapper::toResponse)
                 .toList();
     }
 
     public EventResponse updateEvent(UUID id, EventUpdateRequest request) {
-        Event event = eventRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Event event = eventRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
 
         // Validate project exists and belongs to the same studio as the event
@@ -130,7 +138,7 @@ public class EventService {
     }
 
     public void deleteEvent(UUID id) {
-        Event event = eventRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Event event = eventRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
         eventRepository.delete(event);
     }

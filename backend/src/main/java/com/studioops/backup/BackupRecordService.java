@@ -3,7 +3,7 @@ package com.studioops.backup;
 import com.studioops.deliverable.Deliverable;
 import com.studioops.deliverable.DeliverableRepository;
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.project.ProjectRepository;
 import com.studioops.studio.StudioRepository;
 import org.springframework.stereotype.Service;
@@ -22,19 +22,26 @@ public class BackupRecordService {
     private final ProjectRepository projectRepository;
     private final DeliverableRepository deliverableRepository;
     private final StudioRepository studioRepository;
+    private final TenantContext tenantContext;
 
     public BackupRecordService(BackupRecordRepository backupRecordRepository,
                                ProjectRepository projectRepository,
                                DeliverableRepository deliverableRepository,
-                               StudioRepository studioRepository) {
+                               StudioRepository studioRepository,
+                               TenantContext tenantContext) {
         this.backupRecordRepository = backupRecordRepository;
         this.projectRepository = projectRepository;
         this.deliverableRepository = deliverableRepository;
         this.studioRepository = studioRepository;
+        this.tenantContext = tenantContext;
     }
 
     public BackupRecordResponse createBackup(BackupRecordCreateRequest request) {
-        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        UUID currentStudioId = tenantContext.getCurrentStudioId();
+        if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
+            throw new IllegalArgumentException("Mismatched studio ID provided");
+        }
+        UUID studioId = currentStudioId;
 
         // Validate studio exists
         if (!studioRepository.existsById(studioId)) {
@@ -64,15 +71,15 @@ public class BackupRecordService {
     @Transactional(readOnly = true)
     public List<BackupRecordResponse> listBackups(UUID projectId, UUID deliverableId) {
         List<BackupRecord> records;
-        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+        UUID studioId = tenantContext.getCurrentStudioId();
 
         if (projectId != null) {
-            // Validate project belongs to default studio
+            // Validate project belongs to studio
             projectRepository.findByIdAndStudioId(projectId, studioId)
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
         }
         if (deliverableId != null) {
-            // Validate deliverable belongs to default studio
+            // Validate deliverable belongs to studio
             deliverableRepository.findByIdAndStudioId(deliverableId, studioId)
                     .orElseThrow(() -> new ResourceNotFoundException("Deliverable not found with id: " + deliverableId));
         }
@@ -95,13 +102,13 @@ public class BackupRecordService {
 
     @Transactional(readOnly = true)
     public BackupRecordResponse getBackupById(UUID id) {
-        BackupRecord record = backupRecordRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        BackupRecord record = backupRecordRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Backup record not found with id: " + id));
         return BackupRecordMapper.toResponse(record);
     }
 
     public BackupRecordResponse updateBackup(UUID id, BackupRecordUpdateRequest request) {
-        BackupRecord record = backupRecordRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        BackupRecord record = backupRecordRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Backup record not found with id: " + id));
 
         BackupRecordMapper.updateEntity(record, request);
@@ -110,7 +117,7 @@ public class BackupRecordService {
     }
 
     public void deleteBackup(UUID id) {
-        BackupRecord record = backupRecordRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        BackupRecord record = backupRecordRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Backup record not found with id: " + id));
         backupRecordRepository.delete(record);
     }
@@ -120,7 +127,7 @@ public class BackupRecordService {
         if (deliverableId == null) {
             return 0;
         }
-        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+        UUID studioId = tenantContext.getCurrentStudioId();
         deliverableRepository.findByIdAndStudioId(deliverableId, studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Deliverable not found with id: " + deliverableId));
 

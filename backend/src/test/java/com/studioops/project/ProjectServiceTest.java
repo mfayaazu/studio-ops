@@ -1,5 +1,8 @@
 package com.studioops.project;
 
+import com.studioops.common.tenant.TenantContext;
+import com.studioops.common.tenant.TenantConstants;
+
 import com.studioops.client.Client;
 import com.studioops.client.ClientRepository;
 import com.studioops.common.exception.ResourceNotFoundException;
@@ -24,6 +27,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class ProjectServiceTest {
+    @Mock
+    private TenantContext tenantContext;
+
 
     @Mock
     private ProjectRepository projectRepository;
@@ -43,6 +49,7 @@ class ProjectServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
         clientId = UUID.randomUUID();
         managerId = UUID.randomUUID();
     }
@@ -89,6 +96,7 @@ class ProjectServiceTest {
     @Test
     void createProject_Success_CustomStudio() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         ProjectCreateRequest request = new ProjectCreateRequest(
                 clientId, managerId, "RSA-2026-0001", "Corp Portrait", "Corporate",
                 BookingStatus.INQUIRY, PaymentStatus.UNPAID, ProjectStatus.LEAD,
@@ -129,6 +137,7 @@ class ProjectServiceTest {
     @Test
     void createProject_InvalidStudioId_ThrowsException() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         ProjectCreateRequest request = new ProjectCreateRequest(
                 clientId, managerId, "RSA-2026-0001", "Corp Portrait", "Corporate",
                 BookingStatus.INQUIRY, PaymentStatus.UNPAID, ProjectStatus.LEAD,
@@ -345,4 +354,44 @@ class ProjectServiceTest {
         assertEquals("RSA-2026-0001", responses.get(0).getProjectCode());
         verify(projectRepository, times(1)).searchProjectsByStudio(TenantConstants.DEFAULT_STUDIO_ID, "RSA");
     }
+
+    @Test
+    void projectTenantIsolationTest() {
+        UUID studioA = UUID.randomUUID();
+        UUID studioB = UUID.randomUUID();
+        UUID projectId = UUID.randomUUID();
+
+        // 1. Authenticate as Studio A
+        when(tenantContext.getCurrentStudioId()).thenReturn(studioA);
+
+        Project projectA = new Project();
+        projectA.setId(projectId);
+        projectA.setStudioId(studioA);
+        projectA.setTitle("Project of Studio A");
+        projectA.setProjectCode("PROJ-A");
+
+        // Mock database
+        when(projectRepository.findByIdAndStudioId(projectId, studioA)).thenReturn(Optional.of(projectA));
+        when(projectRepository.findByIdAndStudioId(projectId, studioB)).thenReturn(Optional.empty());
+
+        // Fetching under Studio A should work
+        ProjectResponse response = projectService.getProjectById(projectId);
+        assertEquals("Project of Studio A", response.getTitle());
+        assertEquals(studioA, response.getStudioId());
+
+        // 2. Switch context to Studio B
+        when(tenantContext.getCurrentStudioId()).thenReturn(studioB);
+
+        // Fetching under Studio B should throw ResourceNotFoundException
+        assertThrows(ResourceNotFoundException.class, () -> projectService.getProjectById(projectId));
+
+        // Creating project under Studio B but specifying Studio A ID in payload should fail
+        ProjectCreateRequest request = new ProjectCreateRequest(
+                UUID.randomUUID(), UUID.randomUUID(), "PROJ-B", "Title", "Wedding",
+                BookingStatus.INQUIRY, PaymentStatus.UNPAID, ProjectStatus.LEAD,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15), "Notes", studioA
+        );
+        assertThrows(IllegalArgumentException.class, () -> projectService.createProject(request));
+    }
 }
+

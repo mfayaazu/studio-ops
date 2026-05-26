@@ -2,6 +2,7 @@ package com.studioops.client;
 
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.studio.StudioRepository;
 import com.studioops.client.dto.ClientCreateRequest;
 import com.studioops.client.dto.ClientResponse;
@@ -28,6 +29,9 @@ class ClientServiceTest {
     @Mock
     private StudioRepository studioRepository;
 
+    @Mock
+    private TenantContext tenantContext;
+
     @InjectMocks
     private ClientService clientService;
 
@@ -36,6 +40,7 @@ class ClientServiceTest {
         MockitoAnnotations.openMocks(this);
         // By default, assume the studio exists
         when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
     }
 
     @Test
@@ -71,6 +76,7 @@ class ClientServiceTest {
     @Test
     void createClient_WithStudioId_Success() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         ClientCreateRequest request = new ClientCreateRequest("Jane Doe", "+46701234567", "jane.doe@example.com", "Notes here", customStudioId);
         
         Client client = new Client();
@@ -93,6 +99,7 @@ class ClientServiceTest {
     @Test
     void createClient_StudioNotFound_ThrowsException() {
         UUID nonExistentStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(nonExistentStudioId);
         ClientCreateRequest request = new ClientCreateRequest("Jane Doe", "+46701234567", "jane.doe@example.com", "Notes here", nonExistentStudioId);
 
         when(studioRepository.existsById(nonExistentStudioId)).thenReturn(false);
@@ -247,6 +254,7 @@ class ClientServiceTest {
     @Test
     void listClientsForStudio_CustomStudio_ReturnsMatching() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         Client c1 = new Client();
         c1.setFullName("Client One");
         c1.setStudioId(customStudioId);
@@ -260,4 +268,39 @@ class ClientServiceTest {
         assertEquals(customStudioId, responses.get(0).getStudioId());
         verify(clientRepository, times(1)).findAllByStudioId(customStudioId);
     }
+
+    @Test
+    void clientTenantIsolationTest() {
+        UUID studioA = UUID.randomUUID();
+        UUID studioB = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+
+        // 1. Authenticate as Studio A
+        when(tenantContext.getCurrentStudioId()).thenReturn(studioA);
+
+        Client clientA = new Client();
+        clientA.setId(clientId);
+        clientA.setStudioId(studioA);
+        clientA.setFullName("Client of Studio A");
+
+        // Mock database
+        when(clientRepository.findByIdAndStudioId(clientId, studioA)).thenReturn(Optional.of(clientA));
+        when(clientRepository.findByIdAndStudioId(clientId, studioB)).thenReturn(Optional.empty());
+
+        // Fetching under Studio A should work
+        ClientResponse response = clientService.getClientById(clientId);
+        assertEquals("Client of Studio A", response.getFullName());
+        assertEquals(studioA, response.getStudioId());
+
+        // 2. Switch context to Studio B
+        when(tenantContext.getCurrentStudioId()).thenReturn(studioB);
+
+        // Fetching under Studio B should throw ResourceNotFoundException
+        assertThrows(ResourceNotFoundException.class, () -> clientService.getClientById(clientId));
+
+        // Creating client under Studio B but specifying Studio A ID in payload should fail
+        ClientCreateRequest request = new ClientCreateRequest("Jane Doe", "+46701234567", "jane@example.com", "Notes", studioA);
+        assertThrows(IllegalArgumentException.class, () -> clientService.createClient(request));
+    }
 }
+

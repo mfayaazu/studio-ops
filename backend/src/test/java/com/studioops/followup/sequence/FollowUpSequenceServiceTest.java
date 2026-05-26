@@ -1,5 +1,8 @@
 package com.studioops.followup.sequence;
 
+import com.studioops.common.tenant.TenantContext;
+import com.studioops.common.tenant.TenantConstants;
+
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
 import com.studioops.studio.StudioRepository;
@@ -21,6 +24,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class FollowUpSequenceServiceTest {
+    @Mock
+    private TenantContext tenantContext;
+
 
     @Mock
     private FollowUpSequenceRepository followUpSequenceRepository;
@@ -34,6 +40,7 @@ class FollowUpSequenceServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
         when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
     }
 
@@ -72,6 +79,7 @@ class FollowUpSequenceServiceTest {
     @Test
     void createSequence_CustomStudioId_Success() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         FollowUpSequenceCreateRequest request = new FollowUpSequenceCreateRequest(
                 customStudioId, "Default Sequence", "Desc", false
         );
@@ -98,6 +106,7 @@ class FollowUpSequenceServiceTest {
     @Test
     void createSequence_StudioNotFound_ThrowsException() {
         UUID nonExistentStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(nonExistentStudioId);
         FollowUpSequenceCreateRequest request = new FollowUpSequenceCreateRequest(
                 nonExistentStudioId, "Seq Name", "Desc", true
         );

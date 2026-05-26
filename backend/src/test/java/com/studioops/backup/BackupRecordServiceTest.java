@@ -1,5 +1,8 @@
 package com.studioops.backup;
 
+import com.studioops.common.tenant.TenantContext;
+import com.studioops.common.tenant.TenantConstants;
+
 import com.studioops.deliverable.Deliverable;
 import com.studioops.deliverable.DeliverableRepository;
 import com.studioops.common.exception.ResourceNotFoundException;
@@ -25,6 +28,9 @@ import com.studioops.backup.dto.BackupRecordResponse;
 import com.studioops.backup.dto.BackupRecordUpdateRequest;
 
 class BackupRecordServiceTest {
+    @Mock
+    private TenantContext tenantContext;
+
 
     @Mock
     private BackupRecordRepository backupRecordRepository;
@@ -49,6 +55,7 @@ class BackupRecordServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
         projectId = UUID.randomUUID();
         deliverableId = UUID.randomUUID();
 
@@ -125,6 +132,7 @@ class BackupRecordServiceTest {
     @Test
     void createBackup_Fails_WhenStudioIdDoesNotExist() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         BackupRecordCreateRequest request = new BackupRecordCreateRequest(
                 projectId, null, BackupType.RAW_PHOTOS, BackupLocationType.LOCAL_NAS,
                 "NAS_Volume_2/photos.zip", BackupStatus.COMPLETED, null, null
@@ -153,6 +161,7 @@ class BackupRecordServiceTest {
     @Test
     void createBackup_ProjectDoesNotBelongToSameStudio() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         BackupRecordCreateRequest request = new BackupRecordCreateRequest(
                 projectId, null, BackupType.RAW_PHOTOS, BackupLocationType.LOCAL_NAS,
                 "NAS_Volume_2/photos.zip", BackupStatus.COMPLETED, null, null
@@ -182,6 +191,7 @@ class BackupRecordServiceTest {
     @Test
     void createBackup_DeliverableDoesNotBelongToSameStudio() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         BackupRecordCreateRequest request = new BackupRecordCreateRequest(
                 projectId, deliverableId, BackupType.RAW_PHOTOS, BackupLocationType.LOCAL_NAS,
                 "NAS_Volume_2/photos.zip", BackupStatus.COMPLETED, null, null

@@ -1,5 +1,8 @@
 package com.studioops.assignment;
 
+import com.studioops.common.tenant.TenantContext;
+import com.studioops.common.tenant.TenantConstants;
+
 import com.studioops.employee.Employee;
 import com.studioops.employee.EmployeeRepository;
 import com.studioops.employee.EmployeeStatus;
@@ -30,6 +33,9 @@ import com.studioops.assignment.dto.EventAssignmentResponse;
 import com.studioops.assignment.dto.EventAssignmentUpdateRequest;
 
 class EventAssignmentServiceTest {
+    @Mock
+    private TenantContext tenantContext;
+
 
     @Mock
     private EventAssignmentRepository eventAssignmentRepository;
@@ -54,6 +60,7 @@ class EventAssignmentServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
         eventId = UUID.randomUUID();
         employeeId = UUID.randomUUID();
 
@@ -147,6 +154,7 @@ class EventAssignmentServiceTest {
     @Test
     void createAssignment_Fails_WhenStudioIdDoesNotExist() {
         UUID nonExistentStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(nonExistentStudioId);
         EventAssignmentCreateRequest request = new EventAssignmentCreateRequest();
         request.setStudioId(nonExistentStudioId);
         request.setEventId(eventId);
@@ -163,6 +171,7 @@ class EventAssignmentServiceTest {
     @Test
     void createAssignment_Fails_WhenEventIdDoesNotBelongToSameStudio() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         EventAssignmentCreateRequest request = new EventAssignmentCreateRequest();
         request.setStudioId(customStudioId);
         request.setEventId(eventId);
@@ -180,6 +189,7 @@ class EventAssignmentServiceTest {
     @Test
     void createAssignment_Fails_WhenEmployeeIdDoesNotBelongToSameStudio() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         EventAssignmentCreateRequest request = new EventAssignmentCreateRequest();
         request.setStudioId(customStudioId);
         request.setEventId(eventId);

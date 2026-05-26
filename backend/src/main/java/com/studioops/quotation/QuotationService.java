@@ -1,7 +1,7 @@
 package com.studioops.quotation;
 
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.studio.StudioRepository;
 import com.studioops.client.ClientRepository;
 import com.studioops.project.ProjectRepository;
@@ -29,22 +29,30 @@ public class QuotationService {
     private final ClientRepository clientRepository;
     private final ProjectRepository projectRepository;
     private final LeadRepository leadRepository;
+    private final TenantContext tenantContext;
 
     public QuotationService(
             QuotationRepository quotationRepository,
             StudioRepository studioRepository,
             ClientRepository clientRepository,
             ProjectRepository projectRepository,
-            LeadRepository leadRepository) {
+            LeadRepository leadRepository,
+            TenantContext tenantContext) {
         this.quotationRepository = quotationRepository;
         this.studioRepository = studioRepository;
         this.clientRepository = clientRepository;
         this.projectRepository = projectRepository;
         this.leadRepository = leadRepository;
+        this.tenantContext = tenantContext;
     }
 
     public QuotationResponse createQuotation(QuotationCreateRequest request) {
-        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        UUID currentStudioId = tenantContext.getCurrentStudioId();
+        if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
+            throw new IllegalArgumentException("Mismatched studio ID provided");
+        }
+        UUID studioId = currentStudioId;
+
         if (!studioRepository.existsById(studioId)) {
             throw new IllegalArgumentException("Studio not found with id: " + studioId);
         }
@@ -92,7 +100,7 @@ public class QuotationService {
     }
 
     public List<QuotationResponse> listQuotations(QuotationStatus status) {
-        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+        UUID studioId = tenantContext.getCurrentStudioId();
         List<Quotation> quotations;
         if (status != null) {
             quotations = quotationRepository.findByStudioIdAndStatus(studioId, status);
@@ -105,14 +113,14 @@ public class QuotationService {
     }
 
     public QuotationResponse getQuotationById(UUID id) {
-        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+        UUID studioId = tenantContext.getCurrentStudioId();
         Quotation quotation = quotationRepository.findByIdAndStudioId(id, studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quotation not found with id: " + id));
         return QuotationMapper.toResponse(quotation);
     }
 
     public QuotationResponse updateQuotation(UUID id, QuotationUpdateRequest request) {
-        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+        UUID studioId = tenantContext.getCurrentStudioId();
         Quotation quotation = quotationRepository.findByIdAndStudioId(id, studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quotation not found with id: " + id));
 
@@ -149,7 +157,7 @@ public class QuotationService {
     }
 
     public QuotationResponse updateStatus(UUID id, QuotationStatusUpdateRequest request) {
-        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+        UUID studioId = tenantContext.getCurrentStudioId();
         Quotation quotation = quotationRepository.findByIdAndStudioId(id, studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quotation not found with id: " + id));
 
@@ -163,7 +171,7 @@ public class QuotationService {
     }
 
     public void deleteQuotation(UUID id) {
-        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+        UUID studioId = tenantContext.getCurrentStudioId();
         Quotation quotation = quotationRepository.findByIdAndStudioId(id, studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quotation not found with id: " + id));
         quotationRepository.delete(quotation);

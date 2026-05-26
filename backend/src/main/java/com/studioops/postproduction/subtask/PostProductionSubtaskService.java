@@ -1,7 +1,7 @@
 package com.studioops.postproduction.subtask;
 
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.employee.EmployeeRepository;
 import com.studioops.postproduction.subtask.dto.PostProductionSubtaskCreateRequest;
 import com.studioops.postproduction.subtask.dto.PostProductionSubtaskResponse;
@@ -21,20 +21,27 @@ public class PostProductionSubtaskService {
     private final PostProductionTaskRepository postProductionTaskRepository;
     private final StudioRepository studioRepository;
     private final EmployeeRepository employeeRepository;
+    private final TenantContext tenantContext;
 
     public PostProductionSubtaskService(
             PostProductionSubtaskRepository postProductionSubtaskRepository,
             PostProductionTaskRepository postProductionTaskRepository,
             StudioRepository studioRepository,
-            EmployeeRepository employeeRepository) {
+            EmployeeRepository employeeRepository,
+            TenantContext tenantContext) {
         this.postProductionSubtaskRepository = postProductionSubtaskRepository;
         this.postProductionTaskRepository = postProductionTaskRepository;
         this.studioRepository = studioRepository;
         this.employeeRepository = employeeRepository;
+        this.tenantContext = tenantContext;
     }
 
     public PostProductionSubtaskResponse createSubtask(PostProductionSubtaskCreateRequest request) {
-        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        UUID currentStudioId = tenantContext.getCurrentStudioId();
+        if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
+            throw new IllegalArgumentException("Mismatched studio ID provided");
+        }
+        UUID studioId = currentStudioId;
 
         // Validate studio exists
         if (!studioRepository.existsById(studioId)) {
@@ -64,7 +71,7 @@ public class PostProductionSubtaskService {
             PostProductionSubtaskStatus status,
             UUID assignedEmployeeId) {
 
-        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+        UUID studioId = tenantContext.getCurrentStudioId();
         List<PostProductionSubtask> subtasks = postProductionSubtaskRepository.filterSubtasks(
                 studioId, taskId, status, assignedEmployeeId);
 
@@ -75,13 +82,13 @@ public class PostProductionSubtaskService {
 
     @Transactional(readOnly = true)
     public PostProductionSubtaskResponse getSubtaskById(UUID id) {
-        PostProductionSubtask subtask = postProductionSubtaskRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        PostProductionSubtask subtask = postProductionSubtaskRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("PostProductionSubtask not found with id: " + id));
         return PostProductionSubtaskMapper.toResponse(subtask);
     }
 
     public PostProductionSubtaskResponse updateSubtask(UUID id, PostProductionSubtaskUpdateRequest request) {
-        PostProductionSubtask subtask = postProductionSubtaskRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        PostProductionSubtask subtask = postProductionSubtaskRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("PostProductionSubtask not found with id: " + id));
 
         // Validate assigned employee belongs to the same studio
@@ -96,7 +103,7 @@ public class PostProductionSubtaskService {
     }
 
     public PostProductionSubtaskResponse moveStatus(UUID id, PostProductionSubtaskStatus newStatus) {
-        PostProductionSubtask subtask = postProductionSubtaskRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        PostProductionSubtask subtask = postProductionSubtaskRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("PostProductionSubtask not found with id: " + id));
 
         subtask.setStatus(newStatus);
@@ -105,7 +112,7 @@ public class PostProductionSubtaskService {
     }
 
     public void deleteSubtask(UUID id) {
-        PostProductionSubtask subtask = postProductionSubtaskRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        PostProductionSubtask subtask = postProductionSubtaskRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("PostProductionSubtask not found with id: " + id));
         postProductionSubtaskRepository.delete(subtask);
     }

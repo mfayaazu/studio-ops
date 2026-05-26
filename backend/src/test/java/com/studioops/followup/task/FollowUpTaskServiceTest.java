@@ -1,5 +1,8 @@
 package com.studioops.followup.task;
 
+import com.studioops.common.tenant.TenantContext;
+import com.studioops.common.tenant.TenantConstants;
+
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
 import com.studioops.studio.StudioRepository;
@@ -34,6 +37,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class FollowUpTaskServiceTest {
+    @Mock
+    private TenantContext tenantContext;
+
 
     @Mock
     private FollowUpTaskRepository followUpTaskRepository;
@@ -58,6 +64,7 @@ class FollowUpTaskServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
         when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
     }
 

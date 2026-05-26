@@ -1,5 +1,8 @@
 package com.studioops.followup.sequence;
 
+import com.studioops.common.tenant.TenantContext;
+import com.studioops.common.tenant.TenantConstants;
+
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
 import com.studioops.studio.StudioRepository;
@@ -24,6 +27,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class FollowUpStepServiceTest {
+    @Mock
+    private TenantContext tenantContext;
+
 
     @Mock
     private FollowUpStepRepository followUpStepRepository;
@@ -48,6 +54,7 @@ class FollowUpStepServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
         when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
 
         sequenceId = UUID.randomUUID();
@@ -107,6 +114,7 @@ class FollowUpStepServiceTest {
     @Test
     void createStep_StudioNotFound_ThrowsException() {
         UUID nonExistentStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(nonExistentStudioId);
         FollowUpStepCreateRequest request = new FollowUpStepCreateRequest(
                 nonExistentStudioId, sequenceId, 1, 3, CommunicationChannel.EMAIL, templateId, "Check", true
         );

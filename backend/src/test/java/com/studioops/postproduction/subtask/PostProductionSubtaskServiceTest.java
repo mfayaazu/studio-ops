@@ -1,5 +1,8 @@
 package com.studioops.postproduction.subtask;
 
+import com.studioops.common.tenant.TenantContext;
+import com.studioops.common.tenant.TenantConstants;
+
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
 import com.studioops.employee.Employee;
@@ -24,6 +27,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class PostProductionSubtaskServiceTest {
+    @Mock
+    private TenantContext tenantContext;
+
 
     @Mock
     private PostProductionSubtaskRepository postProductionSubtaskRepository;
@@ -46,6 +52,7 @@ class PostProductionSubtaskServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
         taskId = UUID.randomUUID();
         parentTask = new PostProductionTask();
         parentTask.setId(taskId);

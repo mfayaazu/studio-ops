@@ -22,6 +22,8 @@ import com.studioops.dashboard.dto.DashboardStats;
 import com.studioops.dashboard.dto.DashboardSummaryResponse;
 import com.studioops.dashboard.dto.DashboardWarning;
 
+import com.studioops.common.tenant.TenantContext;
+
 @WebMvcTest(DashboardController.class)
 @Import(SecurityConfig.class)
 class DashboardControllerIntegrationTest {
@@ -32,8 +34,13 @@ class DashboardControllerIntegrationTest {
     @MockBean
     private DashboardService dashboardService;
 
+    @MockBean
+    private TenantContext tenantContext;
+
     @Test
     void getSummary_Success() throws Exception {
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
+
         DashboardStats stats = new DashboardStats(24L, 8L, 3L, 12L);
         
         DashboardWarning warning = new DashboardWarning(

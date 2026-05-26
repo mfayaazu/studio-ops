@@ -1,7 +1,7 @@
 package com.studioops.followup.sequence;
 
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.studio.StudioRepository;
 import com.studioops.followup.template.MessageTemplateRepository;
 import com.studioops.followup.sequence.dto.FollowUpStepCreateRequest;
@@ -20,19 +20,27 @@ public class FollowUpStepService {
     private final FollowUpSequenceRepository followUpSequenceRepository;
     private final MessageTemplateRepository messageTemplateRepository;
     private final StudioRepository studioRepository;
+    private final TenantContext tenantContext;
 
     public FollowUpStepService(FollowUpStepRepository followUpStepRepository,
                               FollowUpSequenceRepository followUpSequenceRepository,
                               MessageTemplateRepository messageTemplateRepository,
-                              StudioRepository studioRepository) {
+                              StudioRepository studioRepository,
+                              TenantContext tenantContext) {
         this.followUpStepRepository = followUpStepRepository;
         this.followUpSequenceRepository = followUpSequenceRepository;
         this.messageTemplateRepository = messageTemplateRepository;
         this.studioRepository = studioRepository;
+        this.tenantContext = tenantContext;
     }
 
     public FollowUpStepResponse createStep(FollowUpStepCreateRequest request) {
-        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        UUID currentStudioId = tenantContext.getCurrentStudioId();
+        if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
+            throw new IllegalArgumentException("Mismatched studio ID provided");
+        }
+        UUID studioId = currentStudioId;
+
         if (!studioRepository.existsById(studioId)) {
             throw new IllegalArgumentException("Studio not found with id: " + studioId);
         }
@@ -66,11 +74,12 @@ public class FollowUpStepService {
 
     @Transactional(readOnly = true)
     public List<FollowUpStepResponse> listStepsBySequence(UUID sequenceId) {
-        // Validate sequence belongs to TenantConstants.DEFAULT_STUDIO_ID
-        followUpSequenceRepository.findByIdAndStudioId(sequenceId, TenantConstants.DEFAULT_STUDIO_ID)
+        UUID studioId = tenantContext.getCurrentStudioId();
+        // Validate sequence belongs to studio
+        followUpSequenceRepository.findByIdAndStudioId(sequenceId, studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Follow-up sequence not found with id: " + sequenceId));
 
-        List<FollowUpStep> steps = followUpStepRepository.findBySequenceIdAndStudioIdOrderByStepOrderAsc(sequenceId, TenantConstants.DEFAULT_STUDIO_ID);
+        List<FollowUpStep> steps = followUpStepRepository.findBySequenceIdAndStudioIdOrderByStepOrderAsc(sequenceId, studioId);
         return steps.stream()
                 .map(FollowUpStepMapper::toResponse)
                 .toList();
@@ -78,13 +87,13 @@ public class FollowUpStepService {
 
     @Transactional(readOnly = true)
     public FollowUpStepResponse getStepById(UUID id) {
-        FollowUpStep step = followUpStepRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        FollowUpStep step = followUpStepRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Follow-up step not found with id: " + id));
         return FollowUpStepMapper.toResponse(step);
     }
 
     public FollowUpStepResponse updateStep(UUID id, FollowUpStepUpdateRequest request) {
-        FollowUpStep step = followUpStepRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        FollowUpStep step = followUpStepRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Follow-up step not found with id: " + id));
 
         // Validate template belongs to the same studio
@@ -108,7 +117,7 @@ public class FollowUpStepService {
     }
 
     public void deleteStep(UUID id) {
-        FollowUpStep step = followUpStepRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        FollowUpStep step = followUpStepRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Follow-up step not found with id: " + id));
         followUpStepRepository.delete(step);
     }

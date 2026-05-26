@@ -1,5 +1,8 @@
 package com.studioops.followup.template;
 
+import com.studioops.common.tenant.TenantContext;
+import com.studioops.common.tenant.TenantConstants;
+
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantConstants;
 import com.studioops.studio.StudioRepository;
@@ -21,6 +24,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class MessageTemplateServiceTest {
+    @Mock
+    private TenantContext tenantContext;
+
 
     @Mock
     private MessageTemplateRepository messageTemplateRepository;
@@ -34,6 +40,7 @@ class MessageTemplateServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
         // By default assume studio exists
         when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
     }
@@ -79,6 +86,7 @@ class MessageTemplateServiceTest {
     @Test
     void createTemplate_CustomStudioId_Success() {
         UUID customStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
         MessageTemplateCreateRequest request = new MessageTemplateCreateRequest(
                 customStudioId, "Standard Welcome", CommunicationChannel.SMS, MessageTemplateType.CUSTOM, null, "Hello!", false
         );
@@ -108,6 +116,7 @@ class MessageTemplateServiceTest {
     @Test
     void createTemplate_StudioNotFound_ThrowsException() {
         UUID nonExistentStudioId = UUID.randomUUID();
+        when(tenantContext.getCurrentStudioId()).thenReturn(nonExistentStudioId);
         MessageTemplateCreateRequest request = new MessageTemplateCreateRequest(
                 nonExistentStudioId, "Welcome", CommunicationChannel.EMAIL, MessageTemplateType.QUOTE_SENT, "Welcome", "Body", true
         );

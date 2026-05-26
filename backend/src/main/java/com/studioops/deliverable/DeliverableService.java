@@ -1,7 +1,7 @@
 package com.studioops.deliverable;
 
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
+import com.studioops.common.tenant.TenantContext;
 import com.studioops.employee.EmployeeRepository;
 import com.studioops.project.ProjectRepository;
 import com.studioops.studio.StudioRepository;
@@ -21,19 +21,26 @@ public class DeliverableService {
     private final ProjectRepository projectRepository;
     private final StudioRepository studioRepository;
     private final EmployeeRepository employeeRepository;
+    private final TenantContext tenantContext;
 
     public DeliverableService(DeliverableRepository deliverableRepository,
                               ProjectRepository projectRepository,
                               StudioRepository studioRepository,
-                              EmployeeRepository employeeRepository) {
+                              EmployeeRepository employeeRepository,
+                              TenantContext tenantContext) {
         this.deliverableRepository = deliverableRepository;
         this.projectRepository = projectRepository;
         this.studioRepository = studioRepository;
         this.employeeRepository = employeeRepository;
+        this.tenantContext = tenantContext;
     }
 
     public DeliverableResponse createDeliverable(DeliverableCreateRequest request) {
-        UUID studioId = request.getStudioId() != null ? request.getStudioId() : TenantConstants.DEFAULT_STUDIO_ID;
+        UUID currentStudioId = tenantContext.getCurrentStudioId();
+        if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
+            throw new IllegalArgumentException("Mismatched studio ID provided");
+        }
+        UUID studioId = currentStudioId;
 
         // Validate studio exists
         if (!studioRepository.existsById(studioId)) {
@@ -64,10 +71,10 @@ public class DeliverableService {
     @Transactional(readOnly = true)
     public List<DeliverableResponse> listDeliverables(UUID projectId) {
         List<Deliverable> deliverables;
-        UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
+        UUID studioId = tenantContext.getCurrentStudioId();
 
         if (projectId != null) {
-            // Validate project belongs to default studio
+            // Validate project belongs to studio
             projectRepository.findByIdAndStudioId(projectId, studioId)
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
             deliverables = deliverableRepository.findByProjectIdAndStudioId(projectId, studioId);
@@ -82,13 +89,13 @@ public class DeliverableService {
 
     @Transactional(readOnly = true)
     public DeliverableResponse getDeliverableById(UUID id) {
-        Deliverable deliverable = deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Deliverable deliverable = deliverableRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Deliverable not found with id: " + id));
         return DeliverableMapper.toResponse(deliverable);
     }
 
     public DeliverableResponse updateDeliverable(UUID id, DeliverableUpdateRequest request) {
-        Deliverable deliverable = deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Deliverable deliverable = deliverableRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Deliverable not found with id: " + id));
 
         // Validate assigned employee belongs to the same studio
@@ -103,7 +110,7 @@ public class DeliverableService {
     }
 
     public void deleteDeliverable(UUID id) {
-        Deliverable deliverable = deliverableRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)
+        Deliverable deliverable = deliverableRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Deliverable not found with id: " + id));
         deliverableRepository.delete(deliverable);
     }
