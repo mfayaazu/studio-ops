@@ -95,6 +95,11 @@ public class PostProductionTaskService {
 
         UUID studioId = TenantConstants.DEFAULT_STUDIO_ID;
 
+        String searchParam = null;
+        if (search != null && !search.trim().isEmpty()) {
+            searchParam = "%" + search.trim().toLowerCase() + "%";
+        }
+
         List<PostProductionTask> tasks = postProductionTaskRepository.filterTasks(
                 studioId,
                 projectId,
@@ -102,7 +107,7 @@ public class PostProductionTaskService {
                 status,
                 assignedEmployeeId,
                 dueBefore,
-                (search != null && !search.trim().isEmpty()) ? search.trim() : null
+                searchParam
         );
 
         return tasks.stream()

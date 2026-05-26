@@ -32,11 +32,11 @@ public interface PostProductionTaskRepository extends JpaRepository<PostProducti
            "AND (:status IS NULL OR t.status = :status) " +
            "AND (:assignedEmployeeId IS NULL OR t.assignedEmployeeId = :assignedEmployeeId) " +
            "AND (:dueBefore IS NULL OR t.dueDate <= :dueBefore) " +
-           "AND (:search IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(t.description) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(STR(t.taskType)) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(STR(t.priority)) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(STR(t.status)) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "AND (:search IS NULL OR LOWER(t.title) LIKE :search " +
+           "OR (t.description IS NOT NULL AND LOWER(t.description) LIKE :search) " +
+           "OR LOWER(STR(t.taskType)) LIKE :search " +
+           "OR LOWER(STR(t.priority)) LIKE :search " +
+           "OR LOWER(STR(t.status)) LIKE :search)")
     List<PostProductionTask> filterTasks(
             @Param("studioId") UUID studioId,
             @Param("projectId") UUID projectId,

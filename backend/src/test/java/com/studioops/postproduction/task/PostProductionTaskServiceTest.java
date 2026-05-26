@@ -212,7 +212,7 @@ class PostProductionTaskServiceTest {
         task.setProjectId(projectId);
 
         when(postProductionTaskRepository.filterTasks(
-                eq(TenantConstants.DEFAULT_STUDIO_ID), eq(projectId), any(), any(), any(), any(), eq("search")))
+                eq(TenantConstants.DEFAULT_STUDIO_ID), eq(projectId), any(), any(), any(), any(), eq("%search%")))
                 .thenReturn(List.of(task));
 
         List<PostProductionTaskResponse> results = postProductionTaskService.listTasks(
@@ -220,7 +220,7 @@ class PostProductionTaskServiceTest {
 
         assertEquals(1, results.size());
         verify(postProductionTaskRepository, times(1)).filterTasks(
-                eq(TenantConstants.DEFAULT_STUDIO_ID), eq(projectId), any(), any(), any(), any(), eq("search"));
+                eq(TenantConstants.DEFAULT_STUDIO_ID), eq(projectId), any(), any(), any(), any(), eq("%search%"));
     }
 
     @Test
