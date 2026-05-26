@@ -17,6 +17,7 @@ import { BackupCenterPage } from '../features/backups/pages/BackupCenterPage';
 import { DeliverablesPage } from '../features/deliverables/pages/DeliverablesPage';
 import { FollowUpCenterPage } from '../features/followup/pages/FollowUpCenterPage';
 import { PostProductionBoardPage } from '../features/postproduction/pages/PostProductionBoardPage';
+import { QuotationsPage } from '../features/quotations/pages/QuotationsPage';
 
 interface HealthResponse {
   status: string;
@@ -99,6 +100,8 @@ const AppContent: React.FC = () => {
         return <FollowUpCenterPage />;
       case 'post-production':
         return <PostProductionBoardPage />;
+      case 'quotations':
+        return <QuotationsPage />;
       default:
         return <DashboardPage />;
     }
