@@ -44,8 +44,13 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
           {employees.map((emp) => (
             <tr key={emp.id} className="hover:bg-slate-800/10 transition-colors">
               <td className="px-6 py-4">
-                <div className="font-semibold text-white text-sm">
-                  {emp.fullName}
+                <div className="font-semibold text-white text-sm flex items-center gap-2">
+                  <span>{emp.fullName}</span>
+                  {emp.userId && (
+                    <span className="text-[9px] bg-indigo-500/15 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded font-semibold font-sans tracking-wide uppercase">
+                      Login: {emp.userRole || 'EMPLOYEE'}
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-slate-500 mt-0.5 font-mono">
                   {emp.email} {emp.phone && `• ${emp.phone}`}

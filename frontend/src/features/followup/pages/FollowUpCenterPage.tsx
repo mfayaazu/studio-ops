@@ -497,9 +497,9 @@ export const FollowUpCenterPage: React.FC = () => {
   const selectedLead = leads.find((l) => l.id === selectedLeadId) || null;
 
   // Handle lead update (e.g. status transition or sending message)
-  const handleConvertToProject = async (leadId: string): Promise<void> => {
+  const handleConvertToProject = async (leadId: string): Promise<string> => {
     const lead = leads.find(l => l.id === leadId);
-    if (!lead) return;
+    if (!lead) return '';
 
     // Send minimal payload as requested
     const title = lead.projectTitle ? `${lead.projectTitle} - ${lead.clientName}` : `Event - ${lead.clientName}`;
@@ -508,8 +508,9 @@ export const FollowUpCenterPage: React.FC = () => {
       notes: lead.notes || undefined
     };
 
-    await convertLeadToProject(leadId, payload);
+    const response = await convertLeadToProject(leadId, payload);
     await refreshLeads();
+    return response.message;
   };
 
   const handleUpdateLead = (updatedLead: Lead) => {

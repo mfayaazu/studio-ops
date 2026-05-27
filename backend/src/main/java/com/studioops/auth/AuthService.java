@@ -118,7 +118,7 @@ public class AuthService {
     }
 
     @Transactional
-    public void signup(SignupRequest request) {
+    public com.studioops.auth.dto.SignupResponse signup(SignupRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email is already registered");
         }
@@ -146,6 +146,14 @@ public class AuthService {
         user.setStudioId(savedStudio.getId());
 
         userRepository.save(user);
+
+        return new com.studioops.auth.dto.SignupResponse(
+            "Beta workspace request submitted",
+            savedStudio.getId(),
+            savedStudio.getName(),
+            savedStudio.getStatus().name(),
+            user.getEmail()
+        );
     }
 
     private String generateSlug(String studioName) {

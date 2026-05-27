@@ -5,7 +5,8 @@ import { MainLayout } from '../components/layout/MainLayout';
 import { useAuth } from '../features/auth/AuthProvider';
 import { LoginPage } from '../features/auth/pages/LoginPage';
 import { PendingApprovalPage } from '../features/auth/pages/PendingApprovalPage';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldAlert, ArrowLeft } from 'lucide-react';
+import { canAccessRoute, ROLE_ROUTE_ACCESS } from '../features/auth/permissions';
 
 // Page components
 import { DashboardPage } from '../features/dashboard/pages/DashboardPage';
@@ -29,8 +30,46 @@ interface HealthResponse {
   error?: string;
 }
 
+interface AccessRestrictedPageProps {
+  role: string;
+  route: string;
+  allowedRoutes: string[];
+  onNavigate: (route: any) => void;
+}
+
+const AccessRestrictedPage: React.FC<AccessRestrictedPageProps> = ({ role, route, allowedRoutes, onNavigate }) => {
+  const firstAllowedRoute = allowedRoutes[0] || 'events';
+  
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-[#0d1424] border border-slate-800/80 rounded-2xl shadow-xl max-w-xl mx-auto space-y-6">
+      <div className="h-16 w-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+        <ShieldAlert className="h-8 w-8" />
+      </div>
+      
+      <div className="space-y-2">
+        <h2 className="text-xl font-heading font-bold text-white tracking-wide">
+          Access Restricted
+        </h2>
+        <p className="text-sm text-slate-400 leading-relaxed max-w-md">
+          Your account role (<span className="text-slate-200 font-semibold">{role}</span>) does not have permission to view the <span className="text-slate-250 font-mono font-semibold">/{route}</span> module.
+        </p>
+      </div>
+
+      <div className="pt-4 w-full">
+        <button
+          onClick={() => onNavigate(firstAllowedRoute)}
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-xs font-semibold py-2.5 px-6 rounded-xl transition-all shadow-lg shadow-violet-500/20 cursor-pointer"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Return to Access Area ({firstAllowedRoute})</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const AppContent: React.FC = () => {
-  const { currentRoute } = useRouter();
+  const { currentRoute, navigateTo } = useRouter();
   const { isAuthenticated, isLoading, user } = useAuth();
   
   const [health, setHealth] = useState<{
@@ -80,6 +119,17 @@ const AppContent: React.FC = () => {
   }, []);
 
   const renderActivePage = () => {
+    if (user && !canAccessRoute(user.role, currentRoute)) {
+      return (
+        <AccessRestrictedPage
+          role={user.role}
+          route={currentRoute}
+          allowedRoutes={ROLE_ROUTE_ACCESS[user.role] || []}
+          onNavigate={navigateTo}
+        />
+      );
+    }
+
     switch (currentRoute) {
       case 'dashboard':
         return <DashboardPage />;

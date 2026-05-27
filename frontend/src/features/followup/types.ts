@@ -157,7 +157,7 @@ export interface FollowUpTask {
 
 export type CommunicationDirection = 'OUTBOUND' | 'INBOUND';
 
-export type CommunicationProvider = 'MANUAL_DEMO' | 'SMTP' | 'GMAIL' | 'TWILIO' | 'META_WHATSAPP' | 'OTHER';
+export type CommunicationProvider = 'MANUAL_DEMO' | 'MANUAL_WHATSAPP' | 'SMTP' | 'GMAIL' | 'TWILIO' | 'META_WHATSAPP' | 'OTHER';
 
 export type CommunicationLogStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'SKIPPED' | 'CANCELLED';
 

@@ -22,7 +22,26 @@ interface UnifiedTask {
   dueStatus: 'due_today' | 'overdue' | 'upcoming';
   subject?: string;
   body: string;
+  recipient?: string;
 }
+
+const cleanPhoneNumber = (phone: string | undefined): string => {
+  if (!phone) return '';
+  return phone.replace(/\D/g, '');
+};
+
+const isValidPhoneNumber = (phone: string | undefined): boolean => {
+  const cleaned = cleanPhoneNumber(phone);
+  return cleaned.length >= 7 && cleaned.length <= 15;
+};
+
+const handleOpenWhatsApp = (task: UnifiedTask) => {
+  const phone = cleanPhoneNumber(task.recipient);
+  if (!phone) return;
+  const encodedText = encodeURIComponent(task.body);
+  const url = `https://wa.me/${phone}?text=${encodedText}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+};
 
 const resolveClientAndProject = (task: FollowUpTask) => {
   const matchedLead = mockLeads.find(lead => 
@@ -69,7 +88,8 @@ const mapBackendTask = (task: FollowUpTask): UnifiedTask => {
     dueDate: new Date(task.scheduledAt).toLocaleDateString(),
     dueStatus: getDueStatus(task.scheduledAt),
     subject: task.subject,
-    body: task.messageBody
+    body: task.messageBody,
+    recipient: task.recipient
   };
 };
 
@@ -83,7 +103,8 @@ const mapMockTask = (task: PendingFollowUp): UnifiedTask => {
     dueDate: task.dueDate,
     dueStatus: task.dueStatus,
     subject: task.subject,
-    body: task.body
+    body: task.body,
+    recipient: task.channel === 'WHATSAPP' ? '919876543210' : undefined
   };
 };
 
@@ -276,37 +297,76 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                   </div>
 
                   {/* CTA actions */}
-                  <div className="flex justify-end gap-1.5 pt-2 border-t border-slate-800/40">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedTaskId(task.id);
-                      }}
-                      className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-350 rounded-lg transition-colors"
-                      title="Preview Draft"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAction(task, 'skipped');
-                      }}
-                      className="p-1.5 bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 text-rose-400 rounded-lg transition-colors"
-                      title="Skip Step"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAction(task, 'approved');
-                      }}
-                      className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400 rounded-lg font-bold text-[10px] transition-colors"
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                      <span>Send</span>
-                    </button>
+                  <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-800/40">
+                    {task.channel === 'WHATSAPP' && !isValidPhoneNumber(task.recipient) && (
+                      <div className="text-[9px] text-rose-400 font-semibold italic text-right mb-1">
+                        Valid phone number required.
+                      </div>
+                    )}
+                    <div className="flex justify-end gap-1.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTaskId(task.id);
+                        }}
+                        className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-350 rounded-lg transition-colors"
+                        title="Preview Draft"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAction(task, 'skipped');
+                        }}
+                        className="p-1.5 bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 text-rose-400 rounded-lg transition-colors"
+                        title="Skip Step"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                      {task.channel === 'WHATSAPP' ? (
+                        <>
+                          <button
+                            disabled={!isValidPhoneNumber(task.recipient)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenWhatsApp(task);
+                            }}
+                            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-[10px] transition-colors ${
+                              isValidPhoneNumber(task.recipient)
+                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                            }`}
+                            title={isValidPhoneNumber(task.recipient) ? "Open WhatsApp" : "Valid phone number required."}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            <span>Open WA</span>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAction(task, 'approved');
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400 rounded-lg font-bold text-[10px] transition-colors"
+                            title="Mark as Sent"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            <span>Mark Sent</span>
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAction(task, 'approved');
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400 rounded-lg font-bold text-[10px] transition-colors"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          <span>Send</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))
@@ -342,10 +402,24 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                     </p>
                   </div>
 
-                  <div className="text-[10px] text-amber-400/80 bg-amber-500/5 border border-amber-500/10 px-2 py-1 rounded flex items-center gap-1">
-                    <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0 text-amber-450" />
-                    <span>Manual demo send — logged only</span>
-                  </div>
+                  {selectedTask.channel === 'WHATSAPP' ? (
+                    <div className="text-[10px] text-emerald-400/90 bg-emerald-500/5 border border-emerald-500/10 px-2 py-1 rounded flex items-center gap-1">
+                      <MessageSquare className="h-3.5 w-3.5 flex-shrink-0 text-emerald-400" />
+                      <span>Manual WhatsApp send — no API cost</span>
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-amber-400/80 bg-amber-500/5 border border-amber-500/10 px-2 py-1 rounded flex items-center gap-1">
+                      <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0 text-amber-450" />
+                      <span>Manual demo send — logged only</span>
+                    </div>
+                  )}
+
+                  {selectedTask.channel === 'WHATSAPP' && !isValidPhoneNumber(selectedTask.recipient) && (
+                    <div className="text-[10px] text-rose-400 bg-rose-500/5 border border-rose-500/10 px-2 py-1 rounded flex items-center gap-1">
+                      <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0 text-rose-400" />
+                      <span>Valid phone number required.</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2 border-t border-slate-800 pt-3">
@@ -355,12 +429,34 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                   >
                     Skip Step
                   </button>
-                  <button
-                    onClick={() => handleAction(selectedTask, 'approved')}
-                    className="flex-1 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-500 hover:to-fuchsia-400 text-white rounded-lg font-bold text-xs transition-colors shadow-md"
-                  >
-                    Approve & Dispatch
-                  </button>
+                  {selectedTask.channel === 'WHATSAPP' ? (
+                    <>
+                      <button
+                        disabled={!isValidPhoneNumber(selectedTask.recipient)}
+                        onClick={() => handleOpenWhatsApp(selectedTask)}
+                        className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors text-center ${
+                          isValidPhoneNumber(selectedTask.recipient)
+                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                            : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        Open WhatsApp
+                      </button>
+                      <button
+                        onClick={() => handleAction(selectedTask, 'approved')}
+                        className="flex-1 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-500 hover:to-fuchsia-400 text-white rounded-lg font-bold text-xs transition-colors shadow-md"
+                      >
+                        Mark as Sent
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => handleAction(selectedTask, 'approved')}
+                      className="flex-1 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-500 hover:to-fuchsia-400 text-white rounded-lg font-bold text-xs transition-colors shadow-md"
+                    >
+                      Approve & Dispatch
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (

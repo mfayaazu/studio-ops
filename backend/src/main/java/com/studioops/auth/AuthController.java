@@ -21,9 +21,9 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<Void> signup(@Valid @RequestBody SignupRequest request) {
-        authService.signup(request);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<com.studioops.auth.dto.SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
+        com.studioops.auth.dto.SignupResponse response = authService.signup(request);
+        return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/login")

@@ -4,6 +4,10 @@ import com.studioops.client.ClientRepository;
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantContext;
 import com.studioops.studio.StudioRepository;
+import com.studioops.event.Event;
+import com.studioops.event.EventRepository;
+import com.studioops.event.EventStatus;
+import com.studioops.event.EventType;
 import com.studioops.project.dto.ProjectCreateRequest;
 import com.studioops.project.dto.ProjectResponse;
 import com.studioops.project.dto.ProjectUpdateRequest;
@@ -20,12 +24,14 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ClientRepository clientRepository;
     private final StudioRepository studioRepository;
+    private final EventRepository eventRepository;
     private final TenantContext tenantContext;
 
-    public ProjectService(ProjectRepository projectRepository, ClientRepository clientRepository, StudioRepository studioRepository, TenantContext tenantContext) {
+    public ProjectService(ProjectRepository projectRepository, ClientRepository clientRepository, StudioRepository studioRepository, EventRepository eventRepository, TenantContext tenantContext) {
         this.projectRepository = projectRepository;
         this.clientRepository = clientRepository;
         this.studioRepository = studioRepository;
+        this.eventRepository = eventRepository;
         this.tenantContext = tenantContext;
     }
 
@@ -146,5 +152,51 @@ public class ProjectService {
         Project project = projectRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
         projectRepository.delete(project);
+    }
+
+    /**
+     * Idempotent repair action: creates a linked Event for a project that already exists
+     * but was converted before automatic event creation was in place.
+     * Safe to call multiple times — skips if event already exists.
+     * Returns a message describing what happened.
+     */
+    public String scheduleEventForProject(UUID id) {
+        UUID studioId = tenantContext.getCurrentStudioId();
+        Project project = projectRepository.findByIdAndStudioId(id, studioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
+
+        if (project.getStartDate() == null) {
+            return "Project has no event date set. Update the project start date first.";
+        }
+
+        // Idempotency check: skip if event already exists for this project
+        if (!eventRepository.findByProjectIdAndStudioId(id, studioId).isEmpty()) {
+            return "Event already exists for this project.";
+        }
+
+        Event event = new Event();
+        event.setProjectId(project.getId());
+        event.setStudioId(studioId);
+        event.setTitle(project.getTitle());
+        event.setType(parseEventType(project.getProjectType()));
+        event.setEventDate(project.getStartDate());
+        event.setStartTime(java.time.LocalTime.of(9, 0));
+        event.setEndTime(java.time.LocalTime.of(18, 0));
+        event.setVenueName("TBD");
+        event.setCity("TBD");
+        event.setAddress("TBD");
+        event.setStatus(EventStatus.SCHEDULED);
+        event.setNotes("Scheduled from project repair action");
+        eventRepository.save(event);
+        return "Event scheduled successfully for project: " + project.getTitle();
+    }
+
+    private EventType parseEventType(String value) {
+        if (value == null) return EventType.OTHER;
+        try {
+            return EventType.valueOf(value.toUpperCase().trim());
+        } catch (IllegalArgumentException e) {
+            return EventType.OTHER;
+        }
     }
 }

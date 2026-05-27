@@ -18,6 +18,10 @@ public class EmployeeResponse {
     private Instant updatedAt;
     private UUID studioId;
 
+    private String loginEmail;
+    private String userRole;
+    private boolean loginEnabled;
+
     public EmployeeResponse() {
     }
 
@@ -134,5 +138,29 @@ public class EmployeeResponse {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getLoginEmail() {
+        return loginEmail;
+    }
+
+    public void setLoginEmail(String loginEmail) {
+        this.loginEmail = loginEmail;
+    }
+
+    public String getUserRole() {
+        return userRole;
+    }
+
+    public void setUserRole(String userRole) {
+        this.userRole = userRole;
+    }
+
+    public boolean isLoginEnabled() {
+        return loginEnabled;
+    }
+
+    public void setLoginEnabled(boolean loginEnabled) {
+        this.loginEnabled = loginEnabled;
     }
 }

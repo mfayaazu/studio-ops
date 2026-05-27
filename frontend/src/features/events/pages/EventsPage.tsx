@@ -262,18 +262,26 @@ export const EventsPage: React.FC = () => {
         <div className="bg-[#0d1424] border border-slate-800/80 rounded-xl p-12 text-center text-slate-500 font-mono animate-pulse">
           Loading scheduled events...
         </div>
+      ) : viewMode === 'calendar' ? (
+        <div className="space-y-4">
+          {events.length === 0 && (
+            <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-4 rounded-xl flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+              <span className="text-sm font-medium">No scheduled events yet. Confirm a project or create an event to allocate resources.</span>
+            </div>
+          )}
+          <EventCalendar
+            events={events}
+            onSelectEvent={handleSelectEvent}
+            onCreateEventForDate={projects.length > 0 ? openCreateModalForDate : undefined}
+          />
+        </div>
       ) : events.length === 0 ? (
         <div className="bg-[#0d1424] border border-slate-800/80 rounded-xl p-16 text-center">
           <CalendarIcon className="h-10 w-10 text-slate-600 mx-auto mb-3" />
           <p className="text-slate-400 text-sm font-semibold">No events found</p>
           <p className="text-slate-500 text-xs mt-1">Try clearing filters or schedule a new event shoot</p>
         </div>
-      ) : viewMode === 'calendar' ? (
-        <EventCalendar
-          events={events}
-          onSelectEvent={handleSelectEvent}
-          onCreateEventForDate={projects.length > 0 ? openCreateModalForDate : undefined}
-        />
       ) : (
         <div className="bg-[#0d1424] border border-slate-800/80 rounded-xl overflow-hidden shadow-lg">
           <EventList

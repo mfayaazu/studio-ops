@@ -25,3 +25,12 @@ export interface CurrentUserResponse {
   authenticated: boolean;
   user: UserResponse | null;
 }
+
+export interface SignupResponse {
+  message: string;
+  studioId: string;
+  studioName: string;
+  studioStatus: string;
+  ownerEmail: string;
+}
+

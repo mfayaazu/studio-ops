@@ -235,7 +235,33 @@ class FollowUpTaskServiceTest {
         assertEquals(FollowUpTaskStatus.SENT, response.getStatus());
         assertNotNull(response.getSentAt());
 
-        verify(communicationLogService, times(1)).createLog(any(CommunicationLogCreateRequest.class));
+        verify(communicationLogService, times(1)).createLog(argThat(logReq -> 
+            logReq.getProvider() == com.studioops.followup.log.CommunicationProvider.MANUAL_DEMO
+        ));
+    }
+
+    @Test
+    void approveTask_Whatsapp_Success() {
+        UUID taskId = UUID.randomUUID();
+        FollowUpTask task = new FollowUpTask();
+        task.setId(taskId);
+        task.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        task.setStatus(FollowUpTaskStatus.PENDING_APPROVAL);
+        task.setChannel(CommunicationChannel.WHATSAPP);
+        task.setRecipient("1234567890");
+        task.setSubject("Approve WhatsApp Test");
+        task.setMessageBody("Approved body");
+
+        when(followUpTaskRepository.findByIdAndStudioId(taskId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(task));
+        when(followUpTaskRepository.save(any(FollowUpTask.class))).thenReturn(task);
+
+        FollowUpTaskResponse response = followUpTaskService.approveTask(taskId);
+        assertEquals(FollowUpTaskStatus.SENT, response.getStatus());
+        assertNotNull(response.getSentAt());
+
+        verify(communicationLogService, times(1)).createLog(argThat(logReq -> 
+            logReq.getProvider() == com.studioops.followup.log.CommunicationProvider.MANUAL_WHATSAPP
+        ));
     }
 
     @Test

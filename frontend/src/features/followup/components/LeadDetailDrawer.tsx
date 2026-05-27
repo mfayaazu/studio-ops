@@ -22,7 +22,7 @@ interface LeadDetailDrawerProps {
     lostReason?: LeadLostReason,
     notes?: string
   ) => Promise<void>;
-  onConvertToProject?: (leadId: string) => Promise<void>;
+  onConvertToProject?: (leadId: string) => Promise<string>;
   quotations?: Quotation[];
   onCreateQuotation?: (lead: Lead) => void;
   onEditQuotation?: (qtn: Quotation) => void;
@@ -201,8 +201,8 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
     setErrorMessage(null);
     setIsConverting(true);
     try {
-      await onConvertToProject(lead.id);
-      setSimulationLog(`Successfully converted lead to project!`);
+      const msg = await onConvertToProject(lead.id);
+      setSimulationLog(msg || `Successfully converted lead to project!`);
       setIsConfirmingConvert(false);
     } catch (err: any) {
       console.error('Failed to convert lead to project:', err);

@@ -1,6 +1,7 @@
 import { useRouter } from '../../app/router';
 import type { AppRoute } from '../../app/router';
 import { useAuth } from '../../features/auth/AuthProvider';
+import { canAccessRoute } from '../../features/auth/permissions';
 
 import {
   Activity,
@@ -38,6 +39,8 @@ export const Sidebar: React.FC = () => {
     { id: 'quotations' as AppRoute, label: 'Quotations', icon: FileText },
   ];
 
+  const allowedNavItems = navItems.filter(item => canAccessRoute(user?.role || 'EMPLOYEE', item.id));
+
   return (
     <aside className="w-64 bg-[#0d1424] border-r border-slate-800/80 flex flex-col justify-between h-screen sticky top-0">
       <div>
@@ -60,7 +63,7 @@ export const Sidebar: React.FC = () => {
             Workspace
           </div>
 
-          {navItems.map((item) => {
+          {allowedNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentRoute === item.id;
             return (

@@ -11,6 +11,10 @@ import com.studioops.project.Project;
 import com.studioops.project.BookingStatus;
 import com.studioops.project.PaymentStatus;
 import com.studioops.project.ProjectStatus;
+import com.studioops.event.Event;
+import com.studioops.event.EventRepository;
+import com.studioops.event.EventType;
+import com.studioops.event.EventStatus;
 import com.studioops.lead.dto.LeadCreateRequest;
 import com.studioops.lead.dto.LeadResponse;
 import com.studioops.lead.dto.LeadUpdateRequest;
@@ -43,6 +47,8 @@ class LeadServiceTest {
     private ClientRepository clientRepository;
     @Mock
     private ProjectRepository projectRepository;
+    @Mock
+    private EventRepository eventRepository;
     @Mock
     private TenantContext tenantContext;
 
@@ -269,7 +275,7 @@ class LeadServiceTest {
         assertEquals(mockProjectId, response.getProjectId());
         assertEquals(LeadPipelineStage.CONFIRMED, response.getPipelineStage());
         assertNotNull(response.getConvertedAt());
-        assertEquals("Lead converted to project successfully", response.getMessage());
+        assertEquals("Project created and added to Event Calendar.", response.getMessage());
 
         // Verify correct properties mapped on created Client
         verify(clientRepository, times(1)).save(argThat(client -> 
@@ -291,6 +297,21 @@ class LeadServiceTest {
             project.getStartDate().equals(LocalDate.of(2026, 10, 15)) &&
             project.getEndDate().equals(LocalDate.of(2026, 10, 15)) &&
             project.getNotes().equals("Project note")
+        ));
+
+        // Verify Event is created
+        verify(eventRepository, times(1)).save(argThat(event -> 
+            event.getProjectId().equals(mockProjectId) &&
+            event.getStudioId().equals(TenantConstants.DEFAULT_STUDIO_ID) &&
+            event.getTitle().equals("Custom Project Title") &&
+            event.getType().equals(EventType.WEDDING) &&
+            event.getEventDate().equals(LocalDate.of(2026, 10, 15)) &&
+            event.getStartTime().equals(java.time.LocalTime.of(9, 0)) &&
+            event.getEndTime().equals(java.time.LocalTime.of(18, 0)) &&
+            event.getVenueName().equals("TBD") &&
+            event.getCity().equals("TBD") &&
+            event.getAddress().equals("TBD") &&
+            event.getStatus().equals(EventStatus.SCHEDULED)
         ));
     }
 
@@ -328,6 +349,7 @@ class LeadServiceTest {
         assertNotNull(response);
         assertEquals(existingClientId, response.getClientId());
         assertEquals(mockProjectId, response.getProjectId());
+        assertEquals("Project created and added to Event Calendar.", response.getMessage());
 
         // Verify default mappings when request parameters are absent
         verify(projectRepository, times(1)).save(argThat(project -> 
@@ -339,6 +361,21 @@ class LeadServiceTest {
             project.getPaymentStatus().equals(PaymentStatus.UNPAID) &&
             project.getStatus().equals(ProjectStatus.LEAD) &&
             project.getStartDate().equals(LocalDate.of(2026, 11, 20))
+        ));
+
+        // Verify Event is created
+        verify(eventRepository, times(1)).save(argThat(event -> 
+            event.getProjectId().equals(mockProjectId) &&
+            event.getStudioId().equals(TenantConstants.DEFAULT_STUDIO_ID) &&
+            event.getTitle().equals("Portrait - Jane Doe") &&
+            event.getType().equals(EventType.OTHER) &&
+            event.getEventDate().equals(LocalDate.of(2026, 11, 20)) &&
+            event.getStartTime().equals(java.time.LocalTime.of(9, 0)) &&
+            event.getEndTime().equals(java.time.LocalTime.of(18, 0)) &&
+            event.getVenueName().equals("TBD") &&
+            event.getCity().equals("TBD") &&
+            event.getAddress().equals("TBD") &&
+            event.getStatus().equals(EventStatus.SCHEDULED)
         ));
 
         // Client Repository save should not be called since client existed
@@ -379,6 +416,9 @@ class LeadServiceTest {
         verify(clientRepository, times(1)).save(argThat(client -> 
             client.getPhone().equals("UNKNOWN")
         ));
+
+        // Verify Event is created
+        verify(eventRepository, times(1)).save(any(Event.class));
     }
 
     @Test
@@ -481,6 +521,89 @@ class LeadServiceTest {
                 null, null, null, "Notes"
         );
         assertThrows(IllegalArgumentException.class, () -> leadService.createLead(request));
+    }
+
+    @Test
+    void convertLeadToProject_NoEventDate_CreatesProjectOnly_WarningMessage() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = new Lead();
+        lead.setId(leadId);
+        lead.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        lead.setClientName("John Doe");
+        lead.setPhone("+1234567890");
+        lead.setEventDate(null); // No event date
+
+        LeadConvertToProjectRequest request = new LeadConvertToProjectRequest();
+
+        when(leadRepository.findByIdAndStudioId(leadId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(lead));
+        when(projectRepository.findByProjectCode(any(String.class))).thenReturn(Optional.empty());
+
+        // Mock saved Client
+        UUID mockClientId = UUID.randomUUID();
+        when(clientRepository.save(any(Client.class))).thenAnswer(invocation -> {
+            Client c = invocation.getArgument(0);
+            c.setId(mockClientId);
+            return c;
+        });
+
+        // Mock saved Project
+        UUID mockProjectId = UUID.randomUUID();
+        when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
+            Project p = invocation.getArgument(0);
+            p.setId(mockProjectId);
+            return p;
+        });
+
+        when(leadRepository.save(any(Lead.class))).thenReturn(lead);
+
+        LeadConvertToProjectResponse response = leadService.convertLeadToProject(leadId, request);
+
+        assertNotNull(response);
+        assertEquals("Project created. Add event date to schedule resources.", response.getMessage());
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+    @Test
+    void convertLeadToProject_DuplicateEvent_PreventsCreation() {
+        UUID leadId = UUID.randomUUID();
+        Lead lead = new Lead();
+        lead.setId(leadId);
+        lead.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        lead.setClientName("John Doe");
+        lead.setPhone("+1234567890");
+        lead.setEventDate(LocalDate.of(2026, 10, 15));
+
+        LeadConvertToProjectRequest request = new LeadConvertToProjectRequest();
+
+        when(leadRepository.findByIdAndStudioId(leadId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(lead));
+        when(projectRepository.findByProjectCode(any(String.class))).thenReturn(Optional.empty());
+
+        // Mock saved Client
+        UUID mockClientId = UUID.randomUUID();
+        when(clientRepository.save(any(Client.class))).thenAnswer(invocation -> {
+            Client c = invocation.getArgument(0);
+            c.setId(mockClientId);
+            return c;
+        });
+
+        // Mock saved Project
+        UUID mockProjectId = UUID.randomUUID();
+        when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
+            Project p = invocation.getArgument(0);
+            p.setId(mockProjectId);
+            return p;
+        });
+
+        when(leadRepository.save(any(Lead.class))).thenReturn(lead);
+        // Mock existing event
+        when(eventRepository.findByProjectIdAndStudioId(mockProjectId, TenantConstants.DEFAULT_STUDIO_ID))
+                .thenReturn(List.of(new Event()));
+
+        LeadConvertToProjectResponse response = leadService.convertLeadToProject(leadId, request);
+
+        assertNotNull(response);
+        assertEquals("Project created and added to Event Calendar.", response.getMessage());
+        verify(eventRepository, never()).save(any(Event.class));
     }
 }
 

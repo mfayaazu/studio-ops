@@ -1,6 +1,7 @@
 package com.studioops.employee;
 
 import com.studioops.employee.dto.EmployeeResponse;
+import com.studioops.user.User;
 
 public class EmployeeMapper {
 
@@ -20,6 +21,18 @@ public class EmployeeMapper {
         response.setCreatedAt(employee.getCreatedAt());
         response.setUpdatedAt(employee.getUpdatedAt());
         response.setStudioId(employee.getStudioId());
+        return response;
+    }
+
+    public static EmployeeResponse toResponse(Employee employee, User user) {
+        EmployeeResponse response = toResponse(employee);
+        if (response != null && user != null) {
+            response.setLoginEmail(user.getEmail());
+            response.setUserRole(user.getRole().name());
+            response.setLoginEnabled(true);
+        } else if (response != null) {
+            response.setLoginEnabled(false);
+        }
         return response;
     }
 }

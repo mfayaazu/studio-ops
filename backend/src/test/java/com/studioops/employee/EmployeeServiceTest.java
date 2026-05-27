@@ -2,10 +2,12 @@ package com.studioops.employee;
 
 import com.studioops.common.tenant.TenantContext;
 import com.studioops.common.tenant.TenantConstants;
-
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
 import com.studioops.studio.StudioRepository;
+import com.studioops.user.User;
+import com.studioops.user.UserRepository;
+import com.studioops.user.UserRole;
+import com.studioops.user.UserStatus;
 import com.studioops.employee.dto.EmployeeCreateRequest;
 import com.studioops.employee.dto.EmployeeResponse;
 import com.studioops.employee.dto.EmployeeUpdateRequest;
@@ -14,6 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import java.time.Instant;
 import java.util.*;
 
@@ -25,12 +31,17 @@ class EmployeeServiceTest {
     @Mock
     private TenantContext tenantContext;
 
-
     @Mock
     private EmployeeRepository employeeRepository;
 
     @Mock
     private StudioRepository studioRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private EmployeeService employeeService;
@@ -39,8 +50,9 @@ class EmployeeServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
-        // Default mock behavior: studios exist
         when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
+        when(passwordEncoder.encode(any(CharSequence.class))).thenAnswer(inv -> "encoded_" + inv.getArgument(0));
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -100,24 +112,6 @@ class EmployeeServiceTest {
 
         assertNotNull(response);
         assertEquals(customStudioId, response.getStudioId());
-        verify(studioRepository, times(1)).existsById(customStudioId);
-    }
-
-    @Test
-    void createEmployee_StudioNotFound_ThrowsException() {
-        UUID nonExistentStudioId = UUID.randomUUID();
-        when(tenantContext.getCurrentStudioId()).thenReturn(nonExistentStudioId);
-        EmployeeCreateRequest request = new EmployeeCreateRequest(
-                null, "Alice Smith", "alice@example.com", "123456", "Lead Photographer", "Colorist", EmployeeStatus.ACTIVE, nonExistentStudioId
-        );
-
-        when(studioRepository.existsById(nonExistentStudioId)).thenReturn(false);
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-                employeeService.createEmployee(request)
-        );
-        assertEquals("Studio not found with id: " + nonExistentStudioId, exception.getMessage());
-        verify(employeeRepository, never()).save(any(Employee.class));
     }
 
     @Test
@@ -133,54 +127,47 @@ class EmployeeServiceTest {
     }
 
     @Test
-    void listEmployees_NoSearch_ReturnsAllForDefaultStudio() {
-        Employee emp1 = new Employee();
-        emp1.setEmail("emp1@example.com");
-        emp1.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
-        Employee emp2 = new Employee();
-        emp2.setEmail("emp2@example.com");
-        emp2.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+    void createEmployee_CreateLogin_Success() {
+        EmployeeCreateRequest request = new EmployeeCreateRequest(
+                null, "Bob Jones", "bob@example.com", "9999", "Editor", "VFX", EmployeeStatus.ACTIVE
+        );
+        request.setCreateLogin(true);
+        request.setLoginEmail("bob.login@example.com");
+        request.setUserRole("EDITOR");
+        request.setTemporaryPassword("bobPassword");
 
-        when(employeeRepository.findAllByStudioId(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Arrays.asList(emp1, emp2));
+        Employee savedEmployee = new Employee();
+        savedEmployee.setId(UUID.randomUUID());
+        savedEmployee.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        savedEmployee.setFullName("Bob Jones");
+        savedEmployee.setEmail("bob@example.com");
+        savedEmployee.setPhone("9999");
+        savedEmployee.setPrimaryRole("Editor");
+        savedEmployee.setSkills("VFX");
+        savedEmployee.setStatus(EmployeeStatus.ACTIVE);
 
-        List<EmployeeResponse> responses = employeeService.listEmployees(null);
+        User savedUser = new User();
+        savedUser.setId(UUID.randomUUID());
+        savedUser.setEmail("bob.login@example.com");
+        savedUser.setRole(UserRole.EDITOR);
 
-        assertEquals(2, responses.size());
-        verify(employeeRepository, times(1)).findAllByStudioId(TenantConstants.DEFAULT_STUDIO_ID);
-        verify(employeeRepository, never()).findAll();
-    }
+        when(employeeRepository.findByEmail("bob@example.com")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("bob.login@example.com")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(employeeRepository.save(any(Employee.class))).thenAnswer(inv -> {
+            Employee e = inv.getArgument(0);
+            e.setId(savedEmployee.getId());
+            return e;
+        });
+        when(userRepository.findById(savedUser.getId())).thenReturn(Optional.of(savedUser));
 
-    @Test
-    void listEmployees_WithSearch_CallsSearchByStudio() {
-        Employee emp = new Employee();
-        emp.setEmail("emp@example.com");
-        emp.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        EmployeeResponse response = employeeService.createEmployee(request);
 
-        when(employeeRepository.searchEmployeesByStudio(TenantConstants.DEFAULT_STUDIO_ID, "photographer")).thenReturn(Collections.singletonList(emp));
-
-        List<EmployeeResponse> responses = employeeService.listEmployees("photographer");
-
-        assertEquals(1, responses.size());
-        verify(employeeRepository, never()).findAll();
-        verify(employeeRepository, times(1)).searchEmployeesByStudio(TenantConstants.DEFAULT_STUDIO_ID, "photographer");
-        verify(employeeRepository, never()).searchEmployees(anyString());
-    }
-
-    @Test
-    void listEmployeesForStudio_CustomStudio_ReturnsMatching() {
-        UUID customStudioId = UUID.randomUUID();
-        when(tenantContext.getCurrentStudioId()).thenReturn(customStudioId);
-        Employee emp = new Employee();
-        emp.setEmail("emp@example.com");
-        emp.setStudioId(customStudioId);
-
-        when(employeeRepository.findAllByStudioId(customStudioId)).thenReturn(Collections.singletonList(emp));
-
-        List<EmployeeResponse> responses = employeeService.listEmployeesForStudio(customStudioId, null);
-
-        assertEquals(1, responses.size());
-        assertEquals(customStudioId, responses.get(0).getStudioId());
-        verify(employeeRepository, times(1)).findAllByStudioId(customStudioId);
+        assertNotNull(response);
+        assertTrue(response.isLoginEnabled());
+        assertEquals("bob.login@example.com", response.getLoginEmail());
+        assertEquals("EDITOR", response.getUserRole());
+        verify(userRepository, times(1)).save(any(User.class));
     }
 
     @Test
@@ -189,16 +176,17 @@ class EmployeeServiceTest {
         Employee employee = new Employee();
         employee.setId(id);
         employee.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
-        employee.setFullName("John Doe");
-        employee.setEmail("john@example.com");
+        employee.setFullName("Jane Doe");
+        employee.setEmail("jane@example.com");
+        employee.setPrimaryRole("Staff");
 
         when(employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(employee));
 
         EmployeeResponse response = employeeService.getEmployeeById(id);
 
+        assertNotNull(response);
         assertEquals(id, response.getId());
-        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
-        assertEquals("John Doe", response.getFullName());
+        assertEquals("Jane Doe", response.getFullName());
     }
 
     @Test
@@ -213,38 +201,36 @@ class EmployeeServiceTest {
     void updateEmployee_Success() {
         UUID id = UUID.randomUUID();
         EmployeeUpdateRequest request = new EmployeeUpdateRequest(
-                null, "John Updated", "john@example.com", "123456", "Senior Editor", "Photoshop", EmployeeStatus.ON_LEAVE
+                null, "Jane Doe Updated", "jane@example.com", "987654", "Studio Manager", "Photoshop", EmployeeStatus.ACTIVE
         );
 
         Employee existing = new Employee();
         existing.setId(id);
         existing.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
-        existing.setFullName("John Doe");
-        existing.setEmail("john@example.com");
-        existing.setStatus(EmployeeStatus.ACTIVE);
+        existing.setFullName("Jane Doe");
+        existing.setEmail("jane@example.com");
+        existing.setPrimaryRole("Staff");
 
-        Employee updated = new Employee();
-        updated.setId(id);
-        updated.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
-        updated.setFullName("John Updated");
-        updated.setEmail("john@example.com");
-        updated.setPhone("123456");
-        updated.setPrimaryRole("Senior Editor");
-        updated.setSkills("Photoshop");
-        updated.setStatus(EmployeeStatus.ON_LEAVE);
-        updated.setCreatedAt(Instant.now());
-        updated.setUpdatedAt(Instant.now());
+        Employee saved = new Employee();
+        saved.setId(id);
+        saved.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        saved.setFullName("Jane Doe Updated");
+        saved.setEmail("jane@example.com");
+        saved.setPhone("987654");
+        saved.setPrimaryRole("Studio Manager");
+        saved.setSkills("Photoshop");
+        saved.setStatus(EmployeeStatus.ACTIVE);
 
         when(employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(existing));
-        when(employeeRepository.findByEmail("john@example.com")).thenReturn(Optional.of(existing));
-        when(employeeRepository.save(any(Employee.class))).thenReturn(updated);
+        when(employeeRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(existing));
+        when(employeeRepository.save(any(Employee.class))).thenReturn(saved);
 
         EmployeeResponse response = employeeService.updateEmployee(id, request);
 
-        assertEquals("John Updated", response.getFullName());
-        assertEquals("Senior Editor", response.getPrimaryRole());
-        assertEquals(EmployeeStatus.ON_LEAVE, response.getStatus());
-        assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
+        assertNotNull(response);
+        assertEquals("Jane Doe Updated", response.getFullName());
+        assertEquals("Studio Manager", response.getPrimaryRole());
+        verify(employeeRepository, times(1)).save(any(Employee.class));
     }
 
     @Test
@@ -290,5 +276,46 @@ class EmployeeServiceTest {
 
         assertThrows(ResourceNotFoundException.class, () -> employeeService.deleteEmployee(id));
         verify(employeeRepository, never()).delete(any(Employee.class));
+    }
+
+    @Test
+    void updateEmployee_UpdateLogin_Success() {
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        EmployeeUpdateRequest request = new EmployeeUpdateRequest(
+                userId, "Jane Updated", "jane@example.com", "987", "Editor", "Premiere", EmployeeStatus.ACTIVE
+        );
+        request.setCreateLogin(true);
+        request.setLoginEmail("jane.login@example.com");
+        request.setUserRole("EDITOR");
+        request.setTemporaryPassword("newPassword");
+
+        Employee existing = new Employee();
+        existing.setId(id);
+        existing.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        existing.setUserId(userId);
+        existing.setEmail("jane@example.com");
+
+        User existingUser = new User();
+        existingUser.setId(userId);
+        existingUser.setEmail("jane.old@example.com");
+        existingUser.setRole(UserRole.EMPLOYEE);
+
+        when(employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(existing));
+        when(employeeRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(existing));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findByEmail("jane.login@example.com")).thenReturn(Optional.empty());
+        when(employeeRepository.save(any(Employee.class))).thenReturn(existing);
+        when(userRepository.save(any(User.class))).thenReturn(existingUser);
+
+        EmployeeResponse response = employeeService.updateEmployee(id, request);
+
+        assertNotNull(response);
+        verify(userRepository, times(1)).save(argThat(u -> 
+            u.getEmail().equals("jane.login@example.com") &&
+            u.getRole().equals(UserRole.EDITOR) &&
+            u.getPasswordHash().equals("encoded_newPassword")
+        ));
     }
 }

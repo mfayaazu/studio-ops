@@ -11,6 +11,9 @@ export interface Employee {
   status: EmployeeStatus;
   createdAt: string;
   updatedAt: string;
+  loginEmail?: string;
+  userRole?: string;
+  loginEnabled?: boolean;
 }
 
 // Keep EmployeeResponse as a type alias for compatibility
@@ -24,6 +27,10 @@ export interface EmployeeCreateRequest {
   primaryRole: string;
   skills?: string;
   status: EmployeeStatus;
+  createLogin?: boolean;
+  loginEmail?: string;
+  userRole?: string;
+  temporaryPassword?: string;
 }
 
 export interface EmployeeUpdateRequest {
@@ -34,4 +41,8 @@ export interface EmployeeUpdateRequest {
   primaryRole: string;
   skills?: string;
   status: EmployeeStatus;
+  createLogin?: boolean;
+  loginEmail?: string;
+  userRole?: string;
+  temporaryPassword?: string;
 }

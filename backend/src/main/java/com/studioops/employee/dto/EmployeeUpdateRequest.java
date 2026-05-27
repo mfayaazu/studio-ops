@@ -30,6 +30,11 @@ public class EmployeeUpdateRequest {
 
     private EmployeeStatus status;
 
+    private Boolean createLogin;
+    private String loginEmail;
+    private String userRole;
+    private String temporaryPassword;
+
     public EmployeeUpdateRequest() {
     }
 
@@ -97,5 +102,37 @@ public class EmployeeUpdateRequest {
 
     public void setStatus(EmployeeStatus status) {
         this.status = status;
+    }
+
+    public Boolean getCreateLogin() {
+        return createLogin;
+    }
+
+    public void setCreateLogin(Boolean createLogin) {
+        this.createLogin = createLogin;
+    }
+
+    public String getLoginEmail() {
+        return loginEmail;
+    }
+
+    public void setLoginEmail(String loginEmail) {
+        this.loginEmail = loginEmail;
+    }
+
+    public String getUserRole() {
+        return userRole;
+    }
+
+    public void setUserRole(String userRole) {
+        this.userRole = userRole;
+    }
+
+    public String getTemporaryPassword() {
+        return temporaryPassword;
+    }
+
+    public void setTemporaryPassword(String temporaryPassword) {
+        this.temporaryPassword = temporaryPassword;
     }
 }

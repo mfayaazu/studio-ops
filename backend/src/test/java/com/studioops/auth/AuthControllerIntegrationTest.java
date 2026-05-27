@@ -190,7 +190,11 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(post("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(signupRequest)))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.message").value("Beta workspace request submitted"))
+                .andExpect(jsonPath("$.studioName").value("Onboarding Test Studio"))
+                .andExpect(jsonPath("$.studioStatus").value("PENDING_APPROVAL"))
+                .andExpect(jsonPath("$.ownerEmail").value("onboarding@test.local"));
 
         // Verify user and studio created
         User user = userRepository.findByEmail("onboarding@test.local")

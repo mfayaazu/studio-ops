@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -53,4 +54,15 @@ public class ProjectController {
         projectService.deleteProject(id);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * Repair action: schedules a missing Event for an already-converted project.
+     * Idempotent — safe to call multiple times.
+     */
+    @PostMapping("/{id}/schedule-event")
+    public ResponseEntity<Map<String, String>> scheduleEvent(@PathVariable("id") UUID id) {
+        String message = projectService.scheduleEventForProject(id);
+        return ResponseEntity.ok(Map.of("message", message));
+    }
 }
+

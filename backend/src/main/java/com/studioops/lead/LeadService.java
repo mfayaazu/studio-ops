@@ -10,6 +10,10 @@ import com.studioops.project.ProjectRepository;
 import com.studioops.project.BookingStatus;
 import com.studioops.project.PaymentStatus;
 import com.studioops.project.ProjectStatus;
+import com.studioops.event.Event;
+import com.studioops.event.EventRepository;
+import com.studioops.event.EventType;
+import com.studioops.event.EventStatus;
 import com.studioops.lead.dto.LeadCreateRequest;
 import com.studioops.lead.dto.LeadResponse;
 import com.studioops.lead.dto.LeadUpdateRequest;
@@ -30,6 +34,7 @@ public class LeadService {
     private final StudioRepository studioRepository;
     private final ClientRepository clientRepository;
     private final ProjectRepository projectRepository;
+    private final EventRepository eventRepository;
     private final TenantContext tenantContext;
 
     public LeadService(
@@ -37,11 +42,13 @@ public class LeadService {
             StudioRepository studioRepository,
             ClientRepository clientRepository,
             ProjectRepository projectRepository,
+            EventRepository eventRepository,
             TenantContext tenantContext) {
         this.leadRepository = leadRepository;
         this.studioRepository = studioRepository;
         this.clientRepository = clientRepository;
         this.projectRepository = projectRepository;
+        this.eventRepository = eventRepository;
         this.tenantContext = tenantContext;
     }
 
@@ -253,7 +260,28 @@ public class LeadService {
 
         Project savedProject = projectRepository.save(project);
 
-        // 3. Update Lead
+        // 3. Create Event automatically if eventDate is present and no event already exists
+        if (lead.getEventDate() != null) {
+            List<Event> existingEvents = eventRepository.findByProjectIdAndStudioId(savedProject.getId(), lead.getStudioId());
+            if (existingEvents.isEmpty()) {
+                Event event = new Event();
+                event.setProjectId(savedProject.getId());
+                event.setStudioId(lead.getStudioId());
+                event.setTitle(savedProject.getTitle());
+                event.setType(parseEventType(lead.getEventType()));
+                event.setEventDate(lead.getEventDate());
+                event.setStartTime(java.time.LocalTime.of(9, 0));
+                event.setEndTime(java.time.LocalTime.of(18, 0));
+                event.setVenueName("TBD");
+                event.setCity(lead.getCity() != null && !lead.getCity().trim().isEmpty() ? lead.getCity().trim() : "TBD");
+                event.setAddress("TBD");
+                event.setStatus(EventStatus.SCHEDULED);
+                event.setNotes("Created automatically from Lead conversion");
+                eventRepository.save(event);
+            }
+        }
+
+        // 4. Update Lead
         lead.setClientId(resolvedClientId);
         lead.setProjectId(savedProject.getId());
         lead.setPipelineStage(LeadPipelineStage.CONFIRMED);
@@ -264,13 +292,28 @@ public class LeadService {
         // TODO: Cancel active follow-up tasks linked to lead once task-lead linkage is implemented.
         // Currently, FollowUpTask doesn't have a leadId/projectId column and we avoid broad cancellation by clientId.
 
+        String responseMessage = lead.getEventDate() != null 
+                ? "Project created and added to Event Calendar."
+                : "Project created. Add event date to schedule resources.";
+
         return new LeadConvertToProjectResponse(
                 savedLead.getId(),
                 resolvedClientId,
                 savedProject.getId(),
                 savedLead.getPipelineStage(),
                 savedLead.getConvertedAt(),
-                "Lead converted to project successfully"
+                responseMessage
         );
+    }
+
+    private EventType parseEventType(String value) {
+        if (value == null) {
+            return EventType.OTHER;
+        }
+        try {
+            return EventType.valueOf(value.toUpperCase().trim());
+        } catch (IllegalArgumentException e) {
+            return EventType.OTHER;
+        }
     }
 }

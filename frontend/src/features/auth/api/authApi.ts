@@ -1,5 +1,5 @@
 import { ApiClient } from '../../../lib/api-client';
-import type { LoginResponse, CurrentUserResponse } from '../types';
+import type { LoginResponse, CurrentUserResponse, SignupResponse } from '../types';
 
 /**
  * Sends a login request with credentials.
@@ -46,6 +46,6 @@ export async function logout(): Promise<void> {
 /**
  * Submits a registration request for a new studio.
  */
-export async function signup(data: any): Promise<void> {
-  return ApiClient.post<void>('/api/auth/signup', data);
+export async function signup(data: any): Promise<SignupResponse> {
+  return ApiClient.post<SignupResponse>('/api/auth/signup', data);
 }

@@ -13,6 +13,7 @@ import com.studioops.followup.log.dto.CommunicationLogCreateRequest;
 import com.studioops.followup.log.CommunicationDirection;
 import com.studioops.followup.log.CommunicationProvider;
 import com.studioops.followup.log.CommunicationLogStatus;
+import com.studioops.followup.template.CommunicationChannel;
 import com.studioops.followup.task.dto.FollowUpTaskCreateRequest;
 import com.studioops.followup.task.dto.FollowUpTaskResponse;
 import com.studioops.followup.task.dto.FollowUpTaskUpdateRequest;
@@ -196,7 +197,11 @@ public class FollowUpTaskService {
         logRequest.setRecipient(saved.getRecipient());
         logRequest.setSubject(saved.getSubject());
         logRequest.setMessageBody(saved.getMessageBody());
-        logRequest.setProvider(CommunicationProvider.MANUAL_DEMO);
+        if (saved.getChannel() == CommunicationChannel.WHATSAPP) {
+            logRequest.setProvider(CommunicationProvider.MANUAL_WHATSAPP);
+        } else {
+            logRequest.setProvider(CommunicationProvider.MANUAL_DEMO);
+        }
         logRequest.setStatus(CommunicationLogStatus.SENT);
         logRequest.setSentAt(saved.getSentAt());
 
