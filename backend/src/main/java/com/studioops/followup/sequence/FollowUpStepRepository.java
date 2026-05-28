@@ -16,4 +16,7 @@ public interface FollowUpStepRepository extends JpaRepository<FollowUpStep, UUID
     boolean existsBySequenceIdAndStepOrderAndIdNot(UUID sequenceId, Integer stepOrder, UUID id);
 
     List<FollowUpStep> findAllByStudioId(UUID studioId);
+
+    boolean existsByTemplateId(UUID templateId);
 }
+

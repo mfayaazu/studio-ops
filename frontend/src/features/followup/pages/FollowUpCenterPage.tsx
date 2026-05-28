@@ -3,7 +3,8 @@ import { mockLeads, mockSequenceSteps, mockTemplates, mockPendingFollowUps } fro
 import { FollowUpSummaryCards } from '../components/FollowUpSummaryCards';
 import { FollowUpPipelineBoard } from '../components/FollowUpPipelineBoard';
 import { FollowUpTimeline } from '../components/FollowUpTimeline';
-import { TemplateCardGrid } from '../components/TemplateCardGrid';
+import { MessageTemplatesPage } from './MessageTemplatesPage';
+import { useAuth } from '../../auth/AuthProvider';
 import { PendingFollowUpsPanel } from '../components/PendingFollowUpsPanel';
 import { LeadDetailDrawer } from '../components/LeadDetailDrawer';
 import type { 
@@ -104,6 +105,8 @@ const mapLeadResponseToLead = (response: LeadResponse): Lead => {
 };
 
 export const FollowUpCenterPage: React.FC = () => {
+  const { user } = useAuth();
+
   // Leads & UI states
   const [leads, setLeads] = useState<Lead[]>(mockLeads);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
@@ -116,6 +119,43 @@ export const FollowUpCenterPage: React.FC = () => {
   const [steps, setSteps] = useState<FollowUpStep[]>([]);
   const [dueTasks, setDueTasks] = useState<FollowUpTask[]>([]);
   const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
+
+  // Parse hash parameters to switch to correct tab on redirects
+  useEffect(() => {
+    const parseHashTab = () => {
+      const hash = window.location.hash;
+      if (hash.includes('?')) {
+        const queryString = hash.split('?')[1];
+        const params = new URLSearchParams(queryString);
+        const tabParam = params.get('tab');
+        if (tabParam === 'templates') {
+          setActiveTab('templates');
+        } else if (tabParam === 'sequence') {
+          setActiveTab('sequence');
+        } else if (tabParam === 'approvals') {
+          setActiveTab('approvals');
+        } else if (tabParam === 'pipeline') {
+          setActiveTab('pipeline');
+        }
+      }
+    };
+
+    parseHashTab();
+    window.addEventListener('hashchange', parseHashTab);
+    return () => window.removeEventListener('hashchange', parseHashTab);
+  }, []);
+
+  const refreshSequenceSteps = async () => {
+    const activeSeq = sequences.find(s => s.active) || sequences[0];
+    if (activeSeq) {
+      try {
+        const fetchedSteps = await fetchFollowUpSteps(activeSeq.id);
+        setSteps(fetchedSteps);
+      } catch (err) {
+        console.warn('Failed to refresh sequence steps:', err);
+      }
+    }
+  };
   
   const [apiStatus, setApiStatus] = useState<'connected' | 'offline' | 'empty'>('offline');
   const [leadApiStatus, setLeadApiStatus] = useState<'connected' | 'empty' | 'offline'>('offline');
@@ -721,10 +761,13 @@ export const FollowUpCenterPage: React.FC = () => {
             steps={steps} 
             templates={templates}
             sequenceName={sequences[0]?.name}
+            sequenceId={sequences[0]?.id}
+            userRole={user?.role}
+            onRefresh={refreshSequenceSteps}
           />
         )}
         {activeTab === 'templates' && !isLoading && (
-          <TemplateCardGrid templates={templates} />
+          <MessageTemplatesPage isEmbedded={true} />
         )}
         {activeTab === 'approvals' && !isLoading && (
           <PendingFollowUpsPanel 

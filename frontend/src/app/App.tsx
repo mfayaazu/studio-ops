@@ -68,6 +68,20 @@ const AccessRestrictedPage: React.FC<AccessRestrictedPageProps> = ({ role, route
   );
 };
 
+const RedirectToTemplatesTab: React.FC = () => {
+  const { navigateTo } = useRouter();
+  useEffect(() => {
+    window.location.hash = '#/follow-up-center?tab=templates';
+    navigateTo('follow-up-center');
+  }, [navigateTo]);
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
+      <Loader2 className="h-6 w-6 text-violet-500 animate-spin" />
+      <span className="text-slate-400 text-xs font-semibold">Redirecting to templates...</span>
+    </div>
+  );
+};
+
 const AppContent: React.FC = () => {
   const { currentRoute, navigateTo } = useRouter();
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -149,6 +163,8 @@ const AppContent: React.FC = () => {
         return <DeliverablesPage />;
       case 'follow-up-center':
         return <FollowUpCenterPage />;
+      case 'message-templates':
+        return <RedirectToTemplatesTab />;
       case 'post-production':
         return <PostProductionBoardPage />;
       case 'quotations':

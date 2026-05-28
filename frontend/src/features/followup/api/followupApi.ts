@@ -100,3 +100,37 @@ export const convertLeadToProject = async (
 ): Promise<LeadConvertToProjectResponse> => {
   return ApiClient.post<LeadConvertToProjectResponse>(`/api/leads/${id}/convert-to-project`, payload || {});
 };
+
+export const createMessageTemplate = async (
+  payload: Omit<MessageTemplate, 'id'>
+): Promise<MessageTemplate> => {
+  return ApiClient.post<MessageTemplate>('/api/message-templates', payload);
+};
+
+export const updateMessageTemplate = async (
+  id: string,
+  payload: Omit<MessageTemplate, 'id'>
+): Promise<MessageTemplate> => {
+  return ApiClient.put<MessageTemplate>(`/api/message-templates/${id}`, payload);
+};
+
+export const deleteMessageTemplate = async (id: string): Promise<void> => {
+  return ApiClient.delete<void>(`/api/message-templates/${id}`);
+};
+
+export const createFollowUpStep = async (
+  payload: Omit<FollowUpStep, 'id' | 'studioId'>
+): Promise<FollowUpStep> => {
+  return ApiClient.post<FollowUpStep>('/api/follow-up-steps', payload);
+};
+
+export const updateFollowUpStep = async (
+  id: string,
+  payload: Omit<FollowUpStep, 'id' | 'studioId' | 'sequenceId'>
+): Promise<FollowUpStep> => {
+  return ApiClient.put<FollowUpStep>(`/api/follow-up-steps/${id}`, payload);
+};
+
+export const deleteFollowUpStep = async (id: string): Promise<void> => {
+  return ApiClient.delete<void>(`/api/follow-up-steps/${id}`);
+};

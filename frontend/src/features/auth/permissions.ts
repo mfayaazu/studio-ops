@@ -5,16 +5,16 @@ export const ROLE_ROUTE_ACCESS: Record<UserRole, AppRoute[]> = {
   OWNER: [
     'dashboard', 'clients', 'projects', 'employees', 'events', 
     'availability', 'deliverables', 'backups', 'follow-up-center', 
-    'post-production', 'quotations'
+    'post-production', 'quotations', 'message-templates'
   ],
   ADMIN: [
     'dashboard', 'clients', 'projects', 'employees', 'events', 
     'availability', 'deliverables', 'backups', 'follow-up-center', 
-    'post-production', 'quotations'
+    'post-production', 'quotations', 'message-templates'
   ],
   PROJECT_MANAGER: [
     'dashboard', 'clients', 'projects', 'events', 
-    'deliverables', 'backups', 'post-production'
+    'deliverables', 'backups', 'follow-up-center', 'post-production'
   ],
   EDITOR: [
     'events', 'deliverables', 'post-production'

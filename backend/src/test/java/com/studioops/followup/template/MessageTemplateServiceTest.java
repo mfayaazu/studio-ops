@@ -2,10 +2,10 @@ package com.studioops.followup.template;
 
 import com.studioops.common.tenant.TenantContext;
 import com.studioops.common.tenant.TenantConstants;
-
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
 import com.studioops.studio.StudioRepository;
+import com.studioops.user.UserRepository;
+import com.studioops.followup.sequence.FollowUpStepRepository;
 import com.studioops.followup.template.dto.MessageTemplateCreateRequest;
 import com.studioops.followup.template.dto.MessageTemplateResponse;
 import com.studioops.followup.template.dto.MessageTemplateUpdateRequest;
@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.test.util.ReflectionTestUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -24,15 +25,21 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class MessageTemplateServiceTest {
+
     @Mock
     private TenantContext tenantContext;
-
 
     @Mock
     private MessageTemplateRepository messageTemplateRepository;
 
     @Mock
     private StudioRepository studioRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private FollowUpStepRepository followUpStepRepository;
 
     @InjectMocks
     private MessageTemplateService messageTemplateService;
@@ -41,8 +48,8 @@ class MessageTemplateServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
-        // By default assume studio exists
         when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
+        when(followUpStepRepository.existsByTemplateId(any(UUID.class))).thenReturn(false);
     }
 
     @Test
@@ -147,6 +154,35 @@ class MessageTemplateServiceTest {
     }
 
     @Test
+    void createTemplate_BetaWhatsappOnlyActive_CoercesToWhatsapp() {
+        ReflectionTestUtils.setField(messageTemplateService, "betaWhatsappOnly", true);
+
+        MessageTemplateCreateRequest request = new MessageTemplateCreateRequest(
+                null, "Welcome Promo", CommunicationChannel.EMAIL, MessageTemplateType.QUOTE_SENT, "Email Subject", "Welcome client!", true
+        );
+
+        MessageTemplate template = new MessageTemplate();
+        template.setId(UUID.randomUUID());
+        template.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        template.setName(request.getName());
+        template.setChannel(CommunicationChannel.WHATSAPP);
+        template.setTemplateType(request.getTemplateType());
+        template.setSubject(null); // subject forced null
+        template.setBody(request.getBody());
+        template.setActive(true);
+
+        when(messageTemplateRepository.existsByStudioIdAndNameIgnoreCaseAndChannel(TenantConstants.DEFAULT_STUDIO_ID, request.getName(), CommunicationChannel.WHATSAPP))
+                .thenReturn(false);
+        when(messageTemplateRepository.save(any(MessageTemplate.class))).thenReturn(template);
+
+        MessageTemplateResponse response = messageTemplateService.createTemplate(request);
+
+        assertNotNull(response);
+        assertEquals(CommunicationChannel.WHATSAPP, response.getChannel());
+        assertNull(response.getSubject());
+    }
+
+    @Test
     void getTemplateById_Success() {
         UUID id = UUID.randomUUID();
         MessageTemplate template = new MessageTemplate();
@@ -231,6 +267,36 @@ class MessageTemplateServiceTest {
     }
 
     @Test
+    void updateTemplate_BetaWhatsappOnlyActive_CoercesToWhatsapp() {
+        ReflectionTestUtils.setField(messageTemplateService, "betaWhatsappOnly", true);
+        UUID id = UUID.randomUUID();
+
+        MessageTemplate template = new MessageTemplate();
+        template.setId(id);
+        template.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        template.setName("Check-in");
+        template.setChannel(CommunicationChannel.WHATSAPP);
+        template.setTemplateType(MessageTemplateType.SOFT_FOLLOW_UP);
+        template.setBody("Checking in!");
+        template.setActive(true);
+
+        MessageTemplateUpdateRequest request = new MessageTemplateUpdateRequest(
+                "Updated Name", CommunicationChannel.EMAIL, MessageTemplateType.SCARCITY_FOLLOW_UP, "Subject", "Body body", true
+        );
+
+        when(messageTemplateRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(template));
+        when(messageTemplateRepository.existsByStudioIdAndNameIgnoreCaseAndChannelAndIdNot(TenantConstants.DEFAULT_STUDIO_ID, request.getName(), CommunicationChannel.WHATSAPP, id))
+                .thenReturn(false);
+        when(messageTemplateRepository.save(any(MessageTemplate.class))).thenReturn(template);
+
+        MessageTemplateResponse response = messageTemplateService.updateTemplate(id, request);
+
+        assertNotNull(response);
+        assertEquals(CommunicationChannel.WHATSAPP, response.getChannel());
+        assertNull(response.getSubject());
+    }
+
+    @Test
     void deleteTemplate_Success() {
         UUID id = UUID.randomUUID();
         MessageTemplate template = new MessageTemplate();
@@ -238,10 +304,28 @@ class MessageTemplateServiceTest {
         template.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
 
         when(messageTemplateRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(template));
+        when(followUpStepRepository.existsByTemplateId(id)).thenReturn(false);
         doNothing().when(messageTemplateRepository).delete(template);
 
         assertDoesNotThrow(() -> messageTemplateService.deleteTemplate(id));
         verify(messageTemplateRepository, times(1)).delete(template);
+    }
+
+    @Test
+    void deleteTemplate_UsedInSequence_ThrowsException() {
+        UUID id = UUID.randomUUID();
+        MessageTemplate template = new MessageTemplate();
+        template.setId(id);
+        template.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        when(messageTemplateRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(template));
+        when(followUpStepRepository.existsByTemplateId(id)).thenReturn(true);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                messageTemplateService.deleteTemplate(id)
+        );
+        assertTrue(exception.getMessage().contains("used in a follow-up sequence"));
+        verify(messageTemplateRepository, never()).delete(any(MessageTemplate.class));
     }
 
     @Test

@@ -2,10 +2,9 @@ package com.studioops.followup.sequence;
 
 import com.studioops.common.tenant.TenantContext;
 import com.studioops.common.tenant.TenantConstants;
-
 import com.studioops.common.exception.ResourceNotFoundException;
-import com.studioops.common.tenant.TenantConstants;
 import com.studioops.studio.StudioRepository;
+import com.studioops.user.UserRepository;
 import com.studioops.followup.template.MessageTemplate;
 import com.studioops.followup.template.MessageTemplateRepository;
 import com.studioops.followup.template.CommunicationChannel;
@@ -17,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.test.util.ReflectionTestUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +30,6 @@ class FollowUpStepServiceTest {
     @Mock
     private TenantContext tenantContext;
 
-
     @Mock
     private FollowUpStepRepository followUpStepRepository;
 
@@ -42,6 +41,9 @@ class FollowUpStepServiceTest {
 
     @Mock
     private StudioRepository studioRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private FollowUpStepService followUpStepService;
@@ -67,6 +69,7 @@ class FollowUpStepServiceTest {
         template = new MessageTemplate();
         template.setId(templateId);
         template.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        template.setChannel(CommunicationChannel.WHATSAPP); // Default to WhatsApp to satisfy template channel checks
 
         when(followUpSequenceRepository.findByIdAndStudioId(sequenceId, TenantConstants.DEFAULT_STUDIO_ID))
                 .thenReturn(Optional.of(sequence));
@@ -171,6 +174,49 @@ class FollowUpStepServiceTest {
     }
 
     @Test
+    void createStep_BetaWhatsappOnlyActive_CoercesToWhatsapp() {
+        ReflectionTestUtils.setField(followUpStepService, "betaWhatsappOnly", true);
+
+        FollowUpStepCreateRequest request = new FollowUpStepCreateRequest(
+                null, sequenceId, 1, 3, CommunicationChannel.EMAIL, templateId, "Check in", null
+        );
+
+        FollowUpStep step = new FollowUpStep();
+        step.setId(UUID.randomUUID());
+        step.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        step.setSequenceId(sequenceId);
+        step.setStepOrder(1);
+        step.setDelayDays(3);
+        step.setChannel(CommunicationChannel.WHATSAPP); // coerced
+        step.setTemplateId(templateId);
+        step.setGoal("Check in");
+        step.setActive(true);
+
+        when(followUpStepRepository.existsBySequenceIdAndStepOrder(sequenceId, 1)).thenReturn(false);
+        when(followUpStepRepository.save(any(FollowUpStep.class))).thenReturn(step);
+
+        FollowUpStepResponse response = followUpStepService.createStep(request);
+
+        assertNotNull(response);
+        assertEquals(CommunicationChannel.WHATSAPP, response.getChannel());
+    }
+
+    @Test
+    void createStep_BetaWhatsappOnlyActive_NonWhatsappTemplate_ThrowsException() {
+        ReflectionTestUtils.setField(followUpStepService, "betaWhatsappOnly", true);
+        template.setChannel(CommunicationChannel.EMAIL); // Template is Email!
+
+        FollowUpStepCreateRequest request = new FollowUpStepCreateRequest(
+                null, sequenceId, 1, 3, CommunicationChannel.EMAIL, templateId, "Check in", null
+        );
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                followUpStepService.createStep(request)
+        );
+        assertEquals("WhatsApp sequence steps require a WhatsApp message template.", exception.getMessage());
+    }
+
+    @Test
     void listStepsBySequence_Success() {
         FollowUpStep step = new FollowUpStep();
         step.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
@@ -248,5 +294,57 @@ class FollowUpStepServiceTest {
         assertThrows(ResourceNotFoundException.class, () ->
                 followUpStepService.updateStep(id, request)
         );
+    }
+
+    @Test
+    void updateStep_BetaWhatsappOnlyActive_CoercesToWhatsapp() {
+        ReflectionTestUtils.setField(followUpStepService, "betaWhatsappOnly", true);
+        UUID id = UUID.randomUUID();
+
+        FollowUpStep step = new FollowUpStep();
+        step.setId(id);
+        step.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        step.setSequenceId(sequenceId);
+        step.setStepOrder(1);
+        step.setTemplateId(templateId);
+
+        FollowUpStepUpdateRequest request = new FollowUpStepUpdateRequest(
+                2, 5, CommunicationChannel.SMS, templateId, "New goal", true
+        );
+
+        when(followUpStepRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(step));
+        when(followUpStepRepository.existsBySequenceIdAndStepOrderAndIdNot(sequenceId, request.getStepOrder(), id))
+                .thenReturn(false);
+        when(followUpStepRepository.save(any(FollowUpStep.class))).thenReturn(step);
+
+        FollowUpStepResponse response = followUpStepService.updateStep(id, request);
+
+        assertNotNull(response);
+        assertEquals(CommunicationChannel.WHATSAPP, response.getChannel());
+    }
+
+    @Test
+    void updateStep_BetaWhatsappOnlyActive_NonWhatsappTemplate_ThrowsException() {
+        ReflectionTestUtils.setField(followUpStepService, "betaWhatsappOnly", true);
+        UUID id = UUID.randomUUID();
+        template.setChannel(CommunicationChannel.EMAIL); // template is Email
+
+        FollowUpStep step = new FollowUpStep();
+        step.setId(id);
+        step.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        step.setSequenceId(sequenceId);
+        step.setStepOrder(1);
+        step.setTemplateId(templateId);
+
+        FollowUpStepUpdateRequest request = new FollowUpStepUpdateRequest(
+                2, 5, CommunicationChannel.SMS, templateId, "New goal", true
+        );
+
+        when(followUpStepRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(step));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                followUpStepService.updateStep(id, request)
+        );
+        assertEquals("WhatsApp sequence steps require a WhatsApp message template.", exception.getMessage());
     }
 }
