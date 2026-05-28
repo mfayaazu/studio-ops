@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { mockLeads, mockSequenceSteps, mockTemplates, mockPendingFollowUps } from '../mockData';
 import { FollowUpSummaryCards } from '../components/FollowUpSummaryCards';
 import { FollowUpPipelineBoard } from '../components/FollowUpPipelineBoard';
 import { FollowUpTimeline } from '../components/FollowUpTimeline';
@@ -30,7 +29,7 @@ import {
   createLead,
   convertLeadToProject
 } from '../api/followupApi';
-import { Sparkles, MessageSquare, Compass, LayoutGrid, CheckSquare, Loader2, Plus, X } from 'lucide-react';
+import { Sparkles, MessageSquare, Compass, LayoutGrid, CheckSquare, Loader2, Plus, X, AlertTriangle } from 'lucide-react';
 import { NewInquiryForm } from '../components/NewInquiryForm';
 import { fetchClients } from '../../clients/api/clientsApi';
 import type { ClientResponse } from '../../clients/types';
@@ -108,7 +107,7 @@ export const FollowUpCenterPage: React.FC = () => {
   const { user } = useAuth();
 
   // Leads & UI states
-  const [leads, setLeads] = useState<Lead[]>(mockLeads);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pipeline' | 'sequence' | 'templates' | 'approvals'>('pipeline');
   const [isInquiryFormOpen, setIsInquiryFormOpen] = useState(false);
@@ -119,6 +118,7 @@ export const FollowUpCenterPage: React.FC = () => {
   const [steps, setSteps] = useState<FollowUpStep[]>([]);
   const [dueTasks, setDueTasks] = useState<FollowUpTask[]>([]);
   const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
+  const [hasError, setHasError] = useState(false);
 
   // Parse hash parameters to switch to correct tab on redirects
   useEffect(() => {
@@ -182,12 +182,13 @@ export const FollowUpCenterPage: React.FC = () => {
         setLeads(fetchedLeads.map(l => mapLeadResponseToLead(l)));
       } else {
         setLeadApiStatus('empty');
-        setLeads(mockLeads.map(l => ({ ...l, isBackendLead: false })));
+        setLeads([]);
       }
     } catch (e) {
       console.warn('Failed to fetch leads from backend:', e);
       setLeadApiStatus('offline');
-      setLeads(mockLeads.map(l => ({ ...l, isBackendLead: false })));
+      setLeads([]);
+      setHasError(true);
     } finally {
       setIsLeadsLoading(false);
     }
@@ -322,151 +323,92 @@ export const FollowUpCenterPage: React.FC = () => {
     }
   };
 
-  // Load configuration details from backend (fallback to mock data)
-  useEffect(() => {
-    let active = true;
+  const loadData = async () => {
+    try {
+      setHasError(false);
+      setIsLoading(true);
+      setIsLeadsLoading(true);
+      const fetchedTemplates = await fetchMessageTemplates();
+      const fetchedSequences = await fetchFollowUpSequences();
 
-    const loadData = async () => {
+      let fetchedTasks: FollowUpTask[] = [];
+      let fetchedLogs: CommunicationLog[] = [];
       try {
-        setIsLoading(true);
-        setIsLeadsLoading(true);
-        const fetchedTemplates = await fetchMessageTemplates();
-        const fetchedSequences = await fetchFollowUpSequences();
+        fetchedTasks = await fetchDueFollowUpTasks();
+        fetchedLogs = await fetchCommunicationLogs();
+      } catch (e) {
+        console.warn('Failed to fetch follow-up tasks or communication logs:', e);
+      }
 
-        let fetchedTasks: FollowUpTask[] = [];
-        let fetchedLogs: CommunicationLog[] = [];
-        try {
-          fetchedTasks = await fetchDueFollowUpTasks();
-          fetchedLogs = await fetchCommunicationLogs();
-        } catch (e) {
-          console.warn('Failed to fetch follow-up tasks or communication logs:', e);
-        }
+      // Fetch Quotations, Clients, and Projects
+      try {
+        const [qtns, clts, prjs] = await Promise.all([
+          quotationsApi.list(),
+          fetchClients(),
+          fetchProjects()
+        ]);
+        setQuotations(qtns);
+        setClients(clts);
+        setProjects(prjs);
+      } catch (e) {
+        console.warn('Failed to fetch quotations, clients, or projects on mount:', e);
+      }
 
-        // Fetch Quotations, Clients, and Projects
-        try {
-          const [qtns, clts, prjs] = await Promise.all([
-            quotationsApi.list(),
-            fetchClients(),
-            fetchProjects()
-          ]);
-          if (active) {
-            setQuotations(qtns);
-            setClients(clts);
-            setProjects(prjs);
-          }
-        } catch (e) {
-          console.warn('Failed to fetch quotations, clients, or projects on mount:', e);
-        }
+      // Fetch Leads
+      const fetchedLeads = await fetchLeads();
+      if (fetchedLeads && fetchedLeads.length > 0) {
+        setLeadApiStatus('connected');
+        setLeads(fetchedLeads.map(l => mapLeadResponseToLead(l)));
+      } else {
+        setLeadApiStatus('empty');
+        setLeads([]);
+      }
 
-        // Fetch Leads
-        try {
-          const fetchedLeads = await fetchLeads();
-          if (active) {
-            if (fetchedLeads && fetchedLeads.length > 0) {
-              setLeadApiStatus('connected');
-              setLeads(fetchedLeads.map(l => mapLeadResponseToLead(l)));
-            } else {
-              setLeadApiStatus('empty');
-              setLeads(mockLeads.map(l => ({ ...l, isBackendLead: false })));
-            }
-          }
-        } catch (e) {
-          console.warn('Failed to fetch leads from backend:', e);
-          if (active) {
-            setLeadApiStatus('offline');
-            setLeads(mockLeads.map(l => ({ ...l, isBackendLead: false })));
-          }
-        }
+      if (fetchedTemplates.length === 0 || fetchedSequences.length === 0) {
+        setApiStatus('empty');
+        setTemplates([]);
+        setSteps([]);
+        setSequences([]);
+      } else {
+        setApiStatus('connected');
+        setTemplates(fetchedTemplates);
+        setSequences(fetchedSequences);
 
-        if (!active) return;
-
-        if (fetchedTemplates.length === 0 || fetchedSequences.length === 0) {
-          // Connected but no database records yet
-          setApiStatus('empty');
-          setTemplates(mockTemplates);
-          // Set mock sequence steps mapped to follow-up step layout
-          const mockStepsMapped = mockSequenceSteps.map(step => ({
-            id: step.id,
-            studioId: 'mock-studio',
-            sequenceId: 'mock-sequence',
-            stepOrder: mockSequenceSteps.indexOf(step) + 1,
-            delayDays: step.delayDays,
-            channel: step.channel,
-            templateId: step.templateType, // map mock type to ID for preview
-            goal: step.goal,
-            active: step.active
-          }));
-          setSteps(mockStepsMapped);
-          setSequences([{
-            id: 'mock-sequence',
-            studioId: 'mock-studio',
-            name: 'Default 10-Day Sequence (Demo)',
-            description: 'Standard follow-up sequence after sending quotation.',
-            active: true
-          }]);
-        } else {
-          // Connected and records found
-          setApiStatus('connected');
-          setTemplates(fetchedTemplates);
-          setSequences(fetchedSequences);
-
-          // Retrieve step configurations for the active sequence
-          const activeSeq = fetchedSequences.find(s => s.active) || fetchedSequences[0];
-          if (activeSeq) {
-            const fetchedSteps = await fetchFollowUpSteps(activeSeq.id);
-            if (active) {
-              setSteps(fetchedSteps);
-            }
-          }
-        }
-
-        if (active) {
-          setDueTasks(fetchedTasks);
-          setCommunicationLogs(fetchedLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-        }
-      } catch (err) {
-        console.warn('Backend Follow-up API offline, using fallback mock data:', err);
-        if (!active) return;
-        setApiStatus('offline');
-        setLeadApiStatus('offline');
-        setLeads(mockLeads.map(l => ({ ...l, isBackendLead: false })));
-        setTemplates(mockTemplates);
-        // Map mock sequence steps
-        const mockStepsMapped = mockSequenceSteps.map(step => ({
-          id: step.id,
-          studioId: 'mock-studio',
-          sequenceId: 'mock-sequence',
-          stepOrder: mockSequenceSteps.indexOf(step) + 1,
-          delayDays: step.delayDays,
-          channel: step.channel,
-          templateId: '', 
-          templateType: step.templateType, // preserve for fallback in FollowUpTimeline
-          goal: step.goal,
-          active: step.active
-        }));
-        setSteps(mockStepsMapped as any);
-        setSequences([{
-          id: 'mock-sequence',
-          studioId: 'mock-studio',
-          name: 'Default 10-Day Sequence (Demo)',
-          description: 'Standard follow-up sequence after sending quotation.',
-          active: true
-        }]);
-        setDueTasks([]);
-        setCommunicationLogs([]);
-      } finally {
-        if (active) {
-          setIsLoading(false);
-          setIsLeadsLoading(false);
+        // Retrieve step configurations for the active sequence
+        const activeSeq = fetchedSequences.find(s => s.active) || fetchedSequences[0];
+        if (activeSeq) {
+          const fetchedSteps = await fetchFollowUpSteps(activeSeq.id);
+          setSteps(fetchedSteps);
         }
       }
-    };
 
+      setDueTasks(fetchedTasks);
+      setCommunicationLogs(fetchedLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    } catch (err) {
+      console.error('Backend Follow-up API request failed:', err);
+      setHasError(true);
+      setApiStatus('offline');
+      setLeadApiStatus('offline');
+      setLeads([]);
+      setTemplates([]);
+      setSteps([]);
+      setSequences([]);
+      setDueTasks([]);
+      setCommunicationLogs([]);
+    } finally {
+      setIsLoading(false);
+      setIsLeadsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadData();
-    return () => {
-      active = false;
-    };
   }, []);
+
+  const handleRetry = () => {
+    loadData();
+  };
+
 
   const handleMoveLeadStage = async (
     leadId: string, 
@@ -557,10 +499,6 @@ export const FollowUpCenterPage: React.FC = () => {
     setLeads(leads.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
   };
 
-  // Determine fallback modes
-  const isBackendActive = apiStatus === 'connected' || apiStatus === 'empty';
-  const usingMockTasks = !isBackendActive || dueTasks.length === 0;
-
   const getDueStatusHelper = (scheduledAt: string): 'due_today' | 'overdue' | 'upcoming' => {
     const scheduledDate = new Date(scheduledAt);
     const today = new Date();
@@ -581,16 +519,8 @@ export const FollowUpCenterPage: React.FC = () => {
   const openLeads = leads.filter((l) => l.stage !== 'CONFIRMED' && l.stage !== 'LOST');
   const leadsInFunnel = openLeads.length;
   
-  const backendDueToday = dueTasks.filter(t => getDueStatusHelper(t.scheduledAt) === 'due_today').length;
-  const backendOverdue = dueTasks.filter(t => getDueStatusHelper(t.scheduledAt) === 'overdue').length;
-
-  const dueTodayCount = !usingMockTasks
-    ? backendDueToday
-    : mockPendingFollowUps.filter((p) => p.dueStatus === 'due_today').length;
-
-  const overdueCount = !usingMockTasks
-    ? backendOverdue
-    : mockPendingFollowUps.filter((p) => p.dueStatus === 'overdue').length;
+  const dueTodayCount = dueTasks.filter(t => getDueStatusHelper(t.scheduledAt) === 'due_today').length;
+  const overdueCount = dueTasks.filter(t => getDueStatusHelper(t.scheduledAt) === 'overdue').length;
   
   const warmLeadsCount = leads.filter((l) => l.stage === 'WARM').length;
   const estimatedOpenValue = openLeads.reduce((sum, lead) => sum + lead.estimatedValue, 0);
@@ -721,13 +651,13 @@ export const FollowUpCenterPage: React.FC = () => {
           {leadApiStatus === 'empty' && (
             <span className="px-2.5 py-1 bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-              Empty backend: showing demo leads
+              Leads: Empty
             </span>
           )}
           {leadApiStatus === 'offline' && (
             <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              Offline: using demo leads
+              Leads: Offline
             </span>
           )}
         </div>
@@ -735,48 +665,83 @@ export const FollowUpCenterPage: React.FC = () => {
 
       {/* Active Tab Screen */}
       <div className="w-full">
-        {activeTab === 'pipeline' && (
-          isLeadsLoading ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl">
-              <Loader2 className="h-5 w-5 text-violet-500 animate-spin" />
-              <span className="text-slate-400 text-xs font-semibold">Loading pipeline from database...</span>
-            </div>
-          ) : (
-            <FollowUpPipelineBoard 
-              leads={leads} 
-              onLeadClick={(leadId) => setSelectedLeadId(leadId)} 
-            />
-          )
-        )}
-        
-        {activeTab !== 'pipeline' && isLoading && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl">
-            <Loader2 className="h-5 w-5 text-violet-500 animate-spin" />
-            <span className="text-slate-400 text-xs font-semibold">Loading from database...</span>
+        {hasError ? (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-8 text-center max-w-xl mx-auto space-y-4 my-8">
+            <AlertTriangle className="h-10 w-10 text-red-400 mx-auto" />
+            <h3 className="text-white font-semibold text-sm">Connection Error</h3>
+            <p className="text-xs text-slate-400">
+              Unable to load follow-up data. Check API connection and retry.
+            </p>
+            <button 
+              onClick={handleRetry}
+              className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer"
+            >
+              Retry
+            </button>
           </div>
-        )}
-        
-        {activeTab === 'sequence' && !isLoading && (
-          <FollowUpTimeline 
-            steps={steps} 
-            templates={templates}
-            sequenceName={sequences[0]?.name}
-            sequenceId={sequences[0]?.id}
-            userRole={user?.role}
-            onRefresh={refreshSequenceSteps}
-          />
-        )}
-        {activeTab === 'templates' && !isLoading && (
-          <MessageTemplatesPage isEmbedded={true} />
-        )}
-        {activeTab === 'approvals' && !isLoading && (
-          <PendingFollowUpsPanel 
-            initialTasks={mockPendingFollowUps} 
-            backendTasks={dueTasks}
-            communicationLogs={communicationLogs}
-            isBackendMode={!usingMockTasks}
-            onActionSuccess={handleActionSuccess}
-          />
+        ) : (
+          <>
+            {activeTab === 'pipeline' && (
+              isLeadsLoading ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl">
+                  <Loader2 className="h-5 w-5 text-violet-500 animate-spin" />
+                  <span className="text-slate-400 text-xs font-semibold">Loading pipeline from database...</span>
+                </div>
+              ) : leads.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl space-y-4">
+                  <MessageSquare className="h-10 w-10 text-slate-650" />
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-slate-200">No Leads Found</h3>
+                    <p className="text-xs text-slate-450 max-w-sm leading-relaxed">
+                      No leads yet. Register your first lead to start the WhatsApp follow-up workflow.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setIsInquiryFormOpen(true)}
+                    className="py-2 px-4 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-md"
+                  >
+                    Register First Lead
+                  </button>
+                </div>
+              ) : (
+                <FollowUpPipelineBoard 
+                  leads={leads} 
+                  onLeadClick={(leadId) => setSelectedLeadId(leadId)} 
+                />
+              )
+            )}
+            
+            {activeTab !== 'pipeline' && isLoading && (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl">
+                <Loader2 className="h-5 w-5 text-violet-500 animate-spin" />
+                <span className="text-slate-400 text-xs font-semibold">Loading from database...</span>
+              </div>
+            )}
+            
+            {activeTab === 'sequence' && !isLoading && (
+              <FollowUpTimeline 
+                steps={steps} 
+                templates={templates}
+                sequenceName={sequences[0]?.name}
+                sequenceId={sequences[0]?.id}
+                userRole={user?.role}
+                onRefresh={refreshSequenceSteps}
+              />
+            )}
+            {activeTab === 'templates' && !isLoading && (
+              <MessageTemplatesPage isEmbedded={true} />
+            )}
+            {activeTab === 'approvals' && !isLoading && (
+              <PendingFollowUpsPanel 
+                initialTasks={[]} 
+                backendTasks={dueTasks}
+                communicationLogs={communicationLogs}
+                isBackendMode={true}
+                onActionSuccess={handleActionSuccess}
+                leads={leads}
+              />
+            )}
+          </>
         )}
       </div>
 
@@ -791,6 +756,7 @@ export const FollowUpCenterPage: React.FC = () => {
         quotations={quotations}
         onCreateQuotation={handleCreateQuotationForLead}
         onEditQuotation={handleEditQuotationForLead}
+        templates={templates}
       />
 
       {/* Quotation Form modal */}

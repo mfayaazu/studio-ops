@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import type { Lead, LeadStage, MessageTemplate, ChannelType, LeadPipelineStage, LeadLostReason } from '../types';
-import { mockTemplates } from '../mockData';
 import { formatCurrencyINR } from '../../../lib/formatters';
 import { 
   X, Mail, MessageSquare, Phone, Smartphone, Calendar, 
@@ -36,6 +35,7 @@ interface LeadDetailDrawerProps {
   quotations?: Quotation[];
   onCreateQuotation?: (lead: Lead) => void;
   onEditQuotation?: (qtn: Quotation) => void;
+  templates?: MessageTemplate[];
 }
 
 export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({ 
@@ -47,7 +47,8 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   onConvertToProject,
   quotations = [],
   onCreateQuotation,
-  onEditQuotation
+  onEditQuotation,
+  templates = []
 }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [simulationLog, setSimulationLog] = useState<string | null>(null);
@@ -114,9 +115,9 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
     
     if (!targetType) return null;
     
-    return mockTemplates.find(
+    return templates.find(
       t => t.templateType === targetType && t.channel === lead.channel
-    ) || mockTemplates.find(t => t.templateType === targetType) || null;
+    ) || templates.find(t => t.templateType === targetType) || null;
   };
 
   const template = getSuggestedTemplate();

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import type { PendingFollowUp, FollowUpTask, CommunicationLog } from '../types';
+import type { PendingFollowUp, FollowUpTask, CommunicationLog, Lead } from '../types';
 import { approveFollowUpTask, skipFollowUpTask } from '../api/followupApi';
-import { mockLeads } from '../mockData';
 import { Mail, MessageSquare, Phone, Smartphone, Check, X, Eye, ShieldAlert, Sparkles, RefreshCw, Loader2 } from 'lucide-react';
 
 interface PendingFollowUpsPanelProps {
@@ -10,6 +9,7 @@ interface PendingFollowUpsPanelProps {
   communicationLogs?: CommunicationLog[];
   isBackendMode: boolean;
   onActionSuccess?: () => void;
+  leads?: Lead[];
 }
 
 interface UnifiedTask {
@@ -44,8 +44,8 @@ const handleOpenWhatsApp = (task: UnifiedTask) => {
   window.open(url, '_blank', 'noopener,noreferrer');
 };
 
-const resolveClientAndProject = (task: FollowUpTask) => {
-  const matchedLead = mockLeads.find(lead => 
+const resolveClientAndProject = (task: FollowUpTask, leads: Lead[] = []) => {
+  const matchedLead = leads.find(lead => 
     lead.id === task.clientId || 
     lead.id === task.projectId ||
     lead.clientName.toLowerCase() === task.recipient?.toLowerCase()
@@ -78,8 +78,8 @@ const getDueStatus = (scheduledAt: string): 'due_today' | 'overdue' | 'upcoming'
   }
 };
 
-const mapBackendTask = (task: FollowUpTask): UnifiedTask => {
-  const resolved = resolveClientAndProject(task);
+const mapBackendTask = (task: FollowUpTask, leads: Lead[] = []): UnifiedTask => {
+  const resolved = resolveClientAndProject(task, leads);
   return {
     id: task.id,
     isBackend: true,
@@ -114,7 +114,8 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
   backendTasks,
   communicationLogs,
   isBackendMode,
-  onActionSuccess
+  onActionSuccess,
+  leads = []
 }) => {
   const [mockTasks, setMockTasks] = useState<PendingFollowUp[]>(initialTasks);
   const [localLogs, setLocalLogs] = useState<string[]>([]);
@@ -131,7 +132,7 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
   }, [initialTasks, isBackendMode]);
 
   const tasksToRender = isBackendMode 
-    ? (backendTasks || []).map(mapBackendTask)
+    ? (backendTasks || []).map(t => mapBackendTask(t, leads))
     : mockTasks.map(mapMockTask);
 
   const selectedTask = tasksToRender.find(t => t.id === selectedTaskId) || null;
@@ -490,7 +491,7 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
         {isBackendMode && communicationLogs && communicationLogs.length > 0 ? (
           <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
             {communicationLogs.map((log) => {
-              const matchedLead = mockLeads.find(l => l.id === log.clientId || l.id === log.projectId);
+              const matchedLead = leads.find(l => l.id === log.clientId || l.id === log.projectId);
               const displayName = matchedLead ? matchedLead.clientName : (log.recipient || 'Client');
               const projectTitle = matchedLead ? matchedLead.projectTitle : (log.subject || 'Follow-up Task');
 
