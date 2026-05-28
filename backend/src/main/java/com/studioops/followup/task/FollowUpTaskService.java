@@ -17,6 +17,7 @@ import com.studioops.followup.template.CommunicationChannel;
 import com.studioops.followup.task.dto.FollowUpTaskCreateRequest;
 import com.studioops.followup.task.dto.FollowUpTaskResponse;
 import com.studioops.followup.task.dto.FollowUpTaskUpdateRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
@@ -26,6 +27,9 @@ import java.util.UUID;
 @Service
 @Transactional
 public class FollowUpTaskService {
+
+    @Value("${studioops.beta.whatsapp-only:true}")
+    private boolean betaWhatsappOnly;
 
     private final FollowUpTaskRepository followUpTaskRepository;
     private final StudioRepository studioRepository;
@@ -101,7 +105,15 @@ public class FollowUpTaskService {
         task.setSequenceId(request.getSequenceId());
         task.setStepId(request.getStepId());
         task.setTemplateId(request.getTemplateId());
-        task.setChannel(request.getChannel());
+        
+        // Coerce to WHATSAPP if beta flag is active
+        // TODO: Replace configurable beta flag with dynamic environment configuration before production.
+        if (betaWhatsappOnly) {
+            task.setChannel(CommunicationChannel.WHATSAPP);
+        } else {
+            task.setChannel(request.getChannel());
+        }
+
         task.setScheduledAt(request.getScheduledAt());
         task.setStatus(request.getStatus() != null ? request.getStatus() : FollowUpTaskStatus.PENDING_APPROVAL);
         task.setRecipient(request.getRecipient() != null ? request.getRecipient().trim() : null);

@@ -9,7 +9,7 @@ export const mockLeads: Lead[] = [
     eventDate: '2026-09-12',
     lastContacted: '2026-05-20',
     nextFollowUp: '2026-05-24', // Due today
-    channel: 'EMAIL',
+    channel: 'WHATSAPP',
     stage: 'QUOTE_SENT',
     priority: 'high',
     urgencyDays: 0,
@@ -17,7 +17,7 @@ export const mockLeads: Lead[] = [
     notes: 'Requested custom destination pricing for a 3-day wedding in Hyderabad. Interested in traditional Telugu rituals coverage + cinematic film and premium leather-bound albums.',
     history: [
       { date: '2026-05-18', event: 'Initial inquiry received via WhatsApp', status: 'system' },
-      { date: '2026-05-20', event: 'Quotation of $350,000 sent with custom portfolio links', status: 'sent' }
+      { date: '2026-05-20', event: 'Quotation of ₹350,000 sent with custom portfolio links', status: 'sent' }
     ]
   },
   {
@@ -48,7 +48,7 @@ export const mockLeads: Lead[] = [
     eventDate: '2026-08-20',
     lastContacted: '2026-05-22',
     nextFollowUp: '2026-05-25', // Tomorrow
-    channel: 'SMS',
+    channel: 'WHATSAPP',
     stage: 'NEW_LEAD',
     priority: 'low',
     urgencyDays: 1,
@@ -66,7 +66,7 @@ export const mockLeads: Lead[] = [
     eventDate: '2026-10-04',
     lastContacted: '2026-05-15',
     nextFollowUp: '2026-05-24', // Due today
-    channel: 'MANUAL_CALL',
+    channel: 'WHATSAPP',
     stage: 'NEGOTIATION',
     priority: 'high',
     urgencyDays: 0,
@@ -86,7 +86,7 @@ export const mockLeads: Lead[] = [
     eventDate: '2026-06-30',
     lastContacted: '2026-05-23',
     nextFollowUp: '2026-05-27',
-    channel: 'EMAIL',
+    channel: 'WHATSAPP',
     stage: 'FOLLOW_UP_PENDING',
     priority: 'medium',
     urgencyDays: 3,
@@ -95,7 +95,7 @@ export const mockLeads: Lead[] = [
     history: [
       { date: '2026-05-20', event: 'Inquiry received', status: 'system' },
       { date: '2026-05-21', event: 'Engagement pricing packages sent', status: 'sent' },
-      { date: '2026-05-23', event: 'Follow-up email with client testimonials approved & sent', status: 'sent' }
+      { date: '2026-05-23', event: 'Follow-up WhatsApp message sent', status: 'sent' }
     ]
   },
   {
@@ -106,7 +106,7 @@ export const mockLeads: Lead[] = [
     eventDate: '2026-06-15',
     lastContacted: '2026-05-10',
     nextFollowUp: '2026-05-20', // Overdue
-    channel: 'EMAIL',
+    channel: 'WHATSAPP',
     stage: 'QUOTE_SENT',
     priority: 'high',
     urgencyDays: -4,
@@ -125,7 +125,7 @@ export const mockLeads: Lead[] = [
     eventDate: '2026-08-15',
     lastContacted: '2026-05-22',
     nextFollowUp: 'Completed',
-    channel: 'EMAIL',
+    channel: 'WHATSAPP',
     stage: 'CONFIRMED',
     priority: 'high',
     urgencyDays: 99,
@@ -146,7 +146,7 @@ export const mockLeads: Lead[] = [
     eventDate: '2026-06-05',
     lastContacted: '2026-05-05',
     nextFollowUp: 'Archived',
-    channel: 'SMS',
+    channel: 'WHATSAPP',
     stage: 'LOST',
     priority: 'low',
     urgencyDays: 99,
@@ -164,9 +164,9 @@ export const mockSequenceSteps: SequenceStep[] = [
   {
     id: 's1',
     delayDays: 0,
-    channel: 'EMAIL',
+    channel: 'WHATSAPP',
     templateType: 'QUOTE_SENT',
-    goal: 'Deliver Custom Quote & Portfolio Link',
+    goal: 'Deliver Custom Quote & Portfolio Link via WhatsApp',
     active: true,
   },
   {
@@ -180,7 +180,7 @@ export const mockSequenceSteps: SequenceStep[] = [
   {
     id: 's3',
     delayDays: 3,
-    channel: 'EMAIL',
+    channel: 'WHATSAPP',
     templateType: 'VALUE_FOLLOW_UP',
     goal: 'Share Indian Wedding Timeline Guide / Planning Tips',
     active: true,
@@ -188,7 +188,7 @@ export const mockSequenceSteps: SequenceStep[] = [
   {
     id: 's4',
     delayDays: 6,
-    channel: 'SMS',
+    channel: 'WHATSAPP',
     templateType: 'SCARCITY_FOLLOW_UP',
     goal: 'Urgency Alert on Wedding Season Booking Slots',
     active: true,
@@ -196,9 +196,9 @@ export const mockSequenceSteps: SequenceStep[] = [
   {
     id: 's5',
     delayDays: 10,
-    channel: 'MANUAL_CALL',
+    channel: 'WHATSAPP',
     templateType: 'FINAL_FOLLOW_UP',
-    goal: 'Final Polite Call on Open Quotation Status',
+    goal: 'Final Polite WhatsApp Check on Open Quotation Status',
     active: true,
   }
 ];
@@ -206,11 +206,10 @@ export const mockSequenceSteps: SequenceStep[] = [
 export const mockTemplates: MessageTemplate[] = [
   {
     id: 't1',
-    name: 'Quote Sent Email Template',
-    channel: 'EMAIL',
+    name: 'Quote Sent WhatsApp Template',
+    channel: 'WHATSAPP',
     templateType: 'QUOTE_SENT',
-    subject: 'Your Photography & Film Quotation from StudioOps',
-    body: 'Hi {{clientName}},\n\nThank you for reaching out to us! Attached you will find our custom quotation for {{projectTitle}} in the amount of ${{estimatedValue}}.\n\nWe have also put together a custom portfolio of wedding films and albums for you here: {{portfolioUrl}}.\n\nPlease let us know if you have any questions or would like to lock in your auspicious dates.\n\nBest regards,\nStudioOps Team',
+    body: 'Hi {{clientName}}! Thank you for reaching out to us. Here is the custom quotation for {{projectTitle}} in the amount of ₹{{estimatedValue}}.\n\nYou can review it and accept directly. We have also put together a custom portfolio of wedding films and albums for you here: {{portfolioUrl}}.\n\nPlease let us know if you have any questions! 😊',
     active: true,
   },
   {
@@ -223,27 +222,26 @@ export const mockTemplates: MessageTemplate[] = [
   },
   {
     id: 't3',
-    name: 'Value Follow-up Email',
-    channel: 'EMAIL',
+    name: 'Value Follow-up WhatsApp',
+    channel: 'WHATSAPP',
     templateType: 'VALUE_FOLLOW_UP',
-    subject: 'How to Plan Your Auspicious Indian Wedding Photography Timeline',
-    body: 'Hi {{clientName}},\n\nPlanning an Indian wedding involves coordinating multiple rituals (Baraat, Muhurtham, Phere, etc.). We compiled a quick guide with timeline tips to ensure your photography captures every beautiful moment stress-free.\n\nCheck out the planning guide here: {{guideUrl}}\n\nHopefully this helps with your planning! We would love to capture your celebrations.\n\nWarmly,\nStudioOps Team',
+    body: 'Hi {{clientName}}! Planning an Indian wedding involves coordinating multiple rituals. We compiled a quick guide with timeline tips to ensure your photography captures every beautiful moment stress-free.\n\nCheck out the planning guide here: {{guideUrl}}\n\nHopefully this helps with your planning!',
     active: true,
   },
   {
     id: 't4',
-    name: 'Scarcity SMS Alert',
-    channel: 'SMS',
+    name: 'Scarcity WhatsApp Alert',
+    channel: 'WHATSAPP',
     templateType: 'SCARCITY_FOLLOW_UP',
     body: 'Hi {{clientName}}! We just received another inquiry for {{eventDate}} (peak wedding season). Since your quote is still active, we wanted to check if you are ready to book so we can save your slot! Reply here to confirm.',
     active: true,
   },
   {
     id: 't5',
-    name: 'Final Closure Call script',
-    channel: 'MANUAL_CALL',
+    name: 'Final Closure WhatsApp Message',
+    channel: 'WHATSAPP',
     templateType: 'FINAL_FOLLOW_UP',
-    body: 'Talking points:\n1. Friendly greeting and warm tone.\n2. Mention we are finalizing the calendar for {{eventDate}} and need to close out pending quotes.\n3. Ask if they chose another provider or want to adjust the package parameters.\n4. Leave on a highly positive note, offering future assistance.',
+    body: 'Hi {{clientName}}! We have not heard back regarding our quotation for {{eventDate}}, so we will close it out to release the date for other inquiries. Thank you and we wish you all the best!',
     active: true,
   }
 ];
@@ -254,11 +252,10 @@ export const mockPendingFollowUps: PendingFollowUp[] = [
     leadId: 'l1',
     clientName: 'Priya & Arjun',
     projectTitle: 'Telugu Wedding Photography in Hyderabad',
-    channel: 'EMAIL',
+    channel: 'WHATSAPP',
     dueDate: '2026-05-24',
     dueStatus: 'due_today',
-    subject: 'Quick question regarding your Telugu Wedding photography quote',
-    body: 'Hi Priya,\n\nI wanted to confirm you received our quotation of $350,000 for your wedding. Do you have any initial questions or details you would like to adjust?\n\nLooking forward to hearing from you!',
+    body: 'Hi Priya! I wanted to confirm you received our quotation of ₹350,000 for your wedding. Do you have any initial questions or details you would like to adjust?',
   },
   {
     id: 'p2',
@@ -275,18 +272,17 @@ export const mockPendingFollowUps: PendingFollowUp[] = [
     leadId: 'l6',
     clientName: 'Ayesha Khan',
     projectTitle: 'Baby Shower Photography in Delhi',
-    channel: 'EMAIL',
+    channel: 'WHATSAPP',
     dueDate: '2026-05-20',
     dueStatus: 'overdue',
-    subject: 'Still interested in baby shower photography?',
-    body: 'Hi Ayesha,\n\nI wanted to check in one last time regarding the baby shower photography quote we sent. Let us know if you would like to block the date!\n\nBest, StudioOps.',
+    body: 'Hi Ayesha! I wanted to check in one last time regarding the baby shower photography quote we sent. Let us know if you would like to block the date!',
   },
   {
     id: 'p4',
     leadId: 'l3',
     clientName: 'Rahul & Ananya',
     projectTitle: 'Pre-wedding Shoot in Goa',
-    channel: 'SMS',
+    channel: 'WHATSAPP',
     dueDate: '2026-05-25',
     dueStatus: 'upcoming',
     body: 'Hi Rahul! We sent you the Goa pre-wedding quote earlier. Do you have any questions? We would love to capture your shoot!',

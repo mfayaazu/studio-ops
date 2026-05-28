@@ -20,6 +20,7 @@ import com.studioops.lead.dto.LeadUpdateRequest;
 import com.studioops.lead.dto.LeadMoveStageRequest;
 import com.studioops.lead.dto.LeadConvertToProjectRequest;
 import com.studioops.lead.dto.LeadConvertToProjectResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
@@ -29,6 +30,9 @@ import java.util.UUID;
 @Service
 @Transactional
 public class LeadService {
+
+    @Value("${studioops.beta.whatsapp-only:true}")
+    private boolean betaWhatsappOnly;
 
     private final LeadRepository leadRepository;
     private final StudioRepository studioRepository;
@@ -80,7 +84,15 @@ public class LeadService {
         lead.setClientName(request.getClientName().trim());
         lead.setPhone(request.getPhone() != null ? request.getPhone().trim() : null);
         lead.setEmail(request.getEmail() != null ? request.getEmail().trim() : null);
-        lead.setPreferredChannel(request.getPreferredChannel());
+        
+        // Coerce to WHATSAPP if beta flag is active
+        // TODO: Replace configurable beta flag with dynamic environment configuration before production.
+        if (betaWhatsappOnly) {
+            lead.setPreferredChannel(LeadPreferredChannel.WHATSAPP);
+        } else {
+            lead.setPreferredChannel(request.getPreferredChannel());
+        }
+
         lead.setEventType(request.getEventType() != null ? request.getEventType().trim() : null);
         lead.setEventDate(request.getEventDate());
         lead.setCity(request.getCity() != null ? request.getCity().trim() : null);
@@ -129,7 +141,14 @@ public class LeadService {
         lead.setClientName(request.getClientName().trim());
         lead.setPhone(request.getPhone() != null ? request.getPhone().trim() : null);
         lead.setEmail(request.getEmail() != null ? request.getEmail().trim() : null);
-        lead.setPreferredChannel(request.getPreferredChannel());
+        
+        // Coerce to WHATSAPP if beta flag is active
+        // TODO: Replace configurable beta flag with dynamic environment configuration before production.
+        if (betaWhatsappOnly) {
+            lead.setPreferredChannel(LeadPreferredChannel.WHATSAPP);
+        } else {
+            lead.setPreferredChannel(request.getPreferredChannel());
+        }
         lead.setEventType(request.getEventType() != null ? request.getEventType().trim() : null);
         lead.setEventDate(request.getEventDate());
         lead.setCity(request.getCity() != null ? request.getCity().trim() : null);

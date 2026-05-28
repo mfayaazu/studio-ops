@@ -355,16 +355,8 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                           </button>
                         </>
                       ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAction(task, 'approved');
-                          }}
-                          className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400 rounded-lg font-bold text-[10px] transition-colors"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                          <span>Send</span>
-                        </button>
+                        /* Hide email-style send action in beta flow */
+                        null
                       )}
                     </div>
                   </div>
@@ -450,12 +442,10 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                       </button>
                     </>
                   ) : (
-                    <button
-                      onClick={() => handleAction(selectedTask, 'approved')}
-                      className="flex-1 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-500 hover:to-fuchsia-400 text-white rounded-lg font-bold text-xs transition-colors shadow-md"
-                    >
-                      Approve & Dispatch
-                    </button>
+                    /* Hide email-style dispatch action in beta flow */
+                    <div className="flex-1 py-2 text-center text-rose-400 text-[10px] font-bold border border-rose-500/25 bg-rose-500/5 rounded-lg select-none">
+                      Non-WhatsApp channels disabled in Beta
+                    </div>
                   )}
                 </div>
               </div>

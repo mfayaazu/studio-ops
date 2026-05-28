@@ -17,3 +17,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+
+studioops:
+  beta:
+    whatsapp-only: true

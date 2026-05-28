@@ -449,7 +449,7 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
   const [clientName, setClientName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [preferredChannel, setPreferredChannel] = useState<LeadPreferredChannel>('EMAIL');
+  const [preferredChannel, setPreferredChannel] = useState<LeadPreferredChannel>('WHATSAPP');
   const [eventType, setEventType] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [city, setCity] = useState('');
@@ -503,6 +503,14 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
       errors.followUpDate = 'Please select a follow-up date as well.';
     }
 
+    if (followUpDate) {
+      const cleanedPhone = phone.trim().replace(/[\s\-\(\)]/g, '');
+      const phoneRegex = /^\+[1-9]\d{7,15}$/;
+      if (!phone.trim() || !phoneRegex.test(cleanedPhone)) {
+        errors.phone = 'WhatsApp requires a valid phone number with country code.';
+      }
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -540,7 +548,7 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
       setClientName('');
       setPhone('');
       setEmail('');
-      setPreferredChannel('EMAIL');
+      setPreferredChannel('WHATSAPP');
       setEventType('');
       setEventDate('');
       setCity('');
@@ -636,8 +644,13 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+919876543210"
-                  className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all"
+                  className={`w-full bg-[#0d1222]/40 border ${
+                    validationErrors.phone ? 'border-rose-500/50 focus:ring-rose-500' : 'border-slate-800 focus:ring-violet-500'
+                  } text-slate-200 rounded-lg p-2.5 text-xs focus:ring-1 focus:outline-none transition-all`}
                 />
+                {validationErrors.phone && (
+                  <span className="text-[10px] text-rose-400 block font-mono mt-0.5">{validationErrors.phone}</span>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -671,12 +684,13 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
                   onChange={(e) => setPreferredChannel(e.target.value as LeadPreferredChannel)}
                   className="w-full bg-[#0d1222]/60 border border-slate-800 text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all"
                 >
-                  <option value="EMAIL">Email</option>
+                  <option value="EMAIL" disabled>Email (Disabled in Beta)</option>
                   <option value="WHATSAPP">WhatsApp</option>
-                  <option value="SMS">SMS</option>
-                  <option value="PHONE_CALL">Phone Call</option>
-                  <option value="MANUAL">Manual Outbox</option>
+                  <option value="SMS" disabled>SMS (Disabled in Beta)</option>
+                  <option value="PHONE_CALL" disabled>Phone Call (Disabled in Beta)</option>
+                  <option value="MANUAL" disabled>Manual Outbox (Disabled in Beta)</option>
                 </select>
+                <p className="text-[10px] text-emerald-400 font-semibold mt-1">Beta communication channel: WhatsApp only</p>
               </div>
 
               <div className="space-y-1">

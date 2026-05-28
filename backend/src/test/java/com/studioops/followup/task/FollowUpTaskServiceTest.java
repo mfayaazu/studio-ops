@@ -301,4 +301,60 @@ class FollowUpTaskServiceTest {
         assertEquals(FollowUpTaskStatus.CANCELLED, response.getStatus());
         verify(communicationLogService, never()).createLog(any());
     }
+
+    @Test
+    void createTask_BetaWhatsappOnlyActive_CoercesToWhatsapp() {
+        org.springframework.test.util.ReflectionTestUtils.setField(followUpTaskService, "betaWhatsappOnly", true);
+
+        UUID projectId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        UUID sequenceId = UUID.randomUUID();
+        UUID stepId = UUID.randomUUID();
+        UUID templateId = UUID.randomUUID();
+
+        FollowUpTaskCreateRequest request = new FollowUpTaskCreateRequest(
+                TenantConstants.DEFAULT_STUDIO_ID, projectId, clientId, sequenceId, stepId, templateId,
+                CommunicationChannel.EMAIL, Instant.now(), FollowUpTaskStatus.PENDING_APPROVAL,
+                "client@example.com", "Follow Up", "Body text"
+        );
+
+        Project project = new Project();
+        project.setId(projectId);
+        project.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        Client client = new Client();
+        client.setId(clientId);
+        client.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        FollowUpSequence seq = new FollowUpSequence();
+        seq.setId(sequenceId);
+        seq.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        FollowUpStep step = new FollowUpStep();
+        step.setId(stepId);
+        step.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        MessageTemplate template = new MessageTemplate();
+        template.setId(templateId);
+        template.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+
+        when(projectRepository.findByIdAndStudioId(projectId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
+        when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(client));
+        when(followUpSequenceRepository.findByIdAndStudioId(sequenceId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(seq));
+        when(followUpStepRepository.findByIdAndStudioId(stepId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(step));
+        when(messageTemplateRepository.findByIdAndStudioId(templateId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(template));
+
+        FollowUpTask task = new FollowUpTask();
+        task.setId(UUID.randomUUID());
+        task.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        task.setChannel(CommunicationChannel.WHATSAPP); // Coerced!
+
+        when(followUpTaskRepository.save(any(FollowUpTask.class))).thenReturn(task);
+
+        followUpTaskService.createTask(request);
+
+        verify(followUpTaskRepository, times(1)).save(argThat(savedTask -> 
+            savedTask.getChannel() == CommunicationChannel.WHATSAPP
+        ));
+    }
 }

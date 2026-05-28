@@ -605,5 +605,66 @@ class LeadServiceTest {
         assertEquals("Project created and added to Event Calendar.", response.getMessage());
         verify(eventRepository, never()).save(any(Event.class));
     }
+
+    @Test
+    void createLead_BetaWhatsappOnlyActive_CoercesToWhatsapp() {
+        org.springframework.test.util.ReflectionTestUtils.setField(leadService, "betaWhatsappOnly", true);
+
+        LeadCreateRequest request = new LeadCreateRequest(
+                null, null, null, "Priya Reddy", "+919876543210", "priya@example.in",
+                LeadPreferredChannel.EMAIL, "Wedding Photography", LocalDate.of(2026, 9, 12),
+                "Hyderabad", BigDecimal.valueOf(350000), LeadSource.WEBSITE, null,
+                null, null, null, "Requested traditional album"
+        );
+
+        Lead lead = new Lead();
+        lead.setId(UUID.randomUUID());
+        lead.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        lead.setClientName(request.getClientName());
+        lead.setPreferredChannel(LeadPreferredChannel.WHATSAPP); // Coerced!
+        lead.setLeadSource(request.getLeadSource());
+        lead.setPipelineStage(LeadPipelineStage.NEW_LEAD);
+        lead.setCreatedAt(Instant.now());
+        lead.setUpdatedAt(Instant.now());
+
+        when(leadRepository.save(any(Lead.class))).thenReturn(lead);
+
+        LeadResponse response = leadService.createLead(request);
+
+        assertNotNull(response);
+        assertEquals(LeadPreferredChannel.WHATSAPP, response.getPreferredChannel());
+        verify(leadRepository, times(1)).save(argThat(savedLead -> 
+            savedLead.getPreferredChannel() == LeadPreferredChannel.WHATSAPP
+        ));
+    }
+
+    @Test
+    void updateLead_BetaWhatsappOnlyActive_CoercesToWhatsapp() {
+        org.springframework.test.util.ReflectionTestUtils.setField(leadService, "betaWhatsappOnly", true);
+
+        UUID leadId = UUID.randomUUID();
+        Lead lead = new Lead();
+        lead.setId(leadId);
+        lead.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        lead.setClientName("Old Name");
+        lead.setPreferredChannel(LeadPreferredChannel.EMAIL);
+        lead.setLeadSource(LeadSource.INSTAGRAM);
+        lead.setPipelineStage(LeadPipelineStage.NEW_LEAD);
+
+        LeadUpdateRequest request = new LeadUpdateRequest(
+                "New Name", "98765", "new@example.com", LeadPreferredChannel.EMAIL,
+                "Pre-wedding", LocalDate.of(2026, 8, 20), "Goa", BigDecimal.valueOf(120000),
+                LeadSource.REFERRAL, null, null, null, "Updated notes"
+        );
+
+        when(leadRepository.findByIdAndStudioId(leadId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(lead));
+        when(leadRepository.save(any(Lead.class))).thenReturn(lead);
+
+        leadService.updateLead(leadId, request);
+
+        verify(leadRepository, times(1)).save(argThat(savedLead -> 
+            savedLead.getPreferredChannel() == LeadPreferredChannel.WHATSAPP
+        ));
+    }
 }
 
