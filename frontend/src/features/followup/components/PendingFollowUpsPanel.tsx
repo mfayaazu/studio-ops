@@ -27,16 +27,17 @@ interface UnifiedTask {
 
 const cleanPhoneNumber = (phone: string | undefined): string => {
   if (!phone) return '';
-  return phone.replace(/\D/g, '');
+  return phone.trim().replace(/[\s\-\(\)]/g, '');
 };
 
 const isValidPhoneNumber = (phone: string | undefined): boolean => {
   const cleaned = cleanPhoneNumber(phone);
-  return cleaned.length >= 7 && cleaned.length <= 15;
+  return /^\+[1-9]\d{7,14}$/.test(cleaned);
 };
 
 const handleOpenWhatsApp = (task: UnifiedTask) => {
-  const phone = cleanPhoneNumber(task.recipient);
+  const cleaned = cleanPhoneNumber(task.recipient);
+  const phone = cleaned.replace(/^\+/, '');
   if (!phone) return;
   const encodedText = encodeURIComponent(task.body);
   const url = `https://wa.me/${phone}?text=${encodedText}`;
@@ -300,7 +301,7 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                   <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-800/40">
                     {task.channel === 'WHATSAPP' && !isValidPhoneNumber(task.recipient) && (
                       <div className="text-[9px] text-rose-400 font-semibold italic text-right mb-1">
-                        Valid phone number required.
+                        Valid WhatsApp number with country code required.
                       </div>
                     )}
                     <div className="flex justify-end gap-1.5">
@@ -337,18 +338,23 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                                 : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
                             }`}
-                            title={isValidPhoneNumber(task.recipient) ? "Open WhatsApp" : "Valid phone number required."}
+                            title={isValidPhoneNumber(task.recipient) ? "Open WhatsApp" : "Valid WhatsApp number with country code required."}
                           >
                             <MessageSquare className="h-3.5 w-3.5" />
                             <span>Open WA</span>
                           </button>
                           <button
+                            disabled={!isValidPhoneNumber(task.recipient)}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleAction(task, 'approved');
                             }}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400 rounded-lg font-bold text-[10px] transition-colors"
-                            title="Mark as Sent"
+                            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-[10px] transition-colors ${
+                              isValidPhoneNumber(task.recipient)
+                                ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400'
+                                : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                            }`}
+                            title={isValidPhoneNumber(task.recipient) ? "Mark as Sent" : "Valid WhatsApp number with country code required."}
                           >
                             <Check className="h-3.5 w-3.5" />
                             <span>Mark Sent</span>
@@ -380,7 +386,7 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                     <span className="text-[10px] text-slate-500 font-mono truncate max-w-[120px]">ID: {selectedTask.id}</span>
                   </div>
                   
-                  {selectedTask.subject && (
+                  {selectedTask.subject && selectedTask.channel !== 'WHATSAPP' && (
                     <div className="bg-slate-900 border border-slate-850 p-2.5 rounded-lg text-xs">
                       <span className="text-[9px] font-mono text-slate-500 block uppercase mb-0.5">Subject:</span>
                       <span className="text-slate-200 font-medium">{selectedTask.subject}</span>
@@ -397,7 +403,7 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                   {selectedTask.channel === 'WHATSAPP' ? (
                     <div className="text-[10px] text-emerald-400/90 bg-emerald-500/5 border border-emerald-500/10 px-2 py-1 rounded flex items-center gap-1">
                       <MessageSquare className="h-3.5 w-3.5 flex-shrink-0 text-emerald-400" />
-                      <span>Manual WhatsApp send — no API cost</span>
+                      <span>Manual WhatsApp send — open WhatsApp first, then mark as sent.</span>
                     </div>
                   ) : (
                     <div className="text-[10px] text-amber-400/80 bg-amber-500/5 border border-amber-500/10 px-2 py-1 rounded flex items-center gap-1">
@@ -409,7 +415,7 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                   {selectedTask.channel === 'WHATSAPP' && !isValidPhoneNumber(selectedTask.recipient) && (
                     <div className="text-[10px] text-rose-400 bg-rose-500/5 border border-rose-500/10 px-2 py-1 rounded flex items-center gap-1">
                       <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0 text-rose-400" />
-                      <span>Valid phone number required.</span>
+                      <span>Valid WhatsApp number with country code required.</span>
                     </div>
                   )}
                 </div>
@@ -417,7 +423,7 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                 <div className="flex gap-2 border-t border-slate-800 pt-3">
                   <button
                     onClick={() => handleAction(selectedTask, 'skipped')}
-                    className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition-colors"
+                    className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-350 rounded-lg font-bold text-xs transition-colors"
                   >
                     Skip Step
                   </button>
@@ -435,8 +441,13 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                         Open WhatsApp
                       </button>
                       <button
+                        disabled={!isValidPhoneNumber(selectedTask.recipient)}
                         onClick={() => handleAction(selectedTask, 'approved')}
-                        className="flex-1 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-500 hover:to-fuchsia-400 text-white rounded-lg font-bold text-xs transition-colors shadow-md"
+                        className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors shadow-md ${
+                          isValidPhoneNumber(selectedTask.recipient)
+                            ? 'bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-500 hover:to-fuchsia-400 text-white'
+                            : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                        }`}
                       >
                         Mark as Sent
                       </button>

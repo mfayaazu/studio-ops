@@ -98,6 +98,10 @@ public class FollowUpTaskService {
                 .orElseThrow(() -> new IllegalArgumentException("Template not found with id: " + request.getTemplateId() + " for studio: " + studioId));
         }
 
+        if (betaWhatsappOnly) {
+            validateWhatsAppPhone(request.getRecipient(), "WhatsApp beta requires a valid phone number with country code.");
+        }
+
         FollowUpTask task = new FollowUpTask();
         task.setStudioId(studioId);
         task.setProjectId(request.getProjectId());
@@ -168,6 +172,10 @@ public class FollowUpTaskService {
             throw new IllegalArgumentException("Cannot update follow-up task with status: " + task.getStatus());
         }
 
+        if (betaWhatsappOnly) {
+            validateWhatsAppPhone(request.getRecipient(), "WhatsApp beta requires a valid phone number with country code.");
+        }
+
         task.setScheduledAt(request.getScheduledAt());
         task.setRecipient(request.getRecipient() != null ? request.getRecipient().trim() : null);
         task.setSubject(request.getSubject() != null ? request.getSubject().trim() : null);
@@ -192,6 +200,10 @@ public class FollowUpTaskService {
         }
         if (task.getStatus() == FollowUpTaskStatus.SKIPPED || task.getStatus() == FollowUpTaskStatus.CANCELLED) {
             throw new IllegalArgumentException("Cannot approve a task that is " + task.getStatus());
+        }
+
+        if (betaWhatsappOnly && task.getChannel() == CommunicationChannel.WHATSAPP) {
+            validateWhatsAppPhone(task.getRecipient(), "Cannot mark WhatsApp task as sent without a valid phone number.");
         }
 
         task.setStatus(FollowUpTaskStatus.SENT);
@@ -265,5 +277,15 @@ public class FollowUpTaskService {
         task.setStatus(FollowUpTaskStatus.CANCELLED);
         FollowUpTask saved = followUpTaskRepository.save(task);
         return FollowUpTaskMapper.toResponse(saved);
+    }
+
+    private void validateWhatsAppPhone(String phone, String errorMessage) {
+        if (phone == null || phone.trim().isEmpty()) {
+            throw new IllegalArgumentException(errorMessage);
+        }
+        String cleaned = phone.trim().replaceAll("[\\s\\-\\(\\)]", "");
+        if (!cleaned.matches("^\\+[1-9]\\d{7,14}$")) {
+            throw new IllegalArgumentException(errorMessage);
+        }
     }
 }

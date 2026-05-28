@@ -77,6 +77,10 @@ public class LeadService {
                 .orElseThrow(() -> new IllegalArgumentException("Project not found with id: " + request.getProjectId() + " for studio: " + studioId));
         }
 
+        if (betaWhatsappOnly) {
+            validateWhatsAppPhone(request.getPhone());
+        }
+
         Lead lead = new Lead();
         lead.setStudioId(studioId);
         lead.setClientId(request.getClientId());
@@ -137,6 +141,10 @@ public class LeadService {
     public LeadResponse updateLead(UUID id, LeadUpdateRequest request) {
         Lead lead = leadRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lead not found with id: " + id));
+
+        if (betaWhatsappOnly) {
+            validateWhatsAppPhone(request.getPhone());
+        }
 
         lead.setClientName(request.getClientName().trim());
         lead.setPhone(request.getPhone() != null ? request.getPhone().trim() : null);
@@ -333,6 +341,16 @@ public class LeadService {
             return EventType.valueOf(value.toUpperCase().trim());
         } catch (IllegalArgumentException e) {
             return EventType.OTHER;
+        }
+    }
+
+    private void validateWhatsAppPhone(String phone) {
+        if (phone == null || phone.trim().isEmpty()) {
+            throw new IllegalArgumentException("WhatsApp beta requires a valid phone number with country code.");
+        }
+        String cleaned = phone.trim().replaceAll("[\\s\\-\\(\\)]", "");
+        if (!cleaned.matches("^\\+[1-9]\\d{7,14}$")) {
+            throw new IllegalArgumentException("WhatsApp beta requires a valid phone number with country code.");
         }
     }
 }

@@ -12,6 +12,16 @@ import type { Quotation } from '../../quotations/types';
 import { QuotationStatusBadge } from '../../quotations/components/QuotationStatusBadge';
 
 
+const cleanPhoneNumber = (phone: string | undefined): string => {
+  if (!phone) return '';
+  return phone.trim().replace(/[\s\-\(\)]/g, '');
+};
+
+const isValidPhoneNumber = (phone: string | undefined): boolean => {
+  const cleaned = cleanPhoneNumber(phone);
+  return /^\+[1-9]\d{7,14}$/.test(cleaned);
+};
+
 interface LeadDetailDrawerProps {
   lead: Lead | null;
   isOpen: boolean;
@@ -194,6 +204,15 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
 
     setSimulationLog(`✗ Visual Simulation: Follow-up step skipped.`);
     setIsPreviewOpen(false);
+  };
+
+  const handleOpenWhatsApp = () => {
+    if (!lead || !template) return;
+    const phoneClean = cleanPhoneNumber(lead.phone).replace(/^\+/, '');
+    const bodyText = renderTemplateBody(template.body);
+    const encodedText = encodeURIComponent(bodyText);
+    const url = `https://wa.me/${phoneClean}?text=${encodedText}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleConvertToProject = async () => {
@@ -583,34 +602,85 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               </div>
 
               {/* Message Controls */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setIsPreviewOpen(!isPreviewOpen)}
-                  className="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-700/80 text-slate-300 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  <span>{isPreviewOpen ? 'Hide Draft' : 'Preview Draft'}</span>
-                </button>
-                <button
-                  onClick={handleApproveFollowUp}
-                  className="flex-1 py-2 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
-                >
-                  <ThumbsUp className="h-3.5 w-3.5" />
-                  <span>Approve & Send</span>
-                </button>
-                <button
-                  onClick={handleSkipFollowUp}
-                  className="py-2 px-3 bg-slate-800/40 hover:bg-slate-800/80 border border-slate-800 text-slate-400 rounded-lg text-xs font-semibold transition-colors"
-                  title="Skip this step"
-                >
-                  Skip
-                </button>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIsPreviewOpen(!isPreviewOpen)}
+                    className="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-700/80 text-slate-350 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>{isPreviewOpen ? 'Hide Draft' : 'Preview Draft'}</span>
+                  </button>
+
+                  {lead.channel === 'WHATSAPP' ? (
+                    <>
+                      <button
+                        disabled={!isValidPhoneNumber(lead.phone)}
+                        onClick={handleOpenWhatsApp}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+                          isValidPhoneNumber(lead.phone)
+                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                            : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                        }`}
+                        title={isValidPhoneNumber(lead.phone) ? "Open WhatsApp" : "Valid WhatsApp number with country code required."}
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        <span>Open WhatsApp</span>
+                      </button>
+
+                      <button
+                        disabled={!isValidPhoneNumber(lead.phone)}
+                        onClick={handleApproveFollowUp}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1 ${
+                          isValidPhoneNumber(lead.phone)
+                            ? 'bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-500 hover:to-fuchsia-400 text-white shadow-md'
+                            : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                        }`}
+                        title={isValidPhoneNumber(lead.phone) ? "Mark as Sent" : "Valid WhatsApp number with country code required."}
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5" />
+                        <span>Mark as Sent</span>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleApproveFollowUp}
+                      className="flex-1 py-2 px-3 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
+                    >
+                      <ThumbsUp className="h-3.5 w-3.5" />
+                      <span>Approve & Send</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={handleSkipFollowUp}
+                    className="py-2 px-3 bg-slate-800/40 hover:bg-slate-800/80 border border-slate-800 text-slate-450 rounded-lg text-xs font-semibold transition-colors"
+                    title="Skip this step"
+                  >
+                    Skip
+                  </button>
+                </div>
+
+                {lead.channel === 'WHATSAPP' && (
+                  <div className="space-y-1.5 mt-1">
+                    {!isValidPhoneNumber(lead.phone) && (
+                      <div className="text-[10px] text-rose-455 bg-rose-500/5 border border-rose-500/10 px-2 py-1 rounded flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 text-rose-400" />
+                        <span>Valid WhatsApp number with country code required.</span>
+                      </div>
+                    )}
+                    <div className="text-[10px] text-emerald-400/90 bg-emerald-500/5 border border-emerald-500/10 px-2 py-1 rounded flex items-center gap-1">
+                      <MessageSquare className="h-3.5 w-3.5 flex-shrink-0 text-emerald-400" />
+                      <span>Manual WhatsApp send — open WhatsApp first, then mark as sent.</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Inline Preview Content */}
               {isPreviewOpen && (
                 <div className="bg-slate-950 border border-slate-850 p-3 rounded-lg space-y-2 animate-fadeIn">
-                  {template.subject && (
+                  {template.subject && lead.channel !== 'WHATSAPP' && (
                     <div className="text-xs">
                       <span className="text-[9px] font-mono text-slate-500 block uppercase">Subject:</span>
                       <p className="text-slate-300 font-medium">{template.subject}</p>

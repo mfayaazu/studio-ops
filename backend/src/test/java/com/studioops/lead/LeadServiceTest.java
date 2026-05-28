@@ -652,7 +652,7 @@ class LeadServiceTest {
         lead.setPipelineStage(LeadPipelineStage.NEW_LEAD);
 
         LeadUpdateRequest request = new LeadUpdateRequest(
-                "New Name", "98765", "new@example.com", LeadPreferredChannel.EMAIL,
+                "New Name", "+919876543210", "new@example.com", LeadPreferredChannel.EMAIL,
                 "Pre-wedding", LocalDate.of(2026, 8, 20), "Goa", BigDecimal.valueOf(120000),
                 LeadSource.REFERRAL, null, null, null, "Updated notes"
         );
@@ -665,6 +665,36 @@ class LeadServiceTest {
         verify(leadRepository, times(1)).save(argThat(savedLead -> 
             savedLead.getPreferredChannel() == LeadPreferredChannel.WHATSAPP
         ));
+    }
+
+    @Test
+    void createLead_BetaWhatsappOnlyActive_MissingPhone_ThrowsException() {
+        org.springframework.test.util.ReflectionTestUtils.setField(leadService, "betaWhatsappOnly", true);
+
+        LeadCreateRequest request = new LeadCreateRequest(
+                null, null, null, "Priya Reddy", null, "priya@example.in",
+                LeadPreferredChannel.EMAIL, "Wedding Photography", LocalDate.of(2026, 9, 12),
+                "Hyderabad", BigDecimal.valueOf(350000), LeadSource.WEBSITE, null,
+                null, null, null, "Requested traditional album"
+        );
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> leadService.createLead(request));
+        assertEquals("WhatsApp beta requires a valid phone number with country code.", ex.getMessage());
+    }
+
+    @Test
+    void createLead_BetaWhatsappOnlyActive_InvalidPhone_ThrowsException() {
+        org.springframework.test.util.ReflectionTestUtils.setField(leadService, "betaWhatsappOnly", true);
+
+        LeadCreateRequest request = new LeadCreateRequest(
+                null, null, null, "Priya Reddy", "1234567", "priya@example.in",
+                LeadPreferredChannel.EMAIL, "Wedding Photography", LocalDate.of(2026, 9, 12),
+                "Hyderabad", BigDecimal.valueOf(350000), LeadSource.WEBSITE, null,
+                null, null, null, "Requested traditional album"
+        );
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> leadService.createLead(request));
+        assertEquals("WhatsApp beta requires a valid phone number with country code.", ex.getMessage());
     }
 }
 

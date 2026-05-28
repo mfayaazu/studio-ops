@@ -315,7 +315,7 @@ class FollowUpTaskServiceTest {
         FollowUpTaskCreateRequest request = new FollowUpTaskCreateRequest(
                 TenantConstants.DEFAULT_STUDIO_ID, projectId, clientId, sequenceId, stepId, templateId,
                 CommunicationChannel.EMAIL, Instant.now(), FollowUpTaskStatus.PENDING_APPROVAL,
-                "client@example.com", "Follow Up", "Body text"
+                "+919876543210", "Follow Up", "Body text"
         );
 
         Project project = new Project();
@@ -356,5 +356,37 @@ class FollowUpTaskServiceTest {
         verify(followUpTaskRepository, times(1)).save(argThat(savedTask -> 
             savedTask.getChannel() == CommunicationChannel.WHATSAPP
         ));
+    }
+
+    @Test
+    void createTask_BetaWhatsappOnlyActive_InvalidRecipient_ThrowsException() {
+        org.springframework.test.util.ReflectionTestUtils.setField(followUpTaskService, "betaWhatsappOnly", true);
+
+        FollowUpTaskCreateRequest request = new FollowUpTaskCreateRequest(
+                TenantConstants.DEFAULT_STUDIO_ID, null, null, null, null, null,
+                CommunicationChannel.EMAIL, Instant.now(), FollowUpTaskStatus.PENDING_APPROVAL,
+                "invalid-recipient", "Follow Up", "Body text"
+        );
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> followUpTaskService.createTask(request));
+        assertEquals("WhatsApp beta requires a valid phone number with country code.", ex.getMessage());
+    }
+
+    @Test
+    void approveTask_BetaWhatsappOnlyActive_InvalidRecipient_ThrowsException() {
+        org.springframework.test.util.ReflectionTestUtils.setField(followUpTaskService, "betaWhatsappOnly", true);
+
+        UUID taskId = UUID.randomUUID();
+        FollowUpTask task = new FollowUpTask();
+        task.setId(taskId);
+        task.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        task.setStatus(FollowUpTaskStatus.PENDING_APPROVAL);
+        task.setChannel(CommunicationChannel.WHATSAPP);
+        task.setRecipient("invalid-recipient");
+
+        when(followUpTaskRepository.findByIdAndStudioId(taskId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(task));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> followUpTaskService.approveTask(taskId));
+        assertEquals("Cannot mark WhatsApp task as sent without a valid phone number.", ex.getMessage());
     }
 }
