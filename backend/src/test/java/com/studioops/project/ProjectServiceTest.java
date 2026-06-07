@@ -40,6 +40,9 @@ class ProjectServiceTest {
     @Mock
     private StudioRepository studioRepository;
 
+    @Mock
+    private com.studioops.user.PermissionService permissionService;
+
     @InjectMocks
     private ProjectService projectService;
 

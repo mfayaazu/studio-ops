@@ -36,6 +36,7 @@ public class EmployeeCreateRequest {
     private String loginEmail;
     private String userRole;
     private String temporaryPassword;
+    private Boolean sendInviteEmail;
 
     public EmployeeCreateRequest() {
     }
@@ -155,5 +156,13 @@ public class EmployeeCreateRequest {
 
     public void setTemporaryPassword(String temporaryPassword) {
         this.temporaryPassword = temporaryPassword;
+    }
+
+    public Boolean getSendInviteEmail() {
+        return sendInviteEmail;
+    }
+
+    public void setSendInviteEmail(Boolean sendInviteEmail) {
+        this.sendInviteEmail = sendInviteEmail;
     }
 }

@@ -18,6 +18,7 @@ interface QuotationFormProps {
   isSubmitting: boolean;
   submitError?: string | null;
   onDelete?: (id: string, quotationNumber: string) => void;
+  isReadOnly?: boolean;
 }
 
 export const QuotationForm: React.FC<QuotationFormProps> = ({
@@ -30,7 +31,8 @@ export const QuotationForm: React.FC<QuotationFormProps> = ({
   onCancel,
   isSubmitting,
   submitError,
-  onDelete
+  onDelete,
+  isReadOnly = false
 }) => {
   const [title, setTitle] = useState('');
   const [quotationNumber, setQuotationNumber] = useState('');
@@ -110,7 +112,7 @@ export const QuotationForm: React.FC<QuotationFormProps> = ({
 
   return (
     <div className="space-y-6">
-      {initialData && onUpdateStatus && (
+      {initialData && onUpdateStatus && !isReadOnly && (
         <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
@@ -166,6 +168,8 @@ export const QuotationForm: React.FC<QuotationFormProps> = ({
             <span>{displayedError}</span>
           </div>
         )}
+
+        <fieldset disabled={isSubmitting || isReadOnly} className="space-y-4 border-0 p-0 m-0">
 
         <div className="space-y-1">
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
@@ -369,9 +373,11 @@ export const QuotationForm: React.FC<QuotationFormProps> = ({
           />
         </div>
 
+        </fieldset>
+
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-slate-800/80">
-          {initialData && onDelete && (
+          {initialData && onDelete && !isReadOnly && (
             <button
               type="button"
               disabled={isSubmitting}
@@ -388,15 +394,17 @@ export const QuotationForm: React.FC<QuotationFormProps> = ({
             onClick={onCancel}
             className="bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-400 text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
           >
-            Cancel
+            {isReadOnly ? 'Close' : 'Cancel'}
           </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-sm font-medium px-5 py-2 rounded-lg shadow-lg hover:shadow-violet-500/20 transition-all cursor-pointer disabled:opacity-50"
-          >
-            {isSubmitting ? 'Saving...' : initialData ? 'Save Changes' : 'Create Quotation'}
-          </button>
+          {!isReadOnly && (
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-sm font-medium px-5 py-2 rounded-lg shadow-lg hover:shadow-violet-500/20 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {isSubmitting ? 'Saving...' : initialData ? 'Save Changes' : 'Create Quotation'}
+            </button>
+          )}
         </div>
       </form>
     </div>

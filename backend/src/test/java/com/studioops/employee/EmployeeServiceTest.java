@@ -43,6 +43,12 @@ class EmployeeServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private com.studioops.user.PermissionService permissionService;
+
+    @Mock
+    private com.studioops.email.EmailService emailService;
+
     @InjectMocks
     private EmployeeService employeeService;
 
@@ -127,7 +133,7 @@ class EmployeeServiceTest {
     }
 
     @Test
-    void createEmployee_CreateLogin_Success() {
+    void createEmployee_CreateLogin_EmailSendingSucceeds() {
         EmployeeCreateRequest request = new EmployeeCreateRequest(
                 null, "Bob Jones", "bob@example.com", "9999", "Editor", "VFX", EmployeeStatus.ACTIVE
         );
@@ -135,6 +141,7 @@ class EmployeeServiceTest {
         request.setLoginEmail("bob.login@example.com");
         request.setUserRole("EDITOR");
         request.setTemporaryPassword("bobPassword");
+        request.setSendInviteEmail(true);
 
         Employee savedEmployee = new Employee();
         savedEmployee.setId(UUID.randomUUID());
@@ -144,6 +151,97 @@ class EmployeeServiceTest {
         savedEmployee.setPhone("9999");
         savedEmployee.setPrimaryRole("Editor");
         savedEmployee.setSkills("VFX");
+        savedEmployee.setStatus(EmployeeStatus.ACTIVE);
+
+        User savedUser = new User();
+        savedUser.setId(UUID.randomUUID());
+        savedUser.setEmail("bob.login@example.com");
+        savedUser.setRole(UserRole.EDITOR);
+        savedUser.setInviteToken("my-test-token");
+
+        when(employeeRepository.findByEmail("bob@example.com")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("bob.login@example.com")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(employeeRepository.save(any(Employee.class))).thenAnswer(inv -> {
+            Employee e = inv.getArgument(0);
+            e.setId(savedEmployee.getId());
+            return e;
+        });
+        when(userRepository.findById(savedUser.getId())).thenReturn(Optional.of(savedUser));
+
+        EmployeeResponse response = employeeService.createEmployee(request);
+
+        assertNotNull(response);
+        assertTrue(response.isLoginEnabled());
+        assertEquals("bob.login@example.com", response.getLoginEmail());
+        assertEquals("EDITOR", response.getUserRole());
+        assertNull(response.getInviteWarning());
+        verify(userRepository, times(1)).save(any(User.class));
+        verify(emailService, times(1)).sendEmployeeInviteEmail(eq(savedUser), anyString(), eq("my-test-token"));
+    }
+
+    @Test
+    void createEmployee_CreateLogin_EmailSendingFails() {
+        EmployeeCreateRequest request = new EmployeeCreateRequest(
+                null, "Bob Jones", "bob@example.com", "9999", "Editor", "VFX", EmployeeStatus.ACTIVE
+        );
+        request.setCreateLogin(true);
+        request.setLoginEmail("bob.login@example.com");
+        request.setUserRole("EDITOR");
+        request.setTemporaryPassword("bobPassword");
+        request.setSendInviteEmail(true);
+
+        Employee savedEmployee = new Employee();
+        savedEmployee.setId(UUID.randomUUID());
+        savedEmployee.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        savedEmployee.setFullName("Bob Jones");
+        savedEmployee.setEmail("bob@example.com");
+        savedEmployee.setStatus(EmployeeStatus.ACTIVE);
+
+        User savedUser = new User();
+        savedUser.setId(UUID.randomUUID());
+        savedUser.setEmail("bob.login@example.com");
+        savedUser.setRole(UserRole.EDITOR);
+        savedUser.setInviteToken("my-test-token");
+
+        when(employeeRepository.findByEmail("bob@example.com")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("bob.login@example.com")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(employeeRepository.save(any(Employee.class))).thenAnswer(inv -> {
+            Employee e = inv.getArgument(0);
+            e.setId(savedEmployee.getId());
+            return e;
+        });
+        when(userRepository.findById(savedUser.getId())).thenReturn(Optional.of(savedUser));
+
+        doThrow(new RuntimeException("SMTP Server Unavailable"))
+                .when(emailService).sendEmployeeInviteEmail(any(User.class), anyString(), anyString());
+
+        EmployeeResponse response = employeeService.createEmployee(request);
+
+        assertNotNull(response);
+        assertTrue(response.isLoginEnabled());
+        assertEquals("Employee login created, but invite email could not be sent.", response.getInviteWarning());
+        verify(userRepository, times(1)).save(any(User.class));
+        verify(emailService, times(1)).sendEmployeeInviteEmail(eq(savedUser), anyString(), eq("my-test-token"));
+    }
+
+    @Test
+    void createEmployee_CreateLogin_SendInviteEmailFalse() {
+        EmployeeCreateRequest request = new EmployeeCreateRequest(
+                null, "Bob Jones", "bob@example.com", "9999", "Editor", "VFX", EmployeeStatus.ACTIVE
+        );
+        request.setCreateLogin(true);
+        request.setLoginEmail("bob.login@example.com");
+        request.setUserRole("EDITOR");
+        request.setTemporaryPassword("bobPassword");
+        request.setSendInviteEmail(false);
+
+        Employee savedEmployee = new Employee();
+        savedEmployee.setId(UUID.randomUUID());
+        savedEmployee.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        savedEmployee.setFullName("Bob Jones");
+        savedEmployee.setEmail("bob@example.com");
         savedEmployee.setStatus(EmployeeStatus.ACTIVE);
 
         User savedUser = new User();
@@ -164,10 +262,8 @@ class EmployeeServiceTest {
         EmployeeResponse response = employeeService.createEmployee(request);
 
         assertNotNull(response);
-        assertTrue(response.isLoginEnabled());
-        assertEquals("bob.login@example.com", response.getLoginEmail());
-        assertEquals("EDITOR", response.getUserRole());
         verify(userRepository, times(1)).save(any(User.class));
+        verify(emailService, never()).sendEmployeeInviteEmail(any(User.class), anyString(), anyString());
     }
 
     @Test
@@ -290,6 +386,7 @@ class EmployeeServiceTest {
         request.setLoginEmail("jane.login@example.com");
         request.setUserRole("EDITOR");
         request.setTemporaryPassword("newPassword");
+        request.setSendInviteEmail(false);
 
         Employee existing = new Employee();
         existing.setId(id);
@@ -312,10 +409,287 @@ class EmployeeServiceTest {
         EmployeeResponse response = employeeService.updateEmployee(id, request);
 
         assertNotNull(response);
+        assertNull(response.getInviteWarning());
         verify(userRepository, times(1)).save(argThat(u -> 
             u.getEmail().equals("jane.login@example.com") &&
             u.getRole().equals(UserRole.EDITOR) &&
             u.getPasswordHash().equals("encoded_newPassword")
         ));
+        verify(emailService, never()).sendEmployeeInviteEmail(any(User.class), anyString(), anyString());
+    }
+
+    @Test
+    void updateEmployee_ResendInviteEmail_Success() {
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        EmployeeUpdateRequest request = new EmployeeUpdateRequest(
+                userId, "Jane Updated", "jane@example.com", "987", "Editor", "Premiere", EmployeeStatus.ACTIVE
+        );
+        request.setCreateLogin(true);
+        request.setLoginEmail("jane.login@example.com");
+        request.setUserRole("EDITOR");
+        request.setSendInviteEmail(true);
+
+        Employee existing = new Employee();
+        existing.setId(id);
+        existing.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        existing.setUserId(userId);
+        existing.setEmail("jane@example.com");
+
+        User existingUser = new User();
+        existingUser.setId(userId);
+        existingUser.setEmail("jane.old@example.com");
+        existingUser.setRole(UserRole.EMPLOYEE);
+
+        when(employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(existing));
+        when(employeeRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(existing));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findByEmail("jane.login@example.com")).thenReturn(Optional.empty());
+        when(employeeRepository.save(any(Employee.class))).thenReturn(existing);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setInviteToken("my-update-token");
+            return u;
+        });
+
+        EmployeeResponse response = employeeService.updateEmployee(id, request);
+
+        assertNotNull(response);
+        assertNull(response.getInviteWarning());
+        verify(emailService, times(1)).sendEmployeeInviteEmail(any(User.class), anyString(), eq("my-update-token"));
+    }
+
+    @Test
+    void updateEmployee_ResendInviteEmail_Failure() {
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        EmployeeUpdateRequest request = new EmployeeUpdateRequest(
+                userId, "Jane Updated", "jane@example.com", "987", "Editor", "Premiere", EmployeeStatus.ACTIVE
+        );
+        request.setCreateLogin(true);
+        request.setLoginEmail("jane.login@example.com");
+        request.setUserRole("EDITOR");
+        request.setSendInviteEmail(true);
+
+        Employee existing = new Employee();
+        existing.setId(id);
+        existing.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        existing.setUserId(userId);
+        existing.setEmail("jane@example.com");
+
+        User existingUser = new User();
+        existingUser.setId(userId);
+        existingUser.setEmail("jane.old@example.com");
+        existingUser.setRole(UserRole.EMPLOYEE);
+
+        when(employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(existing));
+        when(employeeRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(existing));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findByEmail("jane.login@example.com")).thenReturn(Optional.empty());
+        when(employeeRepository.save(any(Employee.class))).thenReturn(existing);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setInviteToken("my-update-token");
+            return u;
+        });
+
+        doThrow(new RuntimeException("SMTP Failure"))
+                .when(emailService).sendEmployeeInviteEmail(any(User.class), anyString(), anyString());
+
+        EmployeeResponse response = employeeService.updateEmployee(id, request);
+
+        assertNotNull(response);
+        assertEquals("Employee login updated, but invite email could not be sent.", response.getInviteWarning());
+        verify(emailService, times(1)).sendEmployeeInviteEmail(any(User.class), anyString(), eq("my-update-token"));
+    }
+
+    @Test
+    void updateEmployee_ExistingLinkedUser_SameEmail_Succeeds() {
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        EmployeeUpdateRequest request = new EmployeeUpdateRequest(
+                userId, "Jane Same", "jane@example.com", "987", "Editor", "Premiere", EmployeeStatus.ACTIVE
+        );
+        request.setCreateLogin(true);
+        request.setLoginEmail("jane.login@example.com");
+        request.setUserRole("EDITOR");
+        request.setSendInviteEmail(false);
+
+        Employee existing = new Employee();
+        existing.setId(id);
+        existing.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        existing.setUserId(userId);
+        existing.setEmail("jane@example.com");
+
+        User existingUser = new User();
+        existingUser.setId(userId);
+        existingUser.setEmail("jane.login@example.com");
+        existingUser.setRole(UserRole.EMPLOYEE);
+
+        when(employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(existing));
+        when(employeeRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(existing));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findByEmail("jane.login@example.com")).thenReturn(Optional.of(existingUser));
+        when(employeeRepository.save(any(Employee.class))).thenReturn(existing);
+        when(userRepository.save(any(User.class))).thenReturn(existingUser);
+
+        EmployeeResponse response = employeeService.updateEmployee(id, request);
+
+        assertNotNull(response);
+        assertEquals("jane.login@example.com", response.getLoginEmail());
+        verify(userRepository, times(1)).findByEmail("jane.login@example.com");
+        verify(userRepository, times(1)).save(existingUser);
+    }
+
+    @Test
+    void updateEmployee_LinkedUser_ChangedUnusedEmail_Succeeds() {
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        EmployeeUpdateRequest request = new EmployeeUpdateRequest(
+                userId, "Jane Changed", "jane@example.com", "987", "Editor", "Premiere", EmployeeStatus.ACTIVE
+        );
+        request.setCreateLogin(true);
+        request.setLoginEmail("jane.new@example.com");
+        request.setUserRole("EDITOR");
+        request.setSendInviteEmail(false);
+
+        Employee existing = new Employee();
+        existing.setId(id);
+        existing.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        existing.setUserId(userId);
+        existing.setEmail("jane@example.com");
+
+        User existingUser = new User();
+        existingUser.setId(userId);
+        existingUser.setEmail("jane.login@example.com");
+        existingUser.setRole(UserRole.EMPLOYEE);
+
+        when(employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(existing));
+        when(employeeRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(existing));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findByEmail("jane.new@example.com")).thenReturn(Optional.empty());
+        when(employeeRepository.save(any(Employee.class))).thenReturn(existing);
+        when(userRepository.save(any(User.class))).thenReturn(existingUser);
+
+        EmployeeResponse response = employeeService.updateEmployee(id, request);
+
+        assertNotNull(response);
+        assertEquals("jane.new@example.com", response.getLoginEmail());
+        verify(userRepository, times(1)).findByEmail("jane.new@example.com");
+        verify(userRepository, times(1)).save(existingUser);
+    }
+
+    @Test
+    void updateEmployee_LinkedUser_EmailUsedByAnotherUser_Fails() {
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        EmployeeUpdateRequest request = new EmployeeUpdateRequest(
+                userId, "Jane Changed", "jane@example.com", "987", "Editor", "Premiere", EmployeeStatus.ACTIVE
+        );
+        request.setCreateLogin(true);
+        request.setLoginEmail("another.used@example.com");
+        request.setUserRole("EDITOR");
+        request.setSendInviteEmail(false);
+
+        Employee existing = new Employee();
+        existing.setId(id);
+        existing.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        existing.setUserId(userId);
+        existing.setEmail("jane@example.com");
+
+        User existingUser = new User();
+        existingUser.setId(userId);
+        existingUser.setEmail("jane.login@example.com");
+        existingUser.setRole(UserRole.EMPLOYEE);
+
+        User anotherUser = new User();
+        anotherUser.setId(UUID.randomUUID());
+        anotherUser.setEmail("another.used@example.com");
+
+        when(employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(existing));
+        when(employeeRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(existing));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findByEmail("another.used@example.com")).thenReturn(Optional.of(anotherUser));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> 
+            employeeService.updateEmployee(id, request)
+        );
+        assertEquals("This email is already used by another user. Use a different login email.", exception.getMessage());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void updateEmployee_NoLinkedUser_EmailUsedByExistingUser_Fails() {
+        UUID id = UUID.randomUUID();
+
+        EmployeeUpdateRequest request = new EmployeeUpdateRequest(
+                null, "Jane No User", "jane@example.com", "987", "Editor", "Premiere", EmployeeStatus.ACTIVE
+        );
+        request.setCreateLogin(true);
+        request.setLoginEmail("existing.user@example.com");
+        request.setUserRole("EDITOR");
+        request.setSendInviteEmail(false);
+
+        Employee existing = new Employee();
+        existing.setId(id);
+        existing.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        existing.setEmail("jane@example.com");
+
+        User existingUser = new User();
+        existingUser.setId(UUID.randomUUID());
+        existingUser.setEmail("existing.user@example.com");
+
+        when(employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(existing));
+        when(employeeRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(existing));
+        when(userRepository.findByEmail("existing.user@example.com")).thenReturn(Optional.of(existingUser));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> 
+            employeeService.updateEmployee(id, request)
+        );
+        assertEquals("This email is already used by another user. Use a different login email.", exception.getMessage());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void updateEmployee_ExistingLinkedUser_DoesNotCreateDuplicateUser() {
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        EmployeeUpdateRequest request = new EmployeeUpdateRequest(
+                userId, "Jane No Duplicate", "jane@example.com", "987", "Editor", "Premiere", EmployeeStatus.ACTIVE
+        );
+        request.setCreateLogin(true);
+        request.setLoginEmail("jane.login@example.com");
+        request.setUserRole("EDITOR");
+        request.setSendInviteEmail(false);
+
+        Employee existing = new Employee();
+        existing.setId(id);
+        existing.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        existing.setUserId(userId);
+        existing.setEmail("jane@example.com");
+
+        User existingUser = new User();
+        existingUser.setId(userId);
+        existingUser.setEmail("jane.login@example.com");
+        existingUser.setRole(UserRole.EMPLOYEE);
+
+        when(employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(existing));
+        when(employeeRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(existing));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findByEmail("jane.login@example.com")).thenReturn(Optional.of(existingUser));
+        when(employeeRepository.save(any(Employee.class))).thenReturn(existing);
+        when(userRepository.save(any(User.class))).thenReturn(existingUser);
+
+        EmployeeResponse response = employeeService.updateEmployee(id, request);
+
+        assertNotNull(response);
+        assertEquals(userId, existing.getUserId());
+        verify(userRepository, times(1)).save(existingUser);
     }
 }

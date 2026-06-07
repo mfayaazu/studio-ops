@@ -17,7 +17,20 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+  mail:
+    host: localhost
+    port: 25
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
 
 studioops:
   beta:
     whatsapp-only: true
+  email:
+    enabled: false
+    from: no-reply@studioops.photo
+  frontend-url: http://localhost:5173

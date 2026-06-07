@@ -135,4 +135,14 @@ public class EmployeeUpdateRequest {
     public void setTemporaryPassword(String temporaryPassword) {
         this.temporaryPassword = temporaryPassword;
     }
+
+    private Boolean sendInviteEmail;
+
+    public Boolean getSendInviteEmail() {
+        return sendInviteEmail;
+    }
+
+    public void setSendInviteEmail(Boolean sendInviteEmail) {
+        this.sendInviteEmail = sendInviteEmail;
+    }
 }

@@ -4,6 +4,7 @@ import type { Employee, EmployeeCreateRequest } from '../types';
 import { EmployeeForm } from '../components/EmployeeForm';
 import { EmployeeList } from '../components/EmployeeList';
 import { ClipboardList, Search, Plus, X, AlertTriangle } from 'lucide-react';
+import * as authApi from '../../auth/api/authApi';
 
 export const EmployeesPage: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -58,17 +59,30 @@ export const EmployeesPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSaveEmployee = async (payload: EmployeeCreateRequest) => {
+  const handleSaveEmployee = async (
+    payload: EmployeeCreateRequest,
+    permissionsOverrides?: { pageKey: string; accessLevel: string }[]
+  ) => {
     setFormError(null);
     setIsSubmitting(true);
     try {
+      let savedEmployee: Employee;
       if (editingEmployee) {
-        await updateEmployee(editingEmployee.id, payload);
+        savedEmployee = await updateEmployee(editingEmployee.id, payload);
       } else {
-        await createEmployee(payload);
+        savedEmployee = await createEmployee(payload);
       }
+
+      if (permissionsOverrides && savedEmployee.userId) {
+        await authApi.updateUserPermissions(savedEmployee.userId, permissionsOverrides);
+      }
+
       setIsModalOpen(false);
       handleFetchEmployees(searchTerm);
+
+      if (savedEmployee.inviteWarning) {
+        alert(savedEmployee.inviteWarning);
+      }
     } catch (err: any) {
       setFormError(err.message || 'Error occurred while saving employee data.');
     } finally {
@@ -167,9 +181,9 @@ export const EmployeesPage: React.FC = () => {
       {/* Modal Dialog */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#0d1424] border border-slate-850 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-[#0d1424] border border-slate-850 w-full w-[min(92vw,980px)] max-w-5xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[calc(100vh-48px)]">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-850 flex items-center justify-between bg-slate-900/20">
+            <div className="px-6 py-4 border-b border-slate-850 flex items-center justify-between bg-slate-900/20 flex-none">
               <h3 className="text-white font-semibold text-base">
                 {editingEmployee ? 'Edit Team Member' : 'Add Team Member'}
               </h3>
@@ -182,7 +196,7 @@ export const EmployeesPage: React.FC = () => {
             </div>
 
             {/* Form Container */}
-            <div className="p-6">
+            <div className="p-6 overflow-hidden flex-1 flex flex-col min-h-0 bg-[#0d1424]">
               <EmployeeForm
                 initialData={editingEmployee}
                 onSubmit={handleSaveEmployee}

@@ -152,202 +152,204 @@ export const EventForm: React.FC<EventFormProps> = ({
   const displayedError = validationError || submitError;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {displayedError && (
-        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3 rounded-lg text-xs flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-          <span>{displayedError}</span>
-        </div>
-      )}
+    <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 overflow-y-auto min-h-0 max-h-[calc(100vh-220px)] space-y-4 pr-1">
+        {displayedError && (
+          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3 rounded-lg text-xs flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+            <span>{displayedError}</span>
+          </div>
+        )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-            Project Link <span className="text-rose-500">*</span>
-          </label>
-          <select
-            required
-            disabled={isSubmitting || projects.length === 0}
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
-          >
-            {projects.length === 0 && (
-              <option value="">No projects available</option>
-            )}
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                [{p.projectCode}] {p.title}
-              </option>
-            ))}
-          </select>
-        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+              Project Link <span className="text-rose-500">*</span>
+            </label>
+            <select
+              required
+              disabled={isSubmitting || projects.length === 0}
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
+            >
+              {projects.length === 0 && (
+                <option value="">No projects available</option>
+              )}
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  [{p.projectCode}] {p.title}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-            Event Type
-          </label>
-          <select
-            disabled={isSubmitting}
-            value={type}
-            onChange={(e) => setType(e.target.value as EventType)}
-            className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
-          >
-            <option value="WEDDING">Wedding</option>
-            <option value="ENGAGEMENT">Engagement</option>
-            <option value="RECEPTION">Reception</option>
-            <option value="HALDI">Haldi</option>
-            <option value="MEHENDI">Mehendi</option>
-            <option value="SANGEET">Sangeet</option>
-            <option value="BIRTHDAY">Birthday</option>
-            <option value="HOUSEWARMING">Housewarming</option>
-            <option value="PRE_WEDDING">Pre-Wedding</option>
-            <option value="CORPORATE">Corporate</option>
-            <option value="OTHER">Other</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-          Event Title <span className="text-rose-500">*</span>
-        </label>
-        <input
-          type="text"
-          required
-          disabled={isSubmitting}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. Sangeet Ceremony"
-          className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-            Event Date <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="date"
-            required
-            disabled={isSubmitting}
-            value={eventDate}
-            onChange={(e) => setEventDate(e.target.value)}
-            className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
-          />
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+              Event Type
+            </label>
+            <select
+              disabled={isSubmitting}
+              value={type}
+              onChange={(e) => setType(e.target.value as EventType)}
+              className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
+            >
+              <option value="WEDDING">Wedding</option>
+              <option value="ENGAGEMENT">Engagement</option>
+              <option value="RECEPTION">Reception</option>
+              <option value="HALDI">Haldi</option>
+              <option value="MEHENDI">Mehendi</option>
+              <option value="SANGEET">Sangeet</option>
+              <option value="BIRTHDAY">Birthday</option>
+              <option value="HOUSEWARMING">Housewarming</option>
+              <option value="PRE_WEDDING">Pre-Wedding</option>
+              <option value="CORPORATE">Corporate</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
         </div>
 
         <div className="space-y-1">
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-            Start Time <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="time"
-            required
-            disabled={isSubmitting}
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-            End Time <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="time"
-            required
-            disabled={isSubmitting}
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-            Venue Name <span className="text-rose-500">*</span>
+            Event Title <span className="text-rose-500">*</span>
           </label>
           <input
             type="text"
             required
             disabled={isSubmitting}
-            value={venueName}
-            onChange={(e) => setVenueName(e.target.value)}
-            placeholder="e.g. Grand Ballroom, Sheraton"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Sangeet Ceremony"
             className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
           />
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+              Event Date <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="date"
+              required
+              disabled={isSubmitting}
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+              className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+              Start Time <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="time"
+              required
+              disabled={isSubmitting}
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+              End Time <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="time"
+              required
+              disabled={isSubmitting}
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+              Venue Name <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              disabled={isSubmitting}
+              value={venueName}
+              onChange={(e) => setVenueName(e.target.value)}
+              placeholder="e.g. Grand Ballroom, Sheraton"
+              className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+              City <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              disabled={isSubmitting}
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="e.g. Mumbai"
+              className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
+            />
+          </div>
+        </div>
+
         <div className="space-y-1">
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-            City <span className="text-rose-500">*</span>
+            Full Address <span className="text-rose-500">*</span>
           </label>
           <input
             type="text"
             required
             disabled={isSubmitting}
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            placeholder="e.g. Mumbai"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="e.g. 123 Luxury Road, Bandra West"
             className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
           />
         </div>
-      </div>
 
-      <div className="space-y-1">
-        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-          Full Address <span className="text-rose-500">*</span>
-        </label>
-        <input
-          type="text"
-          required
-          disabled={isSubmitting}
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="e.g. 123 Luxury Road, Bandra West"
-          className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
-        />
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+              Event Status
+            </label>
+            <select
+              disabled={isSubmitting}
+              value={status}
+              onChange={(e) => setStatus(e.target.value as EventStatus)}
+              className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
+            >
+              <option value="SCHEDULED">Scheduled</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1">
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-            Event Status
+            Internal Notes
           </label>
-          <select
+          <textarea
             disabled={isSubmitting}
-            value={status}
-            onChange={(e) => setStatus(e.target.value as EventStatus)}
-            className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
-          >
-            <option value="SCHEDULED">Scheduled</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="CANCELLED">Cancelled</option>
-          </select>
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Instructions for the crew, shoot specifics, gear required..."
+            rows={3}
+            className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors resize-none disabled:opacity-50"
+          />
         </div>
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-          Internal Notes
-        </label>
-        <textarea
-          disabled={isSubmitting}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Instructions for the crew, shoot specifics, gear required..."
-          rows={3}
-          className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors resize-none disabled:opacity-50"
-        />
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-slate-850">
+      <div className="flex justify-end gap-3 pt-4 border-t border-slate-850 flex-none mt-4">
         <button
           type="button"
           disabled={isSubmitting}

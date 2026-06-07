@@ -326,9 +326,9 @@ export const DeliverablesPage: React.FC = () => {
       {/* Form Modal Overlay */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+          <div className="bg-[#0d1424] border border-slate-850 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-48px)]">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+            <div className="px-6 py-4 border-b border-slate-850 flex justify-between items-center bg-slate-900/20 flex-none">
               <h2 className="text-lg font-semibold text-white">
                 {editingRecord ? 'Edit Deliverable' : 'Add Deliverable'}
               </h2>
@@ -341,7 +341,7 @@ export const DeliverablesPage: React.FC = () => {
             </div>
 
             {/* Form Content */}
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
               <DeliverableForm
                 initialData={editingRecord}
                 projects={projects}

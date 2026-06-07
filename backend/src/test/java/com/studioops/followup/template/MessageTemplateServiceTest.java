@@ -41,6 +41,9 @@ class MessageTemplateServiceTest {
     @Mock
     private FollowUpStepRepository followUpStepRepository;
 
+    @Mock
+    private com.studioops.user.PermissionService permissionService;
+
     @InjectMocks
     private MessageTemplateService messageTemplateService;
 

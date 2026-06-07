@@ -15,9 +15,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.studioops.user.PermissionService permissionService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, com.studioops.user.PermissionService permissionService) {
         this.authService = authService;
+        this.permissionService = permissionService;
     }
 
     @PostMapping("/signup")
@@ -39,9 +41,33 @@ public class AuthController {
         return ResponseEntity.ok(authService.getCurrentUser());
     }
 
+    @GetMapping("/me/permissions")
+    public ResponseEntity<com.studioops.user.dto.UserEffectivePermissionResponse> mePermissions() {
+        com.studioops.user.User currentUser = permissionService.getCurrentUser();
+        return ResponseEntity.ok(permissionService.getEffectivePermissions(currentUser.getId()));
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         authService.logout(request);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody com.studioops.auth.dto.ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody com.studioops.auth.dto.ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/accept-invite")
+    public ResponseEntity<Void> acceptInvite(@Valid @RequestBody com.studioops.auth.dto.AcceptInviteRequest request) {
+        authService.acceptInvite(request);
+        return ResponseEntity.ok().build();
     }
 }

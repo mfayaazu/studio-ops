@@ -10,5 +10,6 @@ public enum LeadSource {
     EMAIL,
     MANUAL,
     IMPORT,
+    GOOGLE,
     OTHER
 }

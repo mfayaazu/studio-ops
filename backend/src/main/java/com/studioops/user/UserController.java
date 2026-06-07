@@ -12,9 +12,11 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final PermissionService permissionService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, PermissionService permissionService) {
         this.userService = userService;
+        this.permissionService = permissionService;
     }
 
     @GetMapping
@@ -29,5 +31,19 @@ public class UserController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @GetMapping("/{userId}/permissions")
+    public ResponseEntity<com.studioops.user.dto.UserEffectivePermissionResponse> getUserPermissions(@PathVariable UUID userId) {
+        return ResponseEntity.ok(permissionService.getEffectivePermissions(userId));
+    }
+
+    @PutMapping("/{userId}/permissions")
+    public ResponseEntity<Void> updateUserPermissions(
+            @PathVariable UUID userId,
+            @jakarta.validation.Valid @RequestBody List<com.studioops.user.dto.UserPagePermissionUpsertRequest> requests) {
+        User currentUser = permissionService.getCurrentUser();
+        permissionService.upsertPermissions(userId, requests, currentUser.getId());
+        return ResponseEntity.ok().build();
     }
 }

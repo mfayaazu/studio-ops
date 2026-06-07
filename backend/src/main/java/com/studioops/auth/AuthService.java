@@ -1,12 +1,12 @@
 package com.studioops.auth;
 
-import com.studioops.auth.dto.CurrentUserResponse;
-import com.studioops.auth.dto.LoginRequest;
-import com.studioops.auth.dto.LoginResponse;
+import com.studioops.auth.dto.*;
 import com.studioops.user.User;
 import com.studioops.user.UserStatus;
 import com.studioops.user.UserService;
 import com.studioops.user.dto.UserResponse;
+import java.time.Instant;
+import java.util.UUID;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -38,18 +38,21 @@ public class AuthService {
     private final StudioRepository studioRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.studioops.email.EmailService emailService;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 
     public AuthService(AuthenticationManager authenticationManager, 
                        UserService userService, 
                        StudioRepository studioRepository,
                        UserRepository userRepository,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder,
+                       com.studioops.email.EmailService emailService) {
         this.authenticationManager = authenticationManager;
         this.userService = userService;
         this.studioRepository = studioRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     public LoginResponse login(LoginRequest request, HttpServletRequest servletRequest,
@@ -174,5 +177,50 @@ public class AuthService {
             counter++;
         }
         return slug;
+    }
+
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        String trimmedEmail = request.getEmail().trim().toLowerCase();
+        User user = userRepository.findByEmail(trimmedEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Email address not found: " + trimmedEmail));
+
+        String token = UUID.randomUUID().toString();
+        user.setPasswordResetToken(token);
+        user.setPasswordResetTokenExpiresAt(Instant.now().plus(java.time.Duration.ofHours(1))); // 1 hour expiration
+        userRepository.save(user);
+
+        emailService.sendPasswordResetEmail(user, token);
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByPasswordResetToken(request.getToken())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired password reset token"));
+
+        if (user.getPasswordResetTokenExpiresAt() == null || Instant.now().isAfter(user.getPasswordResetTokenExpiresAt())) {
+            throw new IllegalArgumentException("Password reset token has expired");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword().trim()));
+        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenExpiresAt(null);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void acceptInvite(AcceptInviteRequest request) {
+        User user = userRepository.findByInviteToken(request.getToken())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired account invite token"));
+
+        if (user.getInviteTokenExpiresAt() == null || Instant.now().isAfter(user.getInviteTokenExpiresAt())) {
+            throw new IllegalArgumentException("Invite token has expired");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword().trim()));
+        user.setInviteToken(null);
+        user.setInviteTokenExpiresAt(null);
+        user.setStatus(UserStatus.ACTIVE);
+        userRepository.save(user);
     }
 }

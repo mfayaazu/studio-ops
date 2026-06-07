@@ -38,6 +38,9 @@ class QuotationServiceTest {
 
 
     @Mock
+    private com.studioops.user.PermissionService permissionService;
+
+    @Mock
     private QuotationRepository quotationRepository;
     @Mock
     private StudioRepository studioRepository;

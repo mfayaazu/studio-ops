@@ -2,6 +2,7 @@ package com.studioops.employee;
 
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.common.tenant.TenantContext;
+import java.time.Instant;
 import com.studioops.studio.StudioRepository;
 import com.studioops.user.User;
 import com.studioops.user.UserRepository;
@@ -29,17 +30,23 @@ public class EmployeeService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final TenantContext tenantContext;
+    private final com.studioops.user.PermissionService permissionService;
+    private final com.studioops.email.EmailService emailService;
 
     public EmployeeService(EmployeeRepository employeeRepository, 
                            StudioRepository studioRepository, 
                            UserRepository userRepository,
                            PasswordEncoder passwordEncoder,
-                           TenantContext tenantContext) {
+                           TenantContext tenantContext,
+                           com.studioops.user.PermissionService permissionService,
+                           com.studioops.email.EmailService emailService) {
         this.employeeRepository = employeeRepository;
         this.studioRepository = studioRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tenantContext = tenantContext;
+        this.permissionService = permissionService;
+        this.emailService = emailService;
     }
 
     public EmployeeResponse createEmployee(EmployeeCreateRequest request) {
@@ -76,13 +83,14 @@ public class EmployeeService {
         employee.setStatus(status);
 
         // Create login if requested
+        String warning = null;
         if (request.getCreateLogin() != null && request.getCreateLogin()) {
             String loginEmail = request.getLoginEmail() != null && !request.getLoginEmail().trim().isEmpty()
                     ? request.getLoginEmail().trim().toLowerCase()
                     : trimmedEmail;
 
             if (userRepository.findByEmail(loginEmail).isPresent()) {
-                throw new IllegalArgumentException("Login email is already in use");
+                throw new IllegalArgumentException("This email is already used by another user. Use a different login email.");
             }
 
             UserRole role;
@@ -94,7 +102,7 @@ public class EmployeeService {
 
             String tempPass = request.getTemporaryPassword() != null && !request.getTemporaryPassword().trim().isEmpty()
                     ? request.getTemporaryPassword().trim()
-                    : "TempPass123!";
+                    : UUID.randomUUID().toString();
 
             User user = new User();
             user.setEmail(loginEmail);
@@ -103,13 +111,32 @@ public class EmployeeService {
             user.setStatus(UserStatus.ACTIVE);
             user.setStudioId(studioId);
             user.setDisplayName(request.getFullName().trim());
-            User savedUser = userRepository.save(user);
 
+            String inviteToken = UUID.randomUUID().toString();
+            user.setInviteToken(inviteToken);
+            user.setInviteTokenExpiresAt(Instant.now().plus(java.time.Duration.ofHours(48)));
+
+            User savedUser = userRepository.save(user);
             employee.setUserId(savedUser.getId());
+
+            if (request.getSendInviteEmail() == null || request.getSendInviteEmail()) {
+                String studioName = studioRepository.findById(studioId)
+                        .map(com.studioops.studio.Studio::getName)
+                        .orElse("StudioOps");
+                try {
+                    emailService.sendEmployeeInviteEmail(savedUser, studioName, savedUser.getInviteToken());
+                } catch (Exception e) {
+                    warning = "Employee login created, but invite email could not be sent.";
+                }
+            }
         }
 
         Employee saved = employeeRepository.save(employee);
-        return mapToResponse(saved);
+        EmployeeResponse response = mapToResponse(saved);
+        if (warning != null) {
+            response.setInviteWarning(warning);
+        }
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -162,6 +189,7 @@ public class EmployeeService {
         employee.setStatus(status);
 
         // Create or update login if requested
+        String warning = null;
         if (request.getCreateLogin() != null && request.getCreateLogin()) {
             String loginEmail = request.getLoginEmail() != null && !request.getLoginEmail().trim().isEmpty()
                     ? request.getLoginEmail().trim().toLowerCase()
@@ -174,15 +202,58 @@ public class EmployeeService {
                 throw new IllegalArgumentException("Invalid user role: " + request.getUserRole());
             }
 
-            if (employee.getUserId() == null) {
-                // Create new login user
-                if (userRepository.findByEmail(loginEmail).isPresent()) {
-                    throw new IllegalArgumentException("Login email is already in use");
+            if (employee.getUserId() != null) {
+                // Case A: employee has existing userId
+                User linkedUser = userRepository.findById(employee.getUserId())
+                        .orElseThrow(() -> new IllegalArgumentException("Linked user account not found"));
+
+                Optional<User> foundUserOpt = userRepository.findByEmail(loginEmail);
+                if (foundUserOpt.isPresent()) {
+                    User foundUser = foundUserOpt.get();
+                    if (!foundUser.getId().equals(linkedUser.getId())) {
+                        throw new IllegalArgumentException("This email is already used by another user. Use a different login email.");
+                    }
+                    linkedUser.setEmail(loginEmail);
+                } else {
+                    linkedUser.setEmail(loginEmail);
+                }
+
+                linkedUser.setRole(role);
+                linkedUser.setDisplayName(request.getFullName().trim());
+
+                // If password provided, update it
+                if (request.getTemporaryPassword() != null && !request.getTemporaryPassword().trim().isEmpty()) {
+                    linkedUser.setPasswordHash(passwordEncoder.encode(request.getTemporaryPassword().trim()));
+                }
+
+                // Resend invite if requested explicitly
+                if (request.getSendInviteEmail() != null && request.getSendInviteEmail()) {
+                    String inviteToken = UUID.randomUUID().toString();
+                    linkedUser.setInviteToken(inviteToken);
+                    linkedUser.setInviteTokenExpiresAt(Instant.now().plus(java.time.Duration.ofHours(48)));
+
+                    User savedUser = userRepository.save(linkedUser);
+                    String studioName = studioRepository.findById(employee.getStudioId())
+                            .map(com.studioops.studio.Studio::getName)
+                            .orElse("StudioOps");
+                    try {
+                        emailService.sendEmployeeInviteEmail(savedUser, studioName, savedUser.getInviteToken());
+                    } catch (Exception e) {
+                        warning = "Employee login updated, but invite email could not be sent.";
+                    }
+                } else {
+                    userRepository.save(linkedUser);
+                }
+            } else {
+                // Case B: employee has no existing userId
+                Optional<User> existingUser = userRepository.findByEmail(loginEmail);
+                if (existingUser.isPresent()) {
+                    throw new IllegalArgumentException("This email is already used by another user. Use a different login email.");
                 }
 
                 String tempPass = request.getTemporaryPassword() != null && !request.getTemporaryPassword().trim().isEmpty()
                         ? request.getTemporaryPassword().trim()
-                        : "TempPass123!";
+                        : UUID.randomUUID().toString();
 
                 User user = new User();
                 user.setEmail(loginEmail);
@@ -191,36 +262,33 @@ public class EmployeeService {
                 user.setStatus(UserStatus.ACTIVE);
                 user.setStudioId(employee.getStudioId());
                 user.setDisplayName(request.getFullName().trim());
+
+                String inviteToken = UUID.randomUUID().toString();
+                user.setInviteToken(inviteToken);
+                user.setInviteTokenExpiresAt(Instant.now().plus(java.time.Duration.ofHours(48)));
+
                 User savedUser = userRepository.save(user);
-
                 employee.setUserId(savedUser.getId());
-            } else {
-                // Update existing login user
-                User user = userRepository.findById(employee.getUserId())
-                        .orElseThrow(() -> new IllegalArgumentException("Linked user account not found"));
 
-                // If email changed, check uniqueness
-                if (!user.getEmail().equalsIgnoreCase(loginEmail)) {
-                    if (userRepository.findByEmail(loginEmail).isPresent()) {
-                        throw new IllegalArgumentException("Login email is already in use");
+                if (request.getSendInviteEmail() == null || request.getSendInviteEmail()) {
+                    String studioName = studioRepository.findById(employee.getStudioId())
+                            .map(com.studioops.studio.Studio::getName)
+                            .orElse("StudioOps");
+                    try {
+                        emailService.sendEmployeeInviteEmail(savedUser, studioName, savedUser.getInviteToken());
+                    } catch (Exception e) {
+                        warning = "Employee login created, but invite email could not be sent.";
                     }
-                    user.setEmail(loginEmail);
                 }
-
-                user.setRole(role);
-                user.setDisplayName(request.getFullName().trim());
-
-                // If password provided, update it
-                if (request.getTemporaryPassword() != null && !request.getTemporaryPassword().trim().isEmpty()) {
-                    user.setPasswordHash(passwordEncoder.encode(request.getTemporaryPassword().trim()));
-                }
-
-                userRepository.save(user);
             }
         }
 
         Employee updated = employeeRepository.save(employee);
-        return mapToResponse(updated);
+        EmployeeResponse response = mapToResponse(updated);
+        if (warning != null) {
+            response.setInviteWarning(warning);
+        }
+        return response;
     }
 
     public void deleteEmployee(UUID id) {
@@ -246,10 +314,7 @@ public class EmployeeService {
     }
 
     private void checkOwnerOrAdminAccess() {
-        User currentUser = getCurrentUser();
-        if (currentUser != null && currentUser.getRole() != UserRole.OWNER && currentUser.getRole() != UserRole.ADMIN) {
-            throw new org.springframework.security.access.AccessDeniedException("Only Owners and Admins can manage employees");
-        }
+        permissionService.checkPermission(com.studioops.user.PageKey.EMPLOYEES, com.studioops.user.AccessLevel.EDIT);
     }
 
     private User getCurrentUser() {

@@ -1,0 +1,67 @@
+name: Deploy Backend to AWS Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'corretto'
+          cache: 'maven'
+
+      - name: Build and Test Backend
+        run: |
+          cd backend
+          chmod +x mvnw
+          ./mvnw clean package
+
+      - name: Prepare Elastic Beanstalk Deployment Package
+        run: |
+          mkdir -p backend/deploy
+          cp backend/target/backend-0.0.1-SNAPSHOT.jar backend/deploy/app.jar
+          echo "web: java -jar app.jar" > backend/deploy/Procfile
+          cd backend/deploy
+          zip -r ../../backend-deploy.zip app.jar Procfile
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload Deployment Package to S3
+        run: |
+          aws s3 cp backend-deploy.zip s3://${{ secrets.AWS_EB_S3_BUCKET }}/backend-deploy-${{ github.sha }}.zip
+
+      - name: Create New Beanstalk Application Version
+        run: |
+          aws elasticbeanstalk create-application-version \
+            --application-name "${{ secrets.AWS_EB_APPLICATION_NAME }}" \
+            --version-label "backend-${{ github.sha }}" \
+            --source-bundle S3Bucket="${{ secrets.AWS_EB_S3_BUCKET }}",S3Key="backend-deploy-${{ github.sha }}.zip" \
+            --description "Commit: ${{ github.sha }}"
+
+      - name: Deploy to Elastic Beanstalk Environment
+        run: |
+          aws elasticbeanstalk update-environment \
+            --environment-name "${{ secrets.AWS_EB_ENVIRONMENT_NAME }}" \
+            --version-label "backend-${{ github.sha }}"

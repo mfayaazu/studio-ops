@@ -163,9 +163,9 @@ export const BackupForm: React.FC<BackupFormProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+      <div className="bg-[#0d1424] border border-slate-850 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-48px)]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-slate-850 flex justify-between items-center bg-slate-900/20 flex-none">
           <h2 className="text-lg font-semibold text-white">
             {isEdit ? 'Edit Backup Record' : 'Add Backup Record'}
           </h2>
@@ -175,155 +175,157 @@ export const BackupForm: React.FC<BackupFormProps> = ({
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-          {error && (
-            <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3 rounded-lg text-xs">
-              {error}
-            </div>
-          )}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="p-6 space-y-4 flex-1 overflow-y-auto min-h-0 max-h-[calc(100vh-200px)]">
+            {error && (
+              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3 rounded-lg text-xs">
+                {error}
+              </div>
+            )}
 
-          {/* Project SELECT */}
-          <div>
-            <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-              Project <span className="text-rose-500">*</span>
-            </label>
-            <select
-              disabled={isEdit}
-              value={projectId}
-              onChange={e => {
-                setProjectId(e.target.value);
-                setDeliverableId(''); // reset deliverable
-              }}
-              className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="">Select Project</option>
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>
-                  [{p.projectCode}] {p.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Deliverable SELECT */}
-          <div>
-            <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-              Deliverable (Optional)
-            </label>
-            <select
-              disabled={isEdit || !projectId}
-              value={deliverableId}
-              onChange={e => setDeliverableId(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="">None / Not Tied to Deliverable</option>
-              {filteredDeliverables.map(d => (
-                <option key={d.id} value={d.id}>
-                  {d.name} ({d.deliverableType})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Backup Type & Location Type Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Project SELECT */}
             <div>
               <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                Backup Type <span className="text-rose-500">*</span>
+                Project <span className="text-rose-500">*</span>
               </label>
               <select
-                value={backupType}
-                onChange={e => setBackupType(e.target.value as BackupType)}
-                className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                disabled={isEdit}
+                value={projectId}
+                onChange={e => {
+                  setProjectId(e.target.value);
+                  setDeliverableId(''); // reset deliverable
+                }}
+                className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {BACKUP_TYPES.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
+                <option value="">Select Project</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>
+                    [{p.projectCode}] {p.title}
                   </option>
                 ))}
               </select>
             </div>
 
+            {/* Deliverable SELECT */}
             <div>
               <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                Location Type <span className="text-rose-500">*</span>
+                Deliverable (Optional)
               </label>
               <select
-                value={locationType}
-                onChange={e => setLocationType(e.target.value as BackupLocationType)}
-                className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                disabled={isEdit || !projectId}
+                value={deliverableId}
+                onChange={e => setDeliverableId(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {LOCATION_TYPES.map(loc => (
-                  <option key={loc.value} value={loc.value}>
-                    {loc.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Destination Path */}
-          <div>
-            <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-              Destination Path <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={destinationPath}
-              onChange={e => setDestinationPath(e.target.value)}
-              placeholder="e.g. s3://studio-photos/wedding-john-doe/raw/"
-              className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 placeholder-slate-600"
-            />
-          </div>
-
-          {/* Status & Verified At */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                Status <span className="text-rose-500">*</span>
-              </label>
-              <select
-                value={status}
-                onChange={e => setStatus(e.target.value as BackupStatus)}
-                className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
-              >
-                {STATUSES.map(s => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
+                <option value="">None / Not Tied to Deliverable</option>
+                {filteredDeliverables.map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.deliverableType})
                   </option>
                 ))}
               </select>
             </div>
 
+            {/* Backup Type & Location Type Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                  Backup Type <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={backupType}
+                  onChange={e => setBackupType(e.target.value as BackupType)}
+                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                >
+                  {BACKUP_TYPES.map(type => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                  Location Type <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={locationType}
+                  onChange={e => setLocationType(e.target.value as BackupLocationType)}
+                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                >
+                  {LOCATION_TYPES.map(loc => (
+                    <option key={loc.value} value={loc.value}>
+                      {loc.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Destination Path */}
             <div>
               <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                Verified At (Optional)
+                Destination Path <span className="text-rose-500">*</span>
               </label>
               <input
-                type="datetime-local"
-                value={verifiedAtLocal}
-                onChange={e => setVerifiedAtLocal(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                type="text"
+                value={destinationPath}
+                onChange={e => setDestinationPath(e.target.value)}
+                placeholder="e.g. s3://studio-photos/wedding-john-doe/raw/"
+                className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 placeholder-slate-600"
+              />
+            </div>
+
+            {/* Status & Verified At */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                  Status <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={status}
+                  onChange={e => setStatus(e.target.value as BackupStatus)}
+                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                >
+                  {STATUSES.map(s => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                  Verified At (Optional)
+                </label>
+                <input
+                  type="datetime-local"
+                  value={verifiedAtLocal}
+                  onChange={e => setVerifiedAtLocal(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                rows={3}
+                placeholder="Additional information, folder specifications, password links..."
+                className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 placeholder-slate-600 resize-none"
               />
             </div>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-              Notes
-            </label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={3}
-              placeholder="Additional information, folder specifications, password links..."
-              className="w-full bg-slate-950 border border-slate-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 placeholder-slate-600 resize-none"
-            />
-          </div>
-
           {/* Actions */}
-          <div className="pt-4 border-t border-slate-800 flex justify-end space-x-3">
+          <div className="px-6 py-4 border-t border-slate-850 bg-slate-900/20 flex justify-end space-x-3 flex-none">
             <button
               type="button"
               onClick={onClose}

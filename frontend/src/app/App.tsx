@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Providers } from './providers';
 import { useRouter } from './router';
+import type { AppRoute } from './router';
 import { MainLayout } from '../components/layout/MainLayout';
 import { useAuth } from '../features/auth/AuthProvider';
 import { LoginPage } from '../features/auth/pages/LoginPage';
 import { PendingApprovalPage } from '../features/auth/pages/PendingApprovalPage';
+import { ForgotPasswordPage } from '../features/auth/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from '../features/auth/pages/ResetPasswordPage';
+import { AcceptInvitePage } from '../features/auth/pages/AcceptInvitePage';
 import { Loader2, ShieldAlert, ArrowLeft } from 'lucide-react';
-import { canAccessRoute, ROLE_ROUTE_ACCESS } from '../features/auth/permissions';
+import { canAccessRoute } from '../features/auth/permissions';
 
 // Page components
 import { DashboardPage } from '../features/dashboard/pages/DashboardPage';
@@ -84,7 +88,7 @@ const RedirectToTemplatesTab: React.FC = () => {
 
 const AppContent: React.FC = () => {
   const { currentRoute, navigateTo } = useRouter();
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, permissions } = useAuth();
   
   const [health, setHealth] = useState<{
     status: 'connecting' | 'online' | 'offline';
@@ -100,7 +104,9 @@ const AppContent: React.FC = () => {
     setChecking(true);
     const startTime = performance.now();
     try {
-      const response = await fetch('/api/health');
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const url = `${baseUrl}/api/health`;
+      const response = await fetch(url);
       const latency = Math.round(performance.now() - startTime);
       
       if (response.ok) {
@@ -133,15 +139,24 @@ const AppContent: React.FC = () => {
   }, []);
 
   const renderActivePage = () => {
-    if (user && !canAccessRoute(user.role, currentRoute)) {
-      return (
-        <AccessRestrictedPage
-          role={user.role}
-          route={currentRoute}
-          allowedRoutes={ROLE_ROUTE_ACCESS[user.role] || []}
-          onNavigate={navigateTo}
-        />
-      );
+    if (user) {
+      const allowed = canAccessRoute(user.role, currentRoute, permissions);
+      if (!allowed) {
+        const allRoutes: AppRoute[] = [
+          'dashboard', 'clients', 'projects', 'employees', 'events',
+          'availability', 'backups', 'deliverables', 'follow-up-center',
+          'post-production', 'quotations'
+        ];
+        const allowedRoutes = allRoutes.filter(r => canAccessRoute(user.role, r, permissions));
+        return (
+          <AccessRestrictedPage
+            role={user.role}
+            route={currentRoute}
+            allowedRoutes={allowedRoutes}
+            onNavigate={navigateTo}
+          />
+        );
+      }
     }
 
     switch (currentRoute) {
@@ -184,6 +199,15 @@ const AppContent: React.FC = () => {
   }
 
   if (!isAuthenticated) {
+    if (currentRoute === 'forgot-password') {
+      return <ForgotPasswordPage />;
+    }
+    if (currentRoute === 'reset-password') {
+      return <ResetPasswordPage />;
+    }
+    if (currentRoute === 'accept-invite') {
+      return <AcceptInvitePage />;
+    }
     return <LoginPage />;
   }
 

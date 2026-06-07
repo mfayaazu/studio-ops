@@ -7,7 +7,7 @@ interface ProjectListProps {
   projects: Project[];
   clients: ClientResponse[];
   onEdit: (project: Project) => void;
-  onDelete: (id: string, code: string) => void;
+  onDelete?: (id: string, code: string) => void;
 }
 
 export const ProjectList: React.FC<ProjectListProps> = ({

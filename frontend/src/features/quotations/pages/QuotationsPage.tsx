@@ -11,8 +11,13 @@ import { QuotationForm } from '../components/QuotationForm';
 import { QuotationList } from '../components/QuotationList';
 import { formatCurrencyINR } from '../../../lib/formatters';
 import { FileText, Plus, X, AlertTriangle, Sparkles, TrendingUp, Send, CheckCircle2, RefreshCw } from 'lucide-react';
+import { useAuth } from '../../auth/AuthProvider';
+import { canEditPage } from '../../auth/permissions';
 
 export const QuotationsPage: React.FC = () => {
+  const { user, permissions } = useAuth();
+  const isEditable = canEditPage(permissions, 'QUOTATIONS', user?.role);
+
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [clients, setClients] = useState<ClientResponse[]>([]);
   const [projects, setProjects] = useState<ProjectResponse[]>([]);
@@ -204,15 +209,27 @@ export const QuotationsPage: React.FC = () => {
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button
-            onClick={openCreateModal}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-medium text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-violet-500/20 transition-all cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New Quotation</span>
-          </button>
+          {isEditable && (
+            <button
+              onClick={openCreateModal}
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-medium text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-violet-500/20 transition-all cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              <span>New Quotation</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* View-Only Warning */}
+      {!isEditable && (
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-4 rounded-xl flex items-center gap-3">
+          <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+          <div className="flex-1 text-sm font-semibold">
+            View-only access: You do not have permission to create or edit quotations.
+          </div>
+        </div>
+      )}
 
       {/* Summary Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -309,7 +326,7 @@ export const QuotationsPage: React.FC = () => {
       {/* Form modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#0d1424] border border-slate-850 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+          <div className="bg-[#0d1424] border border-slate-850 w-full w-[min(92vw,1100px)] max-w-5xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             {/* Header */}
             <div className="px-6 py-4 border-b border-slate-850 flex items-center justify-between bg-slate-900/20 flex-shrink-0">
               <h3 className="text-white font-semibold text-base">
@@ -336,6 +353,7 @@ export const QuotationsPage: React.FC = () => {
                 isSubmitting={isSaving}
                 submitError={formError}
                 onDelete={handleDeleteQuotation}
+                isReadOnly={!isEditable}
               />
             </div>
           </div>

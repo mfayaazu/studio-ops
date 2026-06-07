@@ -42,6 +42,18 @@ public class User {
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 
+    @Column(name = "invite_token")
+    private String inviteToken;
+
+    @Column(name = "invite_token_expires_at")
+    private Instant inviteTokenExpiresAt;
+
+    @Column(name = "password_reset_token")
+    private String passwordResetToken;
+
+    @Column(name = "password_reset_token_expires_at")
+    private Instant passwordResetTokenExpiresAt;
+
     public User() {
     }
 
@@ -134,5 +146,37 @@ public class User {
 
     public void setStudioId(UUID studioId) {
         this.studioId = studioId;
+    }
+
+    public String getInviteToken() {
+        return inviteToken;
+    }
+
+    public void setInviteToken(String inviteToken) {
+        this.inviteToken = inviteToken;
+    }
+
+    public Instant getInviteTokenExpiresAt() {
+        return inviteTokenExpiresAt;
+    }
+
+    public void setInviteTokenExpiresAt(Instant inviteTokenExpiresAt) {
+        this.inviteTokenExpiresAt = inviteTokenExpiresAt;
+    }
+
+    public String getPasswordResetToken() {
+        return passwordResetToken;
+    }
+
+    public void setPasswordResetToken(String passwordResetToken) {
+        this.passwordResetToken = passwordResetToken;
+    }
+
+    public Instant getPasswordResetTokenExpiresAt() {
+        return passwordResetTokenExpiresAt;
+    }
+
+    public void setPasswordResetTokenExpiresAt(Instant passwordResetTokenExpiresAt) {
+        this.passwordResetTokenExpiresAt = passwordResetTokenExpiresAt;
     }
 }

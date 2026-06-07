@@ -26,16 +26,25 @@ public class ProjectService {
     private final StudioRepository studioRepository;
     private final EventRepository eventRepository;
     private final TenantContext tenantContext;
+    private final com.studioops.user.PermissionService permissionService;
 
-    public ProjectService(ProjectRepository projectRepository, ClientRepository clientRepository, StudioRepository studioRepository, EventRepository eventRepository, TenantContext tenantContext) {
+    public ProjectService(
+            ProjectRepository projectRepository,
+            ClientRepository clientRepository,
+            StudioRepository studioRepository,
+            EventRepository eventRepository,
+            TenantContext tenantContext,
+            com.studioops.user.PermissionService permissionService) {
         this.projectRepository = projectRepository;
         this.clientRepository = clientRepository;
         this.studioRepository = studioRepository;
         this.eventRepository = eventRepository;
         this.tenantContext = tenantContext;
+        this.permissionService = permissionService;
     }
 
     public ProjectResponse createProject(ProjectCreateRequest request) {
+        permissionService.checkPermission(com.studioops.user.PageKey.PROJECTS, com.studioops.user.AccessLevel.EDIT);
         UUID currentStudioId = tenantContext.getCurrentStudioId();
         if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
             throw new IllegalArgumentException("Mismatched studio ID provided");
@@ -109,6 +118,7 @@ public class ProjectService {
     }
 
     public ProjectResponse updateProject(UUID id, ProjectUpdateRequest request) {
+        permissionService.checkPermission(com.studioops.user.PageKey.PROJECTS, com.studioops.user.AccessLevel.EDIT);
         Project project = projectRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
 
@@ -149,6 +159,7 @@ public class ProjectService {
     }
 
     public void deleteProject(UUID id) {
+        permissionService.checkPermission(com.studioops.user.PageKey.PROJECTS, com.studioops.user.AccessLevel.EDIT);
         Project project = projectRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
         projectRepository.delete(project);
@@ -161,6 +172,7 @@ public class ProjectService {
      * Returns a message describing what happened.
      */
     public String scheduleEventForProject(UUID id) {
+        permissionService.checkPermission(com.studioops.user.PageKey.PROJECTS, com.studioops.user.AccessLevel.EDIT);
         UUID studioId = tenantContext.getCurrentStudioId();
         Project project = projectRepository.findByIdAndStudioId(id, studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));

@@ -30,6 +30,7 @@ public class QuotationService {
     private final ProjectRepository projectRepository;
     private final LeadRepository leadRepository;
     private final TenantContext tenantContext;
+    private final com.studioops.user.PermissionService permissionService;
 
     public QuotationService(
             QuotationRepository quotationRepository,
@@ -37,16 +38,19 @@ public class QuotationService {
             ClientRepository clientRepository,
             ProjectRepository projectRepository,
             LeadRepository leadRepository,
-            TenantContext tenantContext) {
+            TenantContext tenantContext,
+            com.studioops.user.PermissionService permissionService) {
         this.quotationRepository = quotationRepository;
         this.studioRepository = studioRepository;
         this.clientRepository = clientRepository;
         this.projectRepository = projectRepository;
         this.leadRepository = leadRepository;
         this.tenantContext = tenantContext;
+        this.permissionService = permissionService;
     }
 
     public QuotationResponse createQuotation(QuotationCreateRequest request) {
+        permissionService.checkPermission(com.studioops.user.PageKey.QUOTATIONS, com.studioops.user.AccessLevel.EDIT);
         UUID currentStudioId = tenantContext.getCurrentStudioId();
         if (request.getStudioId() != null && !request.getStudioId().equals(currentStudioId)) {
             throw new IllegalArgumentException("Mismatched studio ID provided");
@@ -120,6 +124,7 @@ public class QuotationService {
     }
 
     public QuotationResponse updateQuotation(UUID id, QuotationUpdateRequest request) {
+        permissionService.checkPermission(com.studioops.user.PageKey.QUOTATIONS, com.studioops.user.AccessLevel.EDIT);
         UUID studioId = tenantContext.getCurrentStudioId();
         Quotation quotation = quotationRepository.findByIdAndStudioId(id, studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quotation not found with id: " + id));
@@ -157,6 +162,7 @@ public class QuotationService {
     }
 
     public QuotationResponse updateStatus(UUID id, QuotationStatusUpdateRequest request) {
+        permissionService.checkPermission(com.studioops.user.PageKey.QUOTATIONS, com.studioops.user.AccessLevel.EDIT);
         UUID studioId = tenantContext.getCurrentStudioId();
         Quotation quotation = quotationRepository.findByIdAndStudioId(id, studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quotation not found with id: " + id));
@@ -171,6 +177,7 @@ public class QuotationService {
     }
 
     public void deleteQuotation(UUID id) {
+        permissionService.checkPermission(com.studioops.user.PageKey.QUOTATIONS, com.studioops.user.AccessLevel.EDIT);
         UUID studioId = tenantContext.getCurrentStudioId();
         Quotation quotation = quotationRepository.findByIdAndStudioId(id, studioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quotation not found with id: " + id));

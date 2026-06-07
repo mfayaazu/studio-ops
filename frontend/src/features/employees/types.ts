@@ -14,6 +14,7 @@ export interface Employee {
   loginEmail?: string;
   userRole?: string;
   loginEnabled?: boolean;
+  inviteWarning?: string;
 }
 
 // Keep EmployeeResponse as a type alias for compatibility
@@ -31,6 +32,7 @@ export interface EmployeeCreateRequest {
   loginEmail?: string;
   userRole?: string;
   temporaryPassword?: string;
+  sendInviteEmail?: boolean;
 }
 
 export interface EmployeeUpdateRequest {
@@ -45,4 +47,5 @@ export interface EmployeeUpdateRequest {
   loginEmail?: string;
   userRole?: string;
   temporaryPassword?: string;
+  sendInviteEmail?: boolean;
 }

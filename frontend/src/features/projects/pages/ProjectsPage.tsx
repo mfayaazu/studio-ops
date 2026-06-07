@@ -6,8 +6,13 @@ import type { ClientResponse } from '../../clients/types';
 import { ProjectForm } from '../components/ProjectForm';
 import { ProjectList } from '../components/ProjectList';
 import { Briefcase, Search, Plus, X, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../../auth/AuthProvider';
+import { canEditPage } from '../../auth/permissions';
 
 export const ProjectsPage: React.FC = () => {
+  const { user, permissions } = useAuth();
+  const isEditable = canEditPage(permissions, 'PROJECTS', user?.role);
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<ClientResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,15 +107,27 @@ export const ProjectsPage: React.FC = () => {
           <p className="text-slate-400 text-xs mt-1">Track creative photo/video contracts, payments, and workflow pipelines</p>
         </div>
         
-        <button
-          onClick={openCreateModal}
-          disabled={clients.length === 0}
-          className="flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-medium text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-violet-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Project</span>
-        </button>
+        {isEditable && (
+          <button
+            onClick={openCreateModal}
+            disabled={clients.length === 0}
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-medium text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-violet-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Project</span>
+          </button>
+        )}
       </div>
+
+      {/* View-Only Warning */}
+      {!isEditable && (
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-4 rounded-xl flex items-center gap-3">
+          <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+          <div className="flex-1 text-sm font-semibold">
+            View-only access: You do not have permission to create or edit projects.
+          </div>
+        </div>
+      )}
 
       {clients.length === 0 && !loading && (
         <div className="bg-amber-500/15 border border-amber-500/20 text-amber-400 p-4 rounded-xl flex items-center gap-3">
@@ -173,7 +190,7 @@ export const ProjectsPage: React.FC = () => {
             projects={projects}
             clients={clients}
             onEdit={openEditModal}
-            onDelete={handleDeleteProject}
+            onDelete={isEditable ? handleDeleteProject : undefined}
           />
         )}
       </div>
@@ -181,9 +198,9 @@ export const ProjectsPage: React.FC = () => {
       {/* Modal Dialog */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#0d1424] border border-slate-850 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-[#0d1424] border border-slate-850 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-48px)] animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-850 flex items-center justify-between bg-slate-900/20">
+            <div className="px-6 py-4 border-b border-slate-850 flex items-center justify-between bg-slate-900/20 flex-none">
               <h3 className="text-white font-semibold text-base">
                 {editingProject ? 'Edit Project Details' : 'New Project Contract'}
               </h3>
@@ -196,7 +213,7 @@ export const ProjectsPage: React.FC = () => {
             </div>
 
             {/* Form Container */}
-            <div className="p-6">
+            <div className="p-6 flex-1 min-h-0 flex flex-col overflow-hidden">
               <ProjectForm
                 initialData={editingProject}
                 clients={clients}
@@ -205,6 +222,7 @@ export const ProjectsPage: React.FC = () => {
                 isSubmitting={isSubmitting}
                 submitError={formError}
                 onDelete={handleDeleteProject}
+                isReadOnly={!isEditable}
               />
             </div>
           </div>

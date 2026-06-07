@@ -34,3 +34,29 @@ export interface SignupResponse {
   ownerEmail: string;
 }
 
+export type PageKey =
+  | 'DASHBOARD'
+  | 'FOLLOW_UP_CENTER'
+  | 'CLIENTS'
+  | 'QUOTATIONS'
+  | 'PROJECTS'
+  | 'EVENTS'
+  | 'DELIVERABLES'
+  | 'BACKUP'
+  | 'POST_PRODUCTION'
+  | 'EMPLOYEES';
+
+export type AccessLevel = 'NONE' | 'VIEW' | 'EDIT';
+
+export interface UserPagePermissionResponse {
+  pageKey: PageKey;
+  accessLevel: AccessLevel;
+}
+
+export interface UserEffectivePermissionResponse {
+  userId: string;
+  explicitOverrides: UserPagePermissionResponse[];
+  effectivePermissions: Record<PageKey, AccessLevel>;
+}
+
+

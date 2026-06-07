@@ -23,7 +23,7 @@ import { APP_VERSION } from '../../lib/constants';
 
 export const Sidebar: React.FC = () => {
   const { currentRoute, navigateTo } = useRouter();
-  const { user, logout } = useAuth();
+  const { user, permissions, logout } = useAuth();
 
   const navItems = [
     { id: 'dashboard' as AppRoute, label: 'Dashboard', icon: Activity },
@@ -39,7 +39,7 @@ export const Sidebar: React.FC = () => {
     { id: 'quotations' as AppRoute, label: 'Quotations', icon: FileText },
   ];
 
-  const allowedNavItems = navItems.filter(item => canAccessRoute(user?.role || 'EMPLOYEE', item.id));
+  const allowedNavItems = navItems.filter(item => canAccessRoute(user?.role || 'EMPLOYEE', item.id, permissions));
 
   return (
     <aside className="w-64 bg-[#0d1424] border-r border-slate-800/80 flex flex-col justify-between h-screen sticky top-0">

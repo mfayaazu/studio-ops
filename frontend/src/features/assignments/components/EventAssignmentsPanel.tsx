@@ -166,7 +166,7 @@ export const EventAssignmentsPanel: React.FC<EventAssignmentsPanelProps> = ({ ev
       {/* Assignment Modal Form */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#0d1424] border border-slate-850 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-[#0d1424] border border-slate-850 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-48px)]">
             {/* Modal Header */}
             <div className="px-5 py-4 border-b border-slate-850 flex items-center justify-between bg-slate-900/20 flex-shrink-0">
               <h3 className="text-white font-semibold text-sm">

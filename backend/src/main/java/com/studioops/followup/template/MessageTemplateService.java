@@ -32,17 +32,20 @@ public class MessageTemplateService {
     private final TenantContext tenantContext;
     private final UserRepository userRepository;
     private final FollowUpStepRepository followUpStepRepository;
+    private final com.studioops.user.PermissionService permissionService;
 
     public MessageTemplateService(MessageTemplateRepository messageTemplateRepository,
                                   StudioRepository studioRepository,
                                   TenantContext tenantContext,
                                   UserRepository userRepository,
-                                  FollowUpStepRepository followUpStepRepository) {
+                                  FollowUpStepRepository followUpStepRepository,
+                                  com.studioops.user.PermissionService permissionService) {
         this.messageTemplateRepository = messageTemplateRepository;
         this.studioRepository = studioRepository;
         this.tenantContext = tenantContext;
         this.userRepository = userRepository;
         this.followUpStepRepository = followUpStepRepository;
+        this.permissionService = permissionService;
     }
 
     public MessageTemplateResponse createTemplate(MessageTemplateCreateRequest request) {
@@ -168,20 +171,11 @@ public class MessageTemplateService {
     }
 
     private void checkOwnerOrAdminAccess() {
-        User currentUser = getCurrentUser();
-        if (currentUser != null && currentUser.getRole() != UserRole.OWNER && currentUser.getRole() != UserRole.ADMIN) {
-            throw new AccessDeniedException("Only Owners and Admins can manage message templates");
-        }
+        permissionService.checkPermission(com.studioops.user.PageKey.FOLLOW_UP_CENTER, com.studioops.user.AccessLevel.EDIT);
     }
 
     private void checkReadAccess() {
-        User currentUser = getCurrentUser();
-        if (currentUser != null 
-                && currentUser.getRole() != UserRole.OWNER 
-                && currentUser.getRole() != UserRole.ADMIN 
-                && currentUser.getRole() != UserRole.PROJECT_MANAGER) {
-            throw new AccessDeniedException("Only Owners, Admins, and Project Managers can view message templates");
-        }
+        permissionService.checkPermission(com.studioops.user.PageKey.FOLLOW_UP_CENTER, com.studioops.user.AccessLevel.VIEW);
     }
 
     private User getCurrentUser() {

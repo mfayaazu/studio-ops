@@ -159,6 +159,9 @@ export const FollowUpCenterPage: React.FC = () => {
   
   const [apiStatus, setApiStatus] = useState<'connected' | 'offline' | 'empty'>('offline');
   const [leadApiStatus, setLeadApiStatus] = useState<'connected' | 'empty' | 'offline'>('offline');
+  const [tasksApiStatus, setTasksApiStatus] = useState<'connected' | 'empty' | 'offline'>('offline');
+  const [templatesApiStatus, setTemplatesApiStatus] = useState<'connected' | 'empty' | 'offline'>('offline');
+  const [sequencesApiStatus, setSequencesApiStatus] = useState<'connected' | 'empty' | 'offline'>('offline');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLeadsLoading, setIsLeadsLoading] = useState<boolean>(true);
 
@@ -188,7 +191,6 @@ export const FollowUpCenterPage: React.FC = () => {
       console.warn('Failed to fetch leads from backend:', e);
       setLeadApiStatus('offline');
       setLeads([]);
-      setHasError(true);
     } finally {
       setIsLeadsLoading(false);
     }
@@ -324,37 +326,17 @@ export const FollowUpCenterPage: React.FC = () => {
   };
 
   const loadData = async () => {
+    setHasError(false);
+    setIsLoading(true);
+    setIsLeadsLoading(true);
+
+    let leadsFailed = false;
+    let templatesFailed = false;
+    let sequencesFailed = false;
+    let tasksFailed = false;
+
+    // 1. Fetch Leads
     try {
-      setHasError(false);
-      setIsLoading(true);
-      setIsLeadsLoading(true);
-      const fetchedTemplates = await fetchMessageTemplates();
-      const fetchedSequences = await fetchFollowUpSequences();
-
-      let fetchedTasks: FollowUpTask[] = [];
-      let fetchedLogs: CommunicationLog[] = [];
-      try {
-        fetchedTasks = await fetchDueFollowUpTasks();
-        fetchedLogs = await fetchCommunicationLogs();
-      } catch (e) {
-        console.warn('Failed to fetch follow-up tasks or communication logs:', e);
-      }
-
-      // Fetch Quotations, Clients, and Projects
-      try {
-        const [qtns, clts, prjs] = await Promise.all([
-          quotationsApi.list(),
-          fetchClients(),
-          fetchProjects()
-        ]);
-        setQuotations(qtns);
-        setClients(clts);
-        setProjects(prjs);
-      } catch (e) {
-        console.warn('Failed to fetch quotations, clients, or projects on mount:', e);
-      }
-
-      // Fetch Leads
       const fetchedLeads = await fetchLeads();
       if (fetchedLeads && fetchedLeads.length > 0) {
         setLeadApiStatus('connected');
@@ -363,42 +345,99 @@ export const FollowUpCenterPage: React.FC = () => {
         setLeadApiStatus('empty');
         setLeads([]);
       }
-
-      if (fetchedTemplates.length === 0 || fetchedSequences.length === 0) {
-        setApiStatus('empty');
-        setTemplates([]);
-        setSteps([]);
-        setSequences([]);
-      } else {
-        setApiStatus('connected');
-        setTemplates(fetchedTemplates);
-        setSequences(fetchedSequences);
-
-        // Retrieve step configurations for the active sequence
-        const activeSeq = fetchedSequences.find(s => s.active) || fetchedSequences[0];
-        if (activeSeq) {
-          const fetchedSteps = await fetchFollowUpSteps(activeSeq.id);
-          setSteps(fetchedSteps);
-        }
-      }
-
-      setDueTasks(fetchedTasks);
-      setCommunicationLogs(fetchedLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-    } catch (err) {
-      console.error('Backend Follow-up API request failed:', err);
-      setHasError(true);
-      setApiStatus('offline');
+    } catch (e) {
+      console.warn('Failed to fetch leads from backend:', e);
       setLeadApiStatus('offline');
       setLeads([]);
-      setTemplates([]);
-      setSteps([]);
-      setSequences([]);
-      setDueTasks([]);
-      setCommunicationLogs([]);
+      leadsFailed = true;
     } finally {
-      setIsLoading(false);
       setIsLeadsLoading(false);
     }
+
+    // 2. Fetch Templates
+    let fetchedTemplates: MessageTemplate[] = [];
+    try {
+      fetchedTemplates = await fetchMessageTemplates();
+      setTemplates(fetchedTemplates);
+      setTemplatesApiStatus(fetchedTemplates.length > 0 ? 'connected' : 'empty');
+    } catch (e) {
+      console.warn('Failed to fetch templates from backend:', e);
+      setTemplatesApiStatus('offline');
+      setTemplates([]);
+      templatesFailed = true;
+    }
+
+    // 3. Fetch Sequences & Steps
+    try {
+      const fetchedSequences = await fetchFollowUpSequences();
+      setSequences(fetchedSequences);
+      if (fetchedSequences.length === 0) {
+        setSequencesApiStatus('empty');
+        setSteps([]);
+      } else {
+        setSequencesApiStatus('connected');
+        const activeSeq = fetchedSequences.find(s => s.active) || fetchedSequences[0];
+        if (activeSeq) {
+          try {
+            const fetchedSteps = await fetchFollowUpSteps(activeSeq.id);
+            setSteps(fetchedSteps);
+          } catch (e) {
+            console.warn('Failed to fetch follow-up steps for active sequence:', e);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch follow-up sequences from backend:', e);
+      setSequencesApiStatus('offline');
+      setSequences([]);
+      setSteps([]);
+      sequencesFailed = true;
+    }
+
+    // 4. Fetch Due Tasks & Logs
+    try {
+      const fetchedTasks = await fetchDueFollowUpTasks();
+      const fetchedLogs = await fetchCommunicationLogs();
+      setDueTasks(fetchedTasks);
+      setCommunicationLogs(fetchedLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      setTasksApiStatus(fetchedTasks.length > 0 || fetchedLogs.length > 0 ? 'connected' : 'empty');
+    } catch (e) {
+      console.warn('Failed to fetch follow-up tasks or logs from backend:', e);
+      setTasksApiStatus('offline');
+      setDueTasks([]);
+      setCommunicationLogs([]);
+      tasksFailed = true;
+    }
+
+    // 5. Fetch Quotations, Clients, and Projects (secondary data)
+    try {
+      const [qtns, clts, prjs] = await Promise.all([
+        quotationsApi.list(),
+        fetchClients(),
+        fetchProjects()
+      ]);
+      setQuotations(qtns);
+      setClients(clts);
+      setProjects(prjs);
+    } catch (e) {
+      console.warn('Failed to fetch quotations, clients, or projects on mount:', e);
+    }
+
+    // Determine legacy apiStatus for backwards compatibility
+    if (templatesFailed || sequencesFailed) {
+      setApiStatus('offline');
+    } else if (fetchedTemplates.length === 0 && sequences.length === 0) {
+      setApiStatus('empty');
+    } else {
+      setApiStatus('connected');
+    }
+
+    // Global connection error trigger (if all essential sections fail)
+    if (leadsFailed && templatesFailed && sequencesFailed && tasksFailed) {
+      setHasError(true);
+    }
+
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -619,33 +658,13 @@ export const FollowUpCenterPage: React.FC = () => {
           </button>
         </div>
 
-        {/* API Integration Status Badge */}
+        {/* API Integration Status Badges */}
         <div className="flex flex-wrap items-center gap-2 px-2 py-1">
-          {/* Follow-up Automation Badge */}
-          {apiStatus === 'connected' && (
-            <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Follow-ups: Connected
-            </span>
-          )}
-          {apiStatus === 'offline' && (
-            <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              Follow-ups: Offline
-            </span>
-          )}
-          {apiStatus === 'empty' && (
-            <span className="px-2.5 py-1 bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-              Follow-ups: Empty
-            </span>
-          )}
-
           {/* Leads API Status Badge */}
           {leadApiStatus === 'connected' && (
-            <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+            <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono animate-fadeIn">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Leads loaded from backend
+              Leads: Connected
             </span>
           )}
           {leadApiStatus === 'empty' && (
@@ -655,9 +674,69 @@ export const FollowUpCenterPage: React.FC = () => {
             </span>
           )}
           {leadApiStatus === 'offline' && (
-            <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            <span className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-455 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
               Leads: Offline
+            </span>
+          )}
+
+          {/* Follow-up Tasks API Status Badge */}
+          {tasksApiStatus === 'connected' && (
+            <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Follow-ups: Connected
+            </span>
+          )}
+          {tasksApiStatus === 'empty' && (
+            <span className="px-2.5 py-1 bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
+              Follow-ups: Empty
+            </span>
+          )}
+          {tasksApiStatus === 'offline' && (
+            <span className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-455 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono animate-pulse">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+              Follow-ups: Offline
+            </span>
+          )}
+
+          {/* Templates API Status Badge */}
+          {templatesApiStatus === 'connected' && (
+            <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Templates: Connected
+            </span>
+          )}
+          {templatesApiStatus === 'empty' && (
+            <span className="px-2.5 py-1 bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
+              Templates: Empty
+            </span>
+          )}
+          {templatesApiStatus === 'offline' && (
+            <span className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-455 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+              Templates: Offline
+            </span>
+          )}
+
+          {/* Sequence API Status Badge */}
+          {sequencesApiStatus === 'connected' && (
+            <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Sequence: Connected
+            </span>
+          )}
+          {sequencesApiStatus === 'empty' && (
+            <span className="px-2.5 py-1 bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
+              Sequence: Empty
+            </span>
+          )}
+          {sequencesApiStatus === 'offline' && (
+            <span className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-455 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+              Sequence: Offline
             </span>
           )}
         </div>
@@ -686,6 +765,22 @@ export const FollowUpCenterPage: React.FC = () => {
                 <div className="flex flex-col items-center justify-center py-16 gap-3 bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl">
                   <Loader2 className="h-5 w-5 text-violet-500 animate-spin" />
                   <span className="text-slate-400 text-xs font-semibold">Loading pipeline from database...</span>
+                </div>
+              ) : leadApiStatus === 'offline' ? (
+                <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl space-y-4">
+                  <AlertTriangle className="h-10 w-10 text-rose-500 animate-pulse" />
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-slate-250">Leads Offline</h3>
+                    <p className="text-xs text-slate-455 max-w-sm leading-relaxed">
+                      Unable to retrieve leads from backend database. Please check your network connection.
+                    </p>
+                  </div>
+                  <button
+                    onClick={refreshLeads}
+                    className="py-2 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-md"
+                  >
+                    Retry Loading Leads
+                  </button>
                 </div>
               ) : leads.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl space-y-4">
@@ -719,27 +814,63 @@ export const FollowUpCenterPage: React.FC = () => {
             )}
             
             {activeTab === 'sequence' && !isLoading && (
-              <FollowUpTimeline 
-                steps={steps} 
-                templates={templates}
-                sequenceName={sequences[0]?.name}
-                sequenceId={sequences[0]?.id}
-                userRole={user?.role}
-                onRefresh={refreshSequenceSteps}
-              />
+              sequencesApiStatus === 'offline' ? (
+                <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl space-y-4">
+                  <AlertTriangle className="h-10 w-10 text-rose-500 animate-pulse" />
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-slate-250">Sequence Offline</h3>
+                    <p className="text-xs text-slate-455 max-w-sm leading-relaxed">
+                      Unable to load follow-up sequences from the database. Please check your network connection.
+                    </p>
+                  </div>
+                  <button
+                    onClick={loadData}
+                    className="py-2 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-md"
+                  >
+                    Retry Loading Sequence
+                  </button>
+                </div>
+              ) : (
+                <FollowUpTimeline 
+                  steps={steps} 
+                  templates={templates}
+                  sequenceName={sequences[0]?.name}
+                  sequenceId={sequences[0]?.id}
+                  userRole={user?.role}
+                  onRefresh={refreshSequenceSteps}
+                />
+              )
             )}
             {activeTab === 'templates' && !isLoading && (
               <MessageTemplatesPage isEmbedded={true} />
             )}
             {activeTab === 'approvals' && !isLoading && (
-              <PendingFollowUpsPanel 
-                initialTasks={[]} 
-                backendTasks={dueTasks}
-                communicationLogs={communicationLogs}
-                isBackendMode={true}
-                onActionSuccess={handleActionSuccess}
-                leads={leads}
-              />
+              tasksApiStatus === 'offline' ? (
+                <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl space-y-4">
+                  <AlertTriangle className="h-10 w-10 text-rose-500 animate-pulse" />
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-slate-250">Follow-ups Offline</h3>
+                    <p className="text-xs text-slate-455 max-w-sm leading-relaxed">
+                      Unable to retrieve pending follow-up tasks from the database. Please check your network connection.
+                    </p>
+                  </div>
+                  <button
+                    onClick={loadData}
+                    className="py-2 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-md"
+                  >
+                    Retry Loading Tasks
+                  </button>
+                </div>
+              ) : (
+                <PendingFollowUpsPanel 
+                  initialTasks={[]} 
+                  backendTasks={dueTasks}
+                  communicationLogs={communicationLogs}
+                  isBackendMode={true}
+                  onActionSuccess={handleActionSuccess}
+                  leads={leads}
+                />
+              )
             )}
           </>
         )}
@@ -762,7 +893,7 @@ export const FollowUpCenterPage: React.FC = () => {
       {/* Quotation Form modal */}
       {isQuotationModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#0d1424] border border-slate-850 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+          <div className="bg-[#0d1424] border border-slate-850 w-full w-[min(92vw,1100px)] max-w-5xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             {/* Header */}
             <div className="px-6 py-4 border-b border-slate-850 flex items-center justify-between bg-slate-900/20 flex-shrink-0">
               <h3 className="text-white font-semibold text-base">

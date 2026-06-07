@@ -156,6 +156,16 @@ public class EmployeeResponse {
         this.userRole = userRole;
     }
 
+    private String inviteWarning;
+
+    public String getInviteWarning() {
+        return inviteWarning;
+    }
+
+    public void setInviteWarning(String inviteWarning) {
+        this.inviteWarning = inviteWarning;
+    }
+
     public boolean isLoginEnabled() {
         return loginEnabled;
     }

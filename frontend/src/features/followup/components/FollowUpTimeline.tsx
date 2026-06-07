@@ -342,7 +342,7 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
           <div className="absolute inset-0 cursor-default" onClick={closeDrawer} />
 
           {/* Drawer container */}
-          <div className="relative w-full max-w-md bg-[#090f1e] border-l border-slate-800/80 shadow-2xl flex flex-col h-full animate-slide-in">
+          <div className="relative w-full max-w-lg bg-[#090f1e] border-l border-slate-800/80 shadow-2xl flex flex-col h-full animate-slide-in">
             {/* Header */}
             <div className="h-16 border-b border-slate-800/80 px-6 flex items-center justify-between bg-slate-900/40">
               <div className="flex items-center gap-3">

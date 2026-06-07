@@ -45,6 +45,9 @@ class FollowUpStepServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private com.studioops.user.PermissionService permissionService;
+
     @InjectMocks
     private FollowUpStepService followUpStepService;
 

@@ -310,10 +310,10 @@ export const EventsPage: React.FC = () => {
       {/* Create / Edit Form Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#0d1424] border border-slate-855 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-[#0d1424] border border-slate-850 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-48px)]">
             
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-850 flex items-center justify-between bg-slate-900/20 flex-shrink-0">
+            <div className="px-6 py-4 border-b border-slate-850 flex items-center justify-between bg-slate-900/20 flex-shrink-0 flex-none">
               <h3 className="text-white font-semibold text-base">
                 {editingEvent ? 'Edit Scheduled Event' : 'Schedule New Event Shoot'}
               </h3>
@@ -327,7 +327,7 @@ export const EventsPage: React.FC = () => {
             </div>
 
             {/* Modal Body with Form */}
-            <div className="p-6 overflow-y-auto">
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
               <EventForm
                 initialData={editingEvent}
                 defaultDate={preSelectedDate}

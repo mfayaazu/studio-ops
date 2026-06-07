@@ -240,7 +240,7 @@ export const PostProductionTaskDrawer: React.FC<PostProductionTaskDrawerProps> =
       />
 
       {/* Drawer Container */}
-      <div className="fixed inset-y-0 right-0 w-full sm:max-w-lg bg-[#0a0f1d] border-l border-slate-800 shadow-2xl z-50 flex flex-col justify-between overflow-hidden animate-slideInRight">
+      <div className="fixed inset-y-0 right-0 w-full md:max-w-3xl bg-[#0a0f1d] border-l border-slate-800 shadow-2xl z-50 flex flex-col justify-between overflow-hidden animate-slideInRight">
         
         {/* Header */}
         <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/40">

@@ -23,26 +23,40 @@ export class ApiClient {
       credentials: 'include',
     };
 
-    const response = await fetch(path, config);
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const url = path.startsWith('http') ? path : `${baseUrl}${path}`;
+    const response = await fetch(url, config);
 
     if (response.status === 204) {
       return {} as T;
     }
 
-    if (!response.ok) {
-      let errorBody: ApiError;
+    const text = await response.text();
+    const contentType = response.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+
+    let data: any = null;
+    if (text && isJson) {
       try {
-        errorBody = await response.json();
-      } catch {
-        errorBody = {
-          status: response.status,
-          message: `HTTP request failed with status ${response.status}`,
-        };
+        data = JSON.parse(text);
+      } catch (e) {
+        console.warn('Failed to parse response body as JSON', e);
       }
+    }
+
+    if (!response.ok) {
+      const errorBody: ApiError = data || {
+        status: response.status,
+        message: text || `HTTP request failed with status ${response.status}`,
+      };
       throw errorBody;
     }
 
-    return response.json() as Promise<T>;
+    if (!text) {
+      return {} as T;
+    }
+
+    return (data !== null ? data : text) as T;
   }
 
   static get<T>(path: string, options?: RequestInit): Promise<T> {
