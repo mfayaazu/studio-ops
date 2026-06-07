@@ -38,3 +38,11 @@ crash.log
 crash.*.log
 *.tfvars
 !*.tfvars.example
+
+# Terraform local/generated files
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!*.tfvars.example
