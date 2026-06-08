@@ -88,7 +88,6 @@ const mapLeadResponseToLead = (response: LeadResponse): Lead => {
     history: [], // History is not stored as array in backend lead currently, can keep empty
     
     // Original backend fields preserved
-    isBackendLead: true,
     phone: response.phone,
     email: response.email,
     city: response.city,
@@ -458,45 +457,19 @@ export const FollowUpCenterPage: React.FC = () => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
 
-    if (lead.isBackendLead) {
-      // Call move-stage API
-      await moveLeadStage(leadId, {
-        pipelineStage: stage,
-        lostReason: lostReason || (stage === 'LOST' ? 'OTHER' : undefined),
-        notes
-      });
-      // After success, refetch leads
-      try {
-        const fetched = await fetchLeads();
-        setLeads(fetched.map(l => mapLeadResponseToLead(l)));
-        setLeadApiStatus(fetched.length > 0 ? 'connected' : 'empty');
-      } catch (err) {
-        console.error('Failed to refetch leads after stage move:', err);
-      }
-    } else {
-      // Fallback mock lead: update local React state only
-      const todayStr = new Date().toISOString().split('T')[0];
-      const newHistory = [
-        ...(lead.history || []),
-        { 
-          date: todayStr, 
-          event: `Moved stage to ${stage}`, 
-          status: 'system' as const 
-        }
-      ];
-
-      const updatedLead: Lead = {
-        ...lead,
-        stage: stage as any,
-        lostReason: lostReason as any,
-        notes: notes || lead.notes,
-        lastContacted: todayStr,
-        urgencyDays: stage === 'CONFIRMED' || stage === 'LOST' ? 99 : lead.urgencyDays,
-        nextFollowUp: stage === 'CONFIRMED' ? 'Completed' : stage === 'LOST' ? 'Archived' : lead.nextFollowUp,
-        history: newHistory
-      };
-      
-      handleUpdateLead(updatedLead);
+    // Call move-stage API
+    await moveLeadStage(leadId, {
+      pipelineStage: stage,
+      lostReason: lostReason || (stage === 'LOST' ? 'OTHER' : undefined),
+      notes
+    });
+    // After success, refetch leads
+    try {
+      const fetched = await fetchLeads();
+      setLeads(fetched.map(l => mapLeadResponseToLead(l)));
+      setLeadApiStatus(fetched.length > 0 ? 'connected' : 'empty');
+    } catch (err) {
+      console.error('Failed to refetch leads after stage move:', err);
     }
   };
 
@@ -863,10 +836,8 @@ export const FollowUpCenterPage: React.FC = () => {
                 </div>
               ) : (
                 <PendingFollowUpsPanel 
-                  initialTasks={[]} 
                   backendTasks={dueTasks}
                   communicationLogs={communicationLogs}
-                  isBackendMode={true}
                   onActionSuccess={handleActionSuccess}
                   leads={leads}
                 />

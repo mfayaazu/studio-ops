@@ -5,6 +5,16 @@
   --font-sans: 'Inter', sans-serif;
   --font-heading: 'Outfit', sans-serif;
 
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-text-primary: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+
   --animate-fade-in: fade-in 0.2s ease-out;
   --animate-slide-in: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   --animate-slideIn: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -24,10 +34,42 @@
   }
 }
 
+:root {
+  /* Default Pro Dark Theme Tokens */
+  --bg: #090d16;
+  --surface: #0d1424;
+  --surface-elevated: #131b2e;
+  --surface-muted: #0f172a;
+  --border: #1e293b;
+  --text: #f3f4f6;
+  --text-muted: #94a3b8;
+  --accent: #6366f1;
+  --accent-soft: rgba(99, 102, 241, 0.1);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+}
+
+[data-theme="light"] {
+  /* Classic Light Theme Tokens */
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-muted: #f1f5f9;
+  --border: #cbd5e1;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --accent: #4f46e5;
+  --accent-soft: rgba(79, 70, 229, 0.1);
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+}
+
 body {
   font-family: var(--font-sans);
-  background-color: #090d16;
-  color: #f3f4f6;
+  background-color: var(--bg);
+  color: var(--text);
   margin: 0;
   overflow-x: hidden;
 }
@@ -38,12 +80,304 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: var(--bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--border);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--text-muted);
 }
+
+/* Light mode overrides for Tailwind utilities */
+[data-theme="light"] {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+[data-theme="light"] .bg-\[\#090d16\],
+[data-theme="light"] .bg-black\/60 {
+  background-color: var(--bg) !important;
+}
+
+[data-theme="light"] .bg-\[\#0a0f1d\],
+[data-theme="light"] .bg-\[\#0b1222\] {
+  background-color: var(--surface) !important;
+}
+
+[data-theme="light"] .bg-\[\#0f172a\],
+[data-theme="light"] .bg-\[\#0d1424\],
+[data-theme="light"] .bg-slate-900,
+[data-theme="light"] .bg-slate-950,
+[data-theme="light"] .bg-\[\#0b1222\]\/50,
+[data-theme="light"] .bg-\[\#0a0f1d\]\/50,
+[data-theme="light"] .bg-\[\#0a0f1d\]\/60,
+[data-theme="light"] .bg-\[\#0a0f1d\]\/80,
+[data-theme="light"] .bg-\[\#0f172a\]\/20,
+[data-theme="light"] .bg-\[\#0f172a\]\/30,
+[data-theme="light"] .bg-\[\#0f172a\]\/40,
+[data-theme="light"] .bg-\[\#0f172a\]\/50,
+[data-theme="light"] .bg-\[\#121b2f\],
+[data-theme="light"] .bg-\[\#0d1424\]\/60,
+[data-theme="light"] .bg-slate-900\/40,
+[data-theme="light"] .bg-slate-950\/40 {
+  background-color: var(--surface-muted) !important;
+}
+
+/* Light mode specific classes for scrollbars */
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+/* Form input styling overrides for Light Mode */
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background-color: var(--surface) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Border overrides */
+[data-theme="light"] .border-slate-800,
+[data-theme="light"] .border-slate-850,
+[data-theme="light"] .border-slate-900,
+[data-theme="light"] .border-slate-850\/60,
+[data-theme="light"] .border-slate-800\/60,
+[data-theme="light"] .border-slate-800\/80 {
+  border-color: var(--border) !important;
+}
+
+/* Text color overrides */
+[data-theme="light"] .text-slate-100,
+[data-theme="light"] .text-slate-200,
+[data-theme="light"] .text-slate-300,
+[data-theme="light"] .text-slate-350,
+[data-theme="light"] .text-slate-400,
+[data-theme="light"] .text-slate-250,
+[data-theme="light"] .text-slate-205,
+[data-theme="light"] .text-white,
+[data-theme="light"] .text-slate-200 {
+  color: var(--text) !important;
+}
+
+[data-theme="light"] .text-slate-450,
+[data-theme="light"] .text-slate-455,
+[data-theme="light"] .text-slate-550,
+[data-theme="light"] .text-slate-500,
+[data-theme="light"] .text-slate-600 {
+  color: var(--text-muted) !important;
+}
+
+/* Keep text white on primary colored buttons and badges */
+[data-theme="light"] .bg-gradient-to-r,
+[data-theme="light"] .bg-violet-600,
+[data-theme="light"] .bg-violet-650,
+[data-theme="light"] .bg-emerald-600,
+[data-theme="light"] .bg-rose-600,
+[data-theme="light"] .bg-rose-700,
+[data-theme="light"] .bg-indigo-600,
+[data-theme="light"] .bg-emerald-500:not(.bg-emerald-500\/10),
+[data-theme="light"] .bg-rose-500:not(.bg-rose-500\/10),
+[data-theme="light"] .bg-sky-500:not(.bg-sky-500\/10),
+[data-theme="light"] .bg-amber-500:not(.bg-amber-500\/10),
+[data-theme="light"] button[type="submit"],
+[data-theme="light"] .bg-violet-650 * {
+  color: #ffffff !important;
+}
+
+/* Header, subheadings, labels */
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3,
+[data-theme="light"] h4,
+[data-theme="light"] h5,
+[data-theme="light"] h6 {
+  color: var(--text) !important;
+}
+
+/* Buttons and icons */
+[data-theme="light"] .bg-slate-800,
+[data-theme="light"] .bg-slate-850 {
+  background-color: var(--surface-muted) !important;
+  color: var(--text) !important;
+}
+
+[data-theme="light"] .hover\:bg-slate-800\/30:hover {
+  background-color: var(--surface-muted) !important;
+}
+
+/* Sidebar Specific overrides */
+[data-theme="light"] aside span.font-heading {
+  background: none !important;
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+}
+
+[data-theme="light"] aside {
+  background-color: var(--surface) !important;
+  border-right-color: var(--border) !important;
+}
+
+[data-theme="light"] aside button:not(.bg-gradient-to-r) {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="light"] aside button:not(.bg-gradient-to-r):hover {
+  background-color: var(--surface-muted) !important;
+  color: var(--text) !important;
+}
+
+[data-theme="light"] aside button:not(.bg-gradient-to-r) svg {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="light"] aside button:not(.bg-gradient-to-r):hover svg {
+  color: var(--text) !important;
+}
+
+[data-theme="light"] aside button.bg-gradient-to-r {
+  background-image: linear-gradient(to right, var(--accent-soft), var(--accent-soft)) !important;
+  color: var(--accent) !important;
+  border-left-color: var(--accent) !important;
+}
+
+[data-theme="light"] aside button.bg-gradient-to-r svg {
+  color: var(--accent) !important;
+}
+
+/* Header Specific overrides */
+[data-theme="light"] header {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+[data-theme="light"] header .bg-slate-900\/60 {
+  background-color: var(--surface-muted) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="light"] header .text-slate-400,
+[data-theme="light"] header .text-slate-500 {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="light"] header .hover\:bg-slate-850\/60:hover {
+  background-color: var(--surface-muted) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="light"] header .absolute.right-0.bg-\[\#0d1424\] {
+  background-color: var(--surface-elevated) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-theme="light"] header button.w-full:hover {
+  background-color: var(--surface-muted) !important;
+  color: var(--text) !important;
+}
+
+[data-theme="light"] header button.w-full {
+  color: var(--text) !important;
+}
+
+/* Dashboard Specific overrides */
+[data-theme="light"] .bg-gradient-to-r.from-slate-900\/60 {
+  background-image: linear-gradient(to right, var(--surface-muted), rgba(99, 102, 241, 0.05)) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="light"] .text-indigo-400 {
+  color: #4f46e5 !important;
+}
+[data-theme="light"] .bg-indigo-500\/10 {
+  background-color: rgba(79, 70, 229, 0.1) !important;
+}
+
+[data-theme="light"] .text-sky-400 {
+  color: #0369a1 !important;
+}
+[data-theme="light"] .bg-sky-500\/10 {
+  background-color: #f0f9ff !important;
+}
+
+[data-theme="light"] .text-violet-400 {
+  color: #6d28d9 !important;
+}
+[data-theme="light"] .bg-violet-500\/10 {
+  background-color: #f5f3ff !important;
+}
+
+[data-theme="light"] .text-rose-400 {
+  color: #b91c1c !important;
+}
+[data-theme="light"] .bg-rose-500\/10 {
+  background-color: #fff1f2 !important;
+}
+[data-theme="light"] .bg-rose-500\/5 {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+[data-theme="light"] .text-emerald-400 {
+  color: #15803d !important;
+}
+[data-theme="light"] .bg-emerald-500\/10 {
+  background-color: #ecfdf5 !important;
+}
+[data-theme="light"] .bg-emerald-500\/5 {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+}
+
+[data-theme="light"] .text-amber-400 {
+  color: #b45309 !important;
+}
+[data-theme="light"] .bg-amber-500\/10 {
+  background-color: #fffbeb !important;
+}
+[data-theme="light"] .bg-amber-500\/5 {
+  background-color: rgba(245, 158, 11, 0.08) !important;
+}
+
+[data-theme="light"] .bg-slate-800\/40 {
+  background-color: var(--surface-muted) !important;
+}
+
+/* Card, panel and component overrides */
+[data-theme="light"] .bg-\[\#0d1424\] {
+  background-color: var(--surface) !important;
+}
+
+[data-theme="light"] .bg-\[\#0d1424\]\/60 {
+  background-color: var(--surface) !important;
+}
+
+[data-theme="light"] .bg-slate-900\/50,
+[data-theme="light"] .bg-slate-900\/60 {
+  background-color: var(--surface-muted) !important;
+  border-color: var(--border) !important;
+}
+
+/* Dialog & Modal overrides */
+[data-theme="light"] .fixed.inset-0.bg-black\/60 {
+  background-color: rgba(15, 23, 42, 0.3) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+[data-theme="light"] .fixed.inset-y-0.right-0.bg-\[\#0a0f1d\],
+[data-theme="light"] .fixed.inset-y-0.right-0.bg-\[\#0a0f1d\].border-l {
+  background-color: var(--surface) !important;
+  border-left-color: var(--border) !important;
+}
+
+[data-theme="light"] .bg-slate-900\/40 {
+  background-color: var(--surface-muted) !important;
+}
+
+/* TODO: Complete full migration from raw hexadecimal background utility classes to CSS variable definitions on all component files */

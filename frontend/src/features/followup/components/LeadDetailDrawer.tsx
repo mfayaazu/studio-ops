@@ -252,15 +252,6 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
             <h3 className="text-base font-bold text-white mt-0.5">{lead.clientName}</h3>
           </div>
           <div className="flex items-center gap-2">
-            {lead.isBackendLead ? (
-              <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[9px] font-bold font-mono">
-                DATABASE
-              </span>
-            ) : (
-              <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full text-[9px] font-bold font-mono">
-                DEMO MOCK
-              </span>
-            )}
             <button 
               onClick={onClose}
               className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
@@ -463,101 +454,92 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
           </div>
 
           {/* Project Conversion & Linkage Block */}
-          {lead.isBackendLead ? (
-            <div className="space-y-2.5">
-              <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Project Conversion</span>
-              
-              {lead.projectId ? (
-                // Already Converted Info Card
-                <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 space-y-2 animate-fadeIn">
-                  <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>Project Linked & Converted</span>
+          <div className="space-y-2.5">
+            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Project Conversion</span>
+            
+            {lead.projectId ? (
+              // Already Converted Info Card
+              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 space-y-2 animate-fadeIn">
+                <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Project Linked & Converted</span>
+                </div>
+                <div className="grid grid-cols-1 gap-2.5 mt-2 bg-slate-950/40 p-3 rounded-lg border border-slate-900 text-xs">
+                  <div>
+                    <span className="text-[9px] font-mono uppercase text-slate-500 block">Project ID</span>
+                    <span className="text-slate-300 font-mono select-all block truncate mt-0.5" title="Double click to select all">
+                      {lead.projectId}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-1 gap-2.5 mt-2 bg-slate-950/40 p-3 rounded-lg border border-slate-900 text-xs">
+                  {lead.convertedAt && (
                     <div>
-                      <span className="text-[9px] font-mono uppercase text-slate-500 block">Project ID</span>
-                      <span className="text-slate-300 font-mono select-all block truncate mt-0.5" title="Double click to select all">
-                        {lead.projectId}
+                      <span className="text-[9px] font-mono uppercase text-slate-500 block">Converted At</span>
+                      <span className="text-slate-400 block mt-0.5">
+                        {new Date(lead.convertedAt).toLocaleString()}
                       </span>
                     </div>
-                    {lead.convertedAt && (
-                      <div>
-                        <span className="text-[9px] font-mono uppercase text-slate-500 block">Converted At</span>
-                        <span className="text-slate-400 block mt-0.5">
-                          {new Date(lead.convertedAt).toLocaleString()}
-                        </span>
-                      </div>
-                    )}
+                  )}
+                </div>
+              </div>
+            ) : (
+              // Not Converted: Show Convert Button/Flow
+              <div className="bg-[#0f172a]/30 border border-slate-850/60 rounded-xl p-4 space-y-3">
+                {hasAcceptedQuotation && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-2.5 rounded-lg text-xs flex items-center gap-2 mb-2 font-medium">
+                    <Sparkles className="h-4 w-4 text-emerald-400 flex-shrink-0 animate-pulse" />
+                    <span>Accepted Quote Found! Ready to convert.</span>
                   </div>
-                </div>
-              ) : (
-                // Not Converted: Show Convert Button/Flow
-                <div className="bg-[#0f172a]/30 border border-slate-850/60 rounded-xl p-4 space-y-3">
-                  {hasAcceptedQuotation && (
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-2.5 rounded-lg text-xs flex items-center gap-2 mb-2 font-medium">
-                      <Sparkles className="h-4 w-4 text-emerald-400 flex-shrink-0 animate-pulse" />
-                      <span>Accepted Quote Found! Ready to convert.</span>
+                )}
+                {!isConfirmingConvert ? (
+                  <button
+                    type="button"
+                    disabled={isConverting || isSaving}
+                    onClick={() => setIsConfirmingConvert(true)}
+                    className={`w-full py-2.5 px-4 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+                      hasAcceptedQuotation
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-500/20 text-white shadow-md'
+                        : 'bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 text-violet-300'
+                    }`}
+                  >
+                    <FolderPlus className="h-4 w-4" />
+                    <span>{hasAcceptedQuotation ? 'Create Project from Accepted Quote' : 'Convert to Project'}</span>
+                  </button>
+                ) : (
+                  <div className="space-y-3 animate-fadeIn">
+                    <div className="flex gap-2 items-start text-slate-455 text-xs leading-relaxed">
+                      <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <p>Convert this lead into a client and project? This will register them in database and transition the stage.</p>
                     </div>
-                  )}
-                  {!isConfirmingConvert ? (
-                    <button
-                      type="button"
-                      disabled={isConverting || isSaving}
-                      onClick={() => setIsConfirmingConvert(true)}
-                      className={`w-full py-2.5 px-4 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer ${
-                        hasAcceptedQuotation
-                          ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-500/20 text-white shadow-md'
-                          : 'bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 text-violet-300'
-                      }`}
-                    >
-                      <FolderPlus className="h-4 w-4" />
-                      <span>{hasAcceptedQuotation ? 'Create Project from Accepted Quote' : 'Convert to Project'}</span>
-                    </button>
-                  ) : (
-                    <div className="space-y-3 animate-fadeIn">
-                      <div className="flex gap-2 items-start text-slate-455 text-xs leading-relaxed">
-                        <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <p>Convert this lead into a client and project? This will register them in database and transition the stage.</p>
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          type="button"
-                          disabled={isConverting}
-                          onClick={() => setIsConfirmingConvert(false)}
-                          className="py-1.5 px-3 bg-slate-850 hover:bg-slate-800 disabled:opacity-40 text-slate-450 rounded-lg text-xs font-semibold transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isConverting}
-                          onClick={handleConvertToProject}
-                          className="py-1.5 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-lg text-xs font-semibold transition-all shadow-md flex items-center justify-center gap-1.5"
-                        >
-                          {isConverting ? (
-                            <>
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              <span>Converting...</span>
-                            </>
-                          ) : (
-                            <span>Confirm Conversion</span>
-                          )}
-                        </button>
-                      </div>
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        type="button"
+                        disabled={isConverting}
+                        onClick={() => setIsConfirmingConvert(false)}
+                        className="py-1.5 px-3 bg-slate-850 hover:bg-slate-800 disabled:opacity-40 text-slate-450 rounded-lg text-xs font-semibold transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isConverting}
+                        onClick={handleConvertToProject}
+                        className="py-1.5 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-lg text-xs font-semibold transition-all shadow-md flex items-center justify-center gap-1.5"
+                      >
+                        {isConverting ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <span>Converting...</span>
+                          </>
+                        ) : (
+                          <span>Confirm Conversion</span>
+                        )}
+                      </button>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ) : (
-            // Mock Lead Info Card
-            <div className="bg-slate-900/10 border border-slate-900 rounded-xl p-3 text-center">
-              <span className="text-[10px] text-slate-500 font-semibold block">
-                Backend database lead required to convert to project
-              </span>
-            </div>
-          )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Workflow Stage Actions Row */}
           <div className="space-y-2.5">

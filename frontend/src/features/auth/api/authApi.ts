@@ -97,3 +97,18 @@ export async function acceptInvite(token: string, password: string): Promise<voi
   return ApiClient.post<void>('/api/auth/accept-invite', { token, password });
 }
 
+/**
+ * Updates the current user's profile display name.
+ */
+export async function updateProfile(displayName: string): Promise<CurrentUserResponse['user']> {
+  return ApiClient.put<CurrentUserResponse['user']>('/api/auth/me/profile', { displayName });
+}
+
+/**
+ * Updates the current user's password.
+ */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+  return ApiClient.post<{ message: string }>('/api/auth/change-password', { currentPassword, newPassword });
+}
+
+

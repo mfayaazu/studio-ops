@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type AppRoute = 'dashboard' | 'clients' | 'projects' | 'employees' | 'events' | 'availability' | 'backups' | 'deliverables' | 'follow-up-center' | 'post-production' | 'quotations' | 'message-templates' | 'forgot-password' | 'reset-password' | 'accept-invite';
+export type AppRoute = 'dashboard' | 'clients' | 'projects' | 'employees' | 'events' | 'availability' | 'backups' | 'deliverables' | 'follow-up-center' | 'post-production' | 'quotations' | 'message-templates' | 'forgot-password' | 'reset-password' | 'accept-invite' | 'my-account';
 
 interface RouterContextType {
   currentRoute: AppRoute;
@@ -21,7 +21,7 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         'dashboard', 'clients', 'projects', 'employees', 'events', 
         'availability', 'backups', 'deliverables', 'follow-up-center', 
         'post-production', 'quotations', 'message-templates',
-        'forgot-password', 'reset-password', 'accept-invite'
+        'forgot-password', 'reset-password', 'accept-invite', 'my-account'
       ];
 
       if (validRoutes.includes(hash)) {

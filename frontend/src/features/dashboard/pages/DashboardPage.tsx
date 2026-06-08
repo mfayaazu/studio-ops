@@ -35,15 +35,6 @@ const defaultSummary: DashboardSummaryResponse = {
   backupChecklists: [],
 };
 
-const fetchWithFallback = async <T,>(promise: Promise<T>, fallback: T): Promise<T> => {
-  try {
-    return await promise;
-  } catch (err) {
-    console.error('API load failed:', err);
-    return fallback;
-  }
-};
-
 export const DashboardPage: React.FC = () => {
   const { navigateTo } = useRouter();
   
@@ -56,32 +47,34 @@ export const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadData = async () => {
     setLoading(true);
     setError(null);
+    try {
+      const [resSummary, resEvents, resProjects, resDeliverables, resBackups] = await Promise.all([
+        dashboardApi.getSummary(),
+        eventsApi.list(),
+        projectsApi.list(),
+        deliverablesApi.list(),
+        backupsApi.list(),
+        employeesApi.list(),
+        assignmentsApi.list(),
+      ]);
+      setSummary(resSummary);
+      setEvents(resEvents);
+      setProjects(resProjects);
+      setDeliverables(resDeliverables);
+      setBackups(resBackups);
+    } catch (err: any) {
+      console.error('Unexpected error loading dashboard:', err);
+      setError('Failed to load operational stats. Please check backend connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    Promise.all([
-      fetchWithFallback(dashboardApi.getSummary(), defaultSummary),
-      fetchWithFallback(eventsApi.list(), []),
-      fetchWithFallback(projectsApi.list(), []),
-      fetchWithFallback(deliverablesApi.list(), []),
-      fetchWithFallback(backupsApi.list(), []),
-      fetchWithFallback(employeesApi.list(), []),
-      fetchWithFallback(assignmentsApi.list(), []),
-    ])
-      .then(([resSummary, resEvents, resProjects, resDeliverables, resBackups]) => {
-        setSummary(resSummary);
-        setEvents(resEvents);
-        setProjects(resProjects);
-        setDeliverables(resDeliverables);
-        setBackups(resBackups);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Unexpected error loading dashboard:', err);
-        setError('An unexpected error occurred while compiling operational stats.');
-        setLoading(false);
-      });
+  useEffect(() => {
+    loadData();
   }, []);
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -126,6 +119,49 @@ export const DashboardPage: React.FC = () => {
     month: 'long',
     day: 'numeric',
   });
+
+  if (error) {
+    return (
+      <main className="space-y-8">
+        {/* Header and Welcome Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-slate-900/60 to-indigo-950/20 border border-slate-800/60 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+          <div className="absolute right-0 top-0 h-full w-1/3 bg-radial-gradient from-indigo-500/5 to-transparent pointer-events-none" />
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-heading font-extrabold text-white tracking-wide">
+                Operations Command Center
+              </h2>
+              <Sparkles className="h-5 w-5 text-indigo-400 animate-bounce" />
+            </div>
+            <p className="text-slate-400 text-xs font-mono">{formattedToday}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 rounded-full text-[11px] font-bold text-rose-400">
+              <ShieldAlert className="h-3.5 w-3.5" />
+              Offline
+            </div>
+          </div>
+        </div>
+
+        {/* Center Failure Alert Card */}
+        <div className="bg-rose-500/5 border border-dashed border-rose-500/20 rounded-2xl p-10 text-center max-w-xl mx-auto space-y-4 my-8">
+          <ShieldAlert className="h-10 w-10 text-rose-500 mx-auto animate-pulse" />
+          <div className="space-y-1">
+            <h3 className="text-white font-bold text-sm">Dashboard Connection Error</h3>
+            <p className="text-xs text-slate-450 leading-relaxed">
+              Unable to load operational stats and Conflict Warnings from the database. Please check your network and try again.
+            </p>
+          </div>
+          <button
+            onClick={loadData}
+            className="py-2 px-4 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-semibold transition-colors border border-rose-500/20 cursor-pointer shadow-md"
+          >
+            Retry Dashboard Load
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   if (loading) {
     return (
@@ -178,13 +214,6 @@ export const DashboardPage: React.FC = () => {
           )}
         </div>
       </div>
-
-      {error && (
-        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl flex items-center gap-3">
-          <ShieldAlert className="h-5 w-5 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
 
       {/* KPI Cards Row */}
       <DashboardStatsCards

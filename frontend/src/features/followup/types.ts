@@ -62,7 +62,6 @@ export interface Lead {
     status: 'sent' | 'skipped' | 'system';
   }>;
   // Backend integrations
-  isBackendLead?: boolean;
   phone?: string;
   email?: string;
   city?: string;

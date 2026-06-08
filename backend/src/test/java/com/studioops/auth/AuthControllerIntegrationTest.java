@@ -234,4 +234,124 @@ class AuthControllerIntegrationTest {
         userRepository.delete(user);
         studioRepository.delete(studio);
     }
+
+    @Test
+    void changePassword_Success_And_Fails() throws Exception {
+        // First login to get a session
+        LoginRequest loginRequest = new LoginRequest("owner@studioops.local", "ChangeMe123!");
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+        MockHttpSession session = (MockHttpSession) result.getRequest().getSession();
+
+        // 1. Change password fails with wrong current password
+        com.studioops.auth.dto.ChangePasswordRequest wrongCurrentReq = new com.studioops.auth.dto.ChangePasswordRequest("WrongPass!", "NewPassword123!");
+        mockMvc.perform(post("/api/auth/change-password")
+                .session(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(wrongCurrentReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Current password is incorrect."));
+
+        // 2. Change password fails with too short new password
+        com.studioops.auth.dto.ChangePasswordRequest shortNewReq = new com.studioops.auth.dto.ChangePasswordRequest("ChangeMe123!", "short");
+        mockMvc.perform(post("/api/auth/change-password")
+                .session(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(shortNewReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("New password must be at least 8 characters."));
+
+        // 3. Change password succeeds
+        com.studioops.auth.dto.ChangePasswordRequest successReq = new com.studioops.auth.dto.ChangePasswordRequest("ChangeMe123!", "NewPassword123!");
+        mockMvc.perform(post("/api/auth/change-password")
+                .session(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(successReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Password changed successfully"));
+
+        // 4. Verify we can login with the new password
+        LoginRequest newLoginRequest = new LoginRequest("owner@studioops.local", "NewPassword123!");
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(newLoginRequest)))
+                .andExpect(status().isOk());
+
+        // Restore original password for other tests
+        User user = userRepository.findByEmail("owner@studioops.local")
+                .orElseThrow(() -> new AssertionError("Owner should exist"));
+        user.setPasswordHash(passwordEncoder.encode("ChangeMe123!"));
+        userRepository.save(user);
+    }
+
+    @Test
+    void updateProfile_Success() throws Exception {
+        LoginRequest loginRequest = new LoginRequest("owner@studioops.local", "ChangeMe123!");
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+        MockHttpSession session = (MockHttpSession) result.getRequest().getSession();
+
+        com.studioops.auth.dto.UpdateProfileRequest updateReq = new com.studioops.auth.dto.UpdateProfileRequest("New Owner Display Name");
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/auth/me/profile")
+                .session(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("New Owner Display Name"))
+                .andExpect(jsonPath("$.role").value("OWNER"));
+
+        // Restore original display name
+        User user = userRepository.findByEmail("owner@studioops.local")
+                .orElseThrow(() -> new AssertionError("Owner should exist"));
+        user.setDisplayName("Studio Owner");
+        userRepository.save(user);
+    }
+
+    @Test
+    void updateProfile_OnlyUpdatesCurrentUser() throws Exception {
+        // Create second user
+        User user2 = new User();
+        user2.setStudioId(testStudio.getId());
+        user2.setEmail("user2@studioops.local");
+        user2.setPasswordHash(passwordEncoder.encode("Password123!"));
+        user2.setRole(UserRole.EMPLOYEE);
+        user2.setStatus(UserStatus.ACTIVE);
+        user2.setDisplayName("User Two Original");
+        user2 = userRepository.save(user2);
+
+        // Login as owner@studioops.local
+        LoginRequest loginRequest = new LoginRequest("owner@studioops.local", "ChangeMe123!");
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+        MockHttpSession session = (MockHttpSession) result.getRequest().getSession();
+
+        // Update profile
+        com.studioops.auth.dto.UpdateProfileRequest updateReq = new com.studioops.auth.dto.UpdateProfileRequest("Owner New Name");
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/auth/me/profile")
+                .session(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk());
+
+        // Verify owner's name was changed, but user2's name was NOT changed
+        User owner = userRepository.findByEmail("owner@studioops.local").orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals("Owner New Name", owner.getDisplayName());
+        
+        User dbUser2 = userRepository.findByEmail("user2@studioops.local").orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals("User Two Original", dbUser2.getDisplayName());
+
+        // Cleanup
+        userRepository.delete(dbUser2);
+        owner.setDisplayName("Studio Owner");
+        userRepository.save(owner);
+    }
 }

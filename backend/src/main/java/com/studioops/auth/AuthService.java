@@ -223,4 +223,45 @@ public class AuthService {
         user.setStatus(UserStatus.ACTIVE);
         userRepository.save(user);
     }
+
+    @Transactional
+    public UserResponse updateProfile(UpdateProfileRequest request) {
+        User user = getAuthenticatedUser();
+        user.setDisplayName(request.getDisplayName().trim());
+        User saved = userRepository.save(user);
+        return mapToUserResponse(saved);
+    }
+
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
+        User user = getAuthenticatedUser();
+        
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect.");
+        }
+        
+        String newPassword = request.getNewPassword();
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new IllegalArgumentException("New password must be at least 8 characters.");
+        }
+        
+        user.setPasswordHash(passwordEncoder.encode(newPassword.trim()));
+        userRepository.save(user);
+    }
+
+    private User getAuthenticatedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() ||
+                "anonymousUser".equals(authentication.getPrincipal())) {
+            throw new org.springframework.security.access.AccessDeniedException("User is not authenticated");
+        }
+        Object principal = authentication.getPrincipal();
+        String email;
+        if (principal instanceof UserDetails) {
+            email = ((UserDetails) principal).getUsername();
+        } else {
+            email = principal.toString();
+        }
+        return userService.findUserByEmail(email);
+    }
 }

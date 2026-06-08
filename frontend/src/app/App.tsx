@@ -9,6 +9,7 @@ import { PendingApprovalPage } from '../features/auth/pages/PendingApprovalPage'
 import { ForgotPasswordPage } from '../features/auth/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '../features/auth/pages/ResetPasswordPage';
 import { AcceptInvitePage } from '../features/auth/pages/AcceptInvitePage';
+import { MyAccountPage } from '../features/auth/pages/MyAccountPage';
 import { Loader2, ShieldAlert, ArrowLeft } from 'lucide-react';
 import { canAccessRoute } from '../features/auth/permissions';
 
@@ -106,7 +107,7 @@ const AppContent: React.FC = () => {
     try {
       const baseUrl = import.meta.env.VITE_API_URL || '';
       const url = `${baseUrl}/api/health`;
-      const response = await fetch(url);
+      const response = await fetch(url, { credentials: 'include' });
       const latency = Math.round(performance.now() - startTime);
       
       if (response.ok) {
@@ -184,6 +185,8 @@ const AppContent: React.FC = () => {
         return <PostProductionBoardPage />;
       case 'quotations':
         return <QuotationsPage />;
+      case 'my-account':
+        return <MyAccountPage />;
       default:
         return <DashboardPage />;
     }

@@ -53,6 +53,19 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/me/profile")
+    public ResponseEntity<com.studioops.user.dto.UserResponse> updateProfile(
+            @Valid @RequestBody com.studioops.auth.dto.UpdateProfileRequest request) {
+        return ResponseEntity.ok(authService.updateProfile(request));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<java.util.Map<String, String>> changePassword(
+            @Valid @RequestBody com.studioops.auth.dto.ChangePasswordRequest request) {
+        authService.changePassword(request);
+        return ResponseEntity.ok(java.util.Map.of("message", "Password changed successfully"));
+    }
+
     @PostMapping("/forgot-password")
     public ResponseEntity<Void> forgotPassword(@Valid @RequestBody com.studioops.auth.dto.ForgotPasswordRequest request) {
         authService.forgotPassword(request);

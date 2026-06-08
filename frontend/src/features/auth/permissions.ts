@@ -17,6 +17,7 @@ export const ROUTE_TO_PAGE_KEY: Record<AppRoute, PageKey | null> = {
   'forgot-password': null,
   'reset-password': null,
   'accept-invite': null,
+  'my-account': null,
 };
 
 export const ROLE_PAGE_DEFAULTS: Record<UserRole, Record<PageKey, AccessLevel>> = {
@@ -122,6 +123,9 @@ export const canAccessRoute = (
   route: AppRoute,
   permissions?: Record<PageKey, AccessLevel> | null
 ): boolean => {
+  if (route === 'my-account') {
+    return true;
+  }
   const pageKey = ROUTE_TO_PAGE_KEY[route];
   if (!pageKey) {
     return false;

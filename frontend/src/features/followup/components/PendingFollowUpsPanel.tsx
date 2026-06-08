@@ -1,20 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import type { PendingFollowUp, FollowUpTask, CommunicationLog, Lead } from '../types';
+import React, { useState } from 'react';
+import type { FollowUpTask, CommunicationLog, Lead } from '../types';
 import { approveFollowUpTask, skipFollowUpTask } from '../api/followupApi';
-import { Mail, MessageSquare, Phone, Smartphone, Check, X, Eye, ShieldAlert, Sparkles, RefreshCw, Loader2 } from 'lucide-react';
+import { Mail, MessageSquare, Phone, Smartphone, Check, X, Eye, ShieldAlert, Sparkles, Loader2 } from 'lucide-react';
 
 interface PendingFollowUpsPanelProps {
-  initialTasks: PendingFollowUp[];
   backendTasks?: FollowUpTask[];
   communicationLogs?: CommunicationLog[];
-  isBackendMode: boolean;
   onActionSuccess?: () => void;
   leads?: Lead[];
 }
 
 interface UnifiedTask {
   id: string;
-  isBackend: boolean;
   clientName: string;
   projectTitle: string;
   channel: string;
@@ -82,7 +79,6 @@ const mapBackendTask = (task: FollowUpTask, leads: Lead[] = []): UnifiedTask => 
   const resolved = resolveClientAndProject(task, leads);
   return {
     id: task.id,
-    isBackend: true,
     clientName: resolved.clientName,
     projectTitle: resolved.projectTitle,
     channel: task.channel,
@@ -94,46 +90,17 @@ const mapBackendTask = (task: FollowUpTask, leads: Lead[] = []): UnifiedTask => 
   };
 };
 
-const mapMockTask = (task: PendingFollowUp): UnifiedTask => {
-  return {
-    id: task.id,
-    isBackend: false,
-    clientName: task.clientName,
-    projectTitle: task.projectTitle,
-    channel: task.channel,
-    dueDate: task.dueDate,
-    dueStatus: task.dueStatus,
-    subject: task.subject,
-    body: task.body,
-    recipient: task.channel === 'WHATSAPP' ? '919876543210' : undefined
-  };
-};
-
 export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
-  initialTasks,
   backendTasks,
   communicationLogs,
-  isBackendMode,
   onActionSuccess,
   leads = []
 }) => {
-  const [mockTasks, setMockTasks] = useState<PendingFollowUp[]>(initialTasks);
-  const [localLogs, setLocalLogs] = useState<string[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Sync state if initialTasks change
-  useEffect(() => {
-    if (!isBackendMode) {
-      setMockTasks(initialTasks);
-    }
-  }, [initialTasks, isBackendMode]);
-
-  const tasksToRender = isBackendMode 
-    ? (backendTasks || []).map(t => mapBackendTask(t, leads))
-    : mockTasks.map(mapMockTask);
+  const tasksToRender = (backendTasks || []).map(t => mapBackendTask(t, leads));
 
   const selectedTask = tasksToRender.find(t => t.id === selectedTaskId) || null;
 
@@ -168,34 +135,21 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
     setActionLoadingId(task.id);
     setActionStatus(null);
     try {
-      if (task.isBackend) {
-        if (action === 'approved') {
-          await approveFollowUpTask(task.id);
-          setActionStatus({ type: 'success', message: `✓ Task approved & logged as SENT for ${task.clientName}` });
-        } else {
-          await skipFollowUpTask(task.id);
-          setActionStatus({ type: 'success', message: `✗ Task skipped & logged as SKIPPED for ${task.clientName}` });
-        }
-        
-        if (selectedTaskId === task.id) {
-          setSelectedTaskId(null);
-        }
-
-        // Notify parent to reload lists
-        if (onActionSuccess) {
-          onActionSuccess();
-        }
+      if (action === 'approved') {
+        await approveFollowUpTask(task.id);
+        setActionStatus({ type: 'success', message: `✓ Task approved & logged as SENT for ${task.clientName}` });
       } else {
-        // Mock UI behavior
-        setMockTasks(prev => prev.filter(t => t.id !== task.id));
-        if (selectedTaskId === task.id) {
-          setSelectedTaskId(null);
-        }
-        const logMsg = action === 'approved' 
-          ? `✓ Follow-up approved & dispatched to ${task.clientName}`
-          : `✗ Follow-up step skipped for ${task.clientName}`;
-        setLocalLogs(prev => [logMsg, ...prev]);
-        setActionStatus({ type: 'success', message: logMsg });
+        await skipFollowUpTask(task.id);
+        setActionStatus({ type: 'success', message: `✗ Task skipped & logged as SKIPPED for ${task.clientName}` });
+      }
+      
+      if (selectedTaskId === task.id) {
+        setSelectedTaskId(null);
+      }
+
+      // Notify parent to reload lists
+      if (onActionSuccess) {
+        onActionSuccess();
       }
     } catch (err: any) {
       console.error(err);
@@ -206,13 +160,6 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
     } finally {
       setActionLoadingId(null);
     }
-  };
-
-  const handleReset = () => {
-    setMockTasks(initialTasks);
-    setLocalLogs([]);
-    setSelectedTaskId(null);
-    setActionStatus(null);
   };
 
   return (
@@ -229,15 +176,6 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
               Manual approval checklist before message transmission
             </p>
           </div>
-          {!isBackendMode && (mockTasks.length < initialTasks.length || localLogs.length > 0) && (
-            <button 
-              onClick={handleReset}
-              title="Reset Mock Tasks"
-              className="p-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded-lg transition-colors"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </button>
-          )}
         </div>
 
         {/* Success/Error Action Toast messages */}
@@ -488,7 +426,7 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
           </div>
         </div>
 
-        {isBackendMode && communicationLogs && communicationLogs.length > 0 ? (
+        {communicationLogs && communicationLogs.length > 0 ? (
           <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
             {communicationLogs.map((log) => {
               const matchedLead = leads.find(l => l.id === log.clientId || l.id === log.projectId);
@@ -524,15 +462,6 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                 </div>
               );
             })}
-          </div>
-        ) : !isBackendMode && localLogs.length > 0 ? (
-          <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
-            {localLogs.map((logMsg, idx) => (
-              <div key={idx} className="text-[10px] font-mono border border-slate-850 bg-slate-900/40 rounded-lg p-2 flex items-center gap-2 text-emerald-400">
-                <Sparkles className="h-3 w-3 text-fuchsia-400 flex-shrink-0" />
-                <span>{logMsg}</span>
-              </div>
-            ))}
           </div>
         ) : (
           <div className="border border-dashed border-slate-800/40 rounded-xl py-6 text-center text-slate-500 text-[11px] font-mono">
