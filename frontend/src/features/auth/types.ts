@@ -14,6 +14,7 @@ export interface UserResponse {
   studioId?: string;
   studioName?: string;
   studioStatus?: string;
+  isPlatformAdmin?: boolean;
 }
 
 export interface LoginResponse {

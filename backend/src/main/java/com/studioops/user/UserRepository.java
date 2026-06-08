@@ -10,4 +10,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
     Optional<User> findByInviteToken(String inviteToken);
     Optional<User> findByPasswordResetToken(String passwordResetToken);
+    java.util.List<User> findByStudioIdAndRole(UUID studioId, UserRole role);
 }

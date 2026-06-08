@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Server, RefreshCw, ChevronDown, User, LogOut } from 'lucide-react';
+import { Clock, Server, RefreshCw, ChevronDown, User, LogOut, Shield } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../features/auth/AuthProvider';
 import { useRouter } from '../../app/router';
@@ -164,6 +164,19 @@ export const Header: React.FC<HeaderProps> = ({
                   <User className="h-4 w-4 text-slate-450" />
                   <span>My Account</span>
                 </button>
+
+                {user.isPlatformAdmin && (
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      navigateTo('platform-admin');
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs text-slate-350 hover:text-white hover:bg-slate-800/40 flex items-center gap-2.5 transition-colors cursor-pointer"
+                  >
+                    <Shield className="h-4 w-4 text-slate-450" />
+                    <span>Platform Admin</span>
+                  </button>
+                )}
 
                 {/* Sign Out Action */}
                 <button

@@ -50,6 +50,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/me/**").authenticated()
                         .requestMatchers("/api/auth/change-password").authenticated()
                         .requestMatchers("/api/users/**").authenticated()
+                        .requestMatchers("/api/platform-admin/**").authenticated()
                         .anyRequest().permitAll());
         return http.build();
     }

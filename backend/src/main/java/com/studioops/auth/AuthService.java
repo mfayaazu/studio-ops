@@ -7,6 +7,8 @@ import com.studioops.user.UserService;
 import com.studioops.user.dto.UserResponse;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -40,6 +42,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final com.studioops.email.EmailService emailService;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
+
+    @Value("${studioops.platform-admin.emails:a.fayaaz@gmail.com,owner@studioops.local}")
+    private List<String> platformAdminEmails;
 
     public AuthService(AuthenticationManager authenticationManager, 
                        UserService userService, 
@@ -111,11 +116,17 @@ public class AuthService {
 
     private UserResponse mapToUserResponse(User user) {
         UserResponse response = UserResponse.fromUser(user);
-        if (response != null && user.getStudioId() != null) {
-            studioRepository.findById(user.getStudioId()).ifPresent(studio -> {
-                response.setStudioName(studio.getName());
-                response.setStudioStatus(studio.getStatus().name());
-            });
+        if (response != null) {
+            boolean isPlatformAdmin = platformAdminEmails != null &&
+                platformAdminEmails.stream().anyMatch(email -> email.trim().equalsIgnoreCase(user.getEmail().trim()));
+            response.setIsPlatformAdmin(isPlatformAdmin);
+            
+            if (user.getStudioId() != null) {
+                studioRepository.findById(user.getStudioId()).ifPresent(studio -> {
+                    response.setStudioName(studio.getName());
+                    response.setStudioStatus(studio.getStatus().name());
+                });
+            }
         }
         return response;
     }

@@ -18,6 +18,7 @@ public class UserResponse {
     private Instant lastLoginAt;
     private String studioName;
     private String studioStatus;
+    private boolean isPlatformAdmin;
 
     public UserResponse() {
     }
@@ -127,5 +128,13 @@ public class UserResponse {
 
     public void setStudioStatus(String studioStatus) {
         this.studioStatus = studioStatus;
+    }
+
+    public boolean getIsPlatformAdmin() {
+        return isPlatformAdmin;
+    }
+
+    public void setIsPlatformAdmin(boolean isPlatformAdmin) {
+        this.isPlatformAdmin = isPlatformAdmin;
     }
 }

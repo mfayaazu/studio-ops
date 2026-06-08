@@ -18,6 +18,7 @@ export const ROUTE_TO_PAGE_KEY: Record<AppRoute, PageKey | null> = {
   'reset-password': null,
   'accept-invite': null,
   'my-account': null,
+  'platform-admin': null,
 };
 
 export const ROLE_PAGE_DEFAULTS: Record<UserRole, Record<PageKey, AccessLevel>> = {

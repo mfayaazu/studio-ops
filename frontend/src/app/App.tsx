@@ -10,6 +10,7 @@ import { ForgotPasswordPage } from '../features/auth/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '../features/auth/pages/ResetPasswordPage';
 import { AcceptInvitePage } from '../features/auth/pages/AcceptInvitePage';
 import { MyAccountPage } from '../features/auth/pages/MyAccountPage';
+import { PlatformAdminPage } from '../features/platform-admin/pages/PlatformAdminPage';
 import { Loader2, ShieldAlert, ArrowLeft } from 'lucide-react';
 import { canAccessRoute } from '../features/auth/permissions';
 
@@ -141,7 +142,8 @@ const AppContent: React.FC = () => {
 
   const renderActivePage = () => {
     if (user) {
-      const allowed = canAccessRoute(user.role, currentRoute, permissions);
+      const isPlatformAdminRoute = currentRoute === 'platform-admin';
+      const allowed = isPlatformAdminRoute ? !!user.isPlatformAdmin : canAccessRoute(user.role, currentRoute, permissions);
       if (!allowed) {
         const allRoutes: AppRoute[] = [
           'dashboard', 'clients', 'projects', 'employees', 'events',
@@ -187,6 +189,8 @@ const AppContent: React.FC = () => {
         return <QuotationsPage />;
       case 'my-account':
         return <MyAccountPage />;
+      case 'platform-admin':
+        return <PlatformAdminPage />;
       default:
         return <DashboardPage />;
     }

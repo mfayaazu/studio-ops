@@ -39,3 +39,4 @@ studioops:
     notifications:
       enabled: ${STUDIOOPS_PLATFORM_ADMIN_NOTIFICATIONS_ENABLED:true}
       email: ${STUDIOOPS_PLATFORM_ADMIN_EMAIL:}
+    emails: ${STUDIOOPS_PLATFORM_ADMIN_EMAILS:a.fayaaz@gmail.com}

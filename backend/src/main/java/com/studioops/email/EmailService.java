@@ -223,4 +223,25 @@ public class EmailService {
             log.error("Failed to write platform system email audit log to database: {}", dbEx.getMessage());
         }
     }
+
+    public void sendStudioApprovedEmail(User owner, String studioName) {
+        String subject = "Your StudioOps Beta Workspace is Approved!";
+        String workspaceUrl = frontendUrl + "/#/login";
+
+        String htmlContent = "<div style=\"font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0b0f19; color: #f8fafc; border-radius: 8px;\">" +
+                "<h2 style=\"color: #a78bfa;\">Workspace Approved!</h2>" +
+                "<p>Hello " + (owner.getDisplayName() != null ? owner.getDisplayName() : "") + ",</p>" +
+                "<p>Great news! Your StudioOps beta workspace <strong>" + studioName + "</strong> has been approved by the platform admin.</p>" +
+                "<p>You can now log in and start managing your photography operations:</p>" +
+                "<div style=\"margin: 30px 0; text-align: center;\">" +
+                "<a href=\"" + workspaceUrl + "\" style=\"background-color: #7c3aed; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;\">Go to Workspace</a>" +
+                "</div>" +
+                "<p style=\"font-size: 12px; color: #94a3b8;\">If the button above does not work, copy and paste this link in your browser:</p>" +
+                "<p style=\"font-size: 12px; color: #a78bfa; word-break: break-all;\">" + workspaceUrl + "</p>" +
+                "<hr style=\"border: none; border-top: 1px solid #1e293b; margin: 20px 0;\">" +
+                "<p style=\"font-size: 11px; color: #64748b;\">Thank you for joining the StudioOps beta program!</p>" +
+                "</div>";
+
+        sendEmail(owner, "STUDIO_APPROVED", subject, htmlContent);
+    }
 }
