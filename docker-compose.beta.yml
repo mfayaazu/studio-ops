@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: studioops-postgres-beta
+    environment:
+      POSTGRES_DB: studioops
+      POSTGRES_USER: ${DB_USERNAME:-studioops}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432" # Bind to localhost to prevent public access
+    volumes:
+      - postgres_beta_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-studioops} -d studioops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.beta
+    container_name: studioops-backend-beta
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/studioops
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-studioops}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_MAIL_HOST=email-smtp.us-east-1.amazonaws.com
+      - SPRING_MAIL_PORT=587
+      - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD}
+      - STUDIOOPS_EMAIL_FROM=${EMAIL_FROM}
+      - STUDIOOPS_EMAIL_ENABLED=${EMAIL_ENABLED}
+      - STUDIOOPS_FRONTEND_URL=${FRONTEND_URL}
+      - STUDIOOPS_CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - STUDIOOPS_PLATFORM_ADMIN_EMAILS=${PLATFORM_ADMIN_EMAILS}
+      - STUDIOOPS_ADMIN_NOTIFICATIONS_ENABLED=${ADMIN_NOTIFICATIONS_ENABLED}
+      - STUDIOOPS_BETA_WHATSAPP_ONLY=${BETA_WHATSAPP_ONLY:-true}
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.beta
+    container_name: studioops-frontend-beta
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+volumes:
+  postgres_beta_data:

@@ -46,3 +46,7 @@ crash.log
 crash.*.log
 *.tfvars
 !*.tfvars.example
+
+# Environment Secrets
+.env.beta
+
