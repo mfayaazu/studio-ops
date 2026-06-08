@@ -36,4 +36,8 @@ studioops:
   frontend-url: ${STUDIOOPS_FRONTEND_URL:http://localhost:5173}
   cors:
     allowed-origins: ${STUDIOOPS_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  platform-admin:
+    notifications:
+      enabled: ${STUDIOOPS_PLATFORM_ADMIN_NOTIFICATIONS_ENABLED:false}
+      email: ${STUDIOOPS_PLATFORM_ADMIN_EMAIL:}
 

@@ -49,6 +49,12 @@ class AuthControllerIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private com.studioops.email.EmailService emailService;
+
+    @Autowired
+    private com.studioops.email.SystemEmailLogRepository systemEmailLogRepository;
+
     private Studio testStudio;
     private User disabledUser;
 
@@ -353,5 +359,124 @@ class AuthControllerIntegrationTest {
         userRepository.delete(dbUser2);
         owner.setDisplayName("Studio Owner");
         userRepository.save(owner);
+    }
+
+    @Test
+    void signup_PlatformAdminNotificationsEnabled_LogSaved() throws Exception {
+        org.springframework.test.util.ReflectionTestUtils.setField(emailService, "platformAdminNotificationsEnabled", true);
+        org.springframework.test.util.ReflectionTestUtils.setField(emailService, "platformAdminEmail", "admin@studioops.photo");
+
+        SignupRequest signupRequest = new SignupRequest(
+                "Notify Enabled Studio",
+                "Enabled Owner",
+                "notify-enabled@test.local",
+                "Password123!",
+                "112233",
+                "Germany"
+        );
+
+        mockMvc.perform(post("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(signupRequest)))
+                .andExpect(status().isCreated());
+
+        java.util.List<com.studioops.email.SystemEmailLog> logs = systemEmailLogRepository.findAll().stream()
+                .filter(log -> "PLATFORM_BETA_SIGNUP_NOTIFICATION".equals(log.getEmailType()))
+                .toList();
+
+        org.junit.jupiter.api.Assertions.assertFalse(logs.isEmpty(), "Email log should exist");
+        com.studioops.email.SystemEmailLog logEntry = logs.stream()
+                .filter(l -> l.getRecipient().equals("admin@studioops.photo"))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Should have a log for admin@studioops.photo"));
+
+        org.junit.jupiter.api.Assertions.assertNull(logEntry.getUserId(), "User ID must be null in platform notifications");
+        org.junit.jupiter.api.Assertions.assertNotNull(logEntry.getStudioId(), "Studio ID must be set");
+        org.junit.jupiter.api.Assertions.assertNotNull(logEntry.getStatus(), "Status must be set");
+
+        // Clean up created user, studio, and log
+        User createdUser = userRepository.findByEmail("notify-enabled@test.local").orElse(null);
+        if (createdUser != null) {
+            userRepository.delete(createdUser);
+            studioRepository.deleteById(createdUser.getStudioId());
+        }
+        systemEmailLogRepository.delete(logEntry);
+    }
+
+    @Test
+    void signup_PlatformAdminNotificationsDisabled_NoLogSaved() throws Exception {
+        org.springframework.test.util.ReflectionTestUtils.setField(emailService, "platformAdminNotificationsEnabled", false);
+        org.springframework.test.util.ReflectionTestUtils.setField(emailService, "platformAdminEmail", "admin@studioops.photo");
+
+        long initialLogCount = systemEmailLogRepository.count();
+
+        SignupRequest signupRequest = new SignupRequest(
+                "Notify Disabled Studio",
+                "Disabled Owner",
+                "notify-disabled@test.local",
+                "Password123!",
+                "445566",
+                "France"
+        );
+
+        mockMvc.perform(post("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(signupRequest)))
+                .andExpect(status().isCreated());
+
+        long postLogCount = systemEmailLogRepository.count();
+        org.junit.jupiter.api.Assertions.assertEquals(initialLogCount, postLogCount, "No new email logs should be saved when notifications are disabled");
+
+        // Clean up created user & studio
+        User createdUser = userRepository.findByEmail("notify-disabled@test.local").orElse(null);
+        if (createdUser != null) {
+            userRepository.delete(createdUser);
+            studioRepository.deleteById(createdUser.getStudioId());
+        }
+    }
+
+    @Test
+    void signup_PlatformAdminNotificationsEnabled_MailSendFails_SignupSucceeds() throws Exception {
+        org.springframework.test.util.ReflectionTestUtils.setField(emailService, "enabled", true);
+        org.springframework.test.util.ReflectionTestUtils.setField(emailService, "platformAdminNotificationsEnabled", true);
+        org.springframework.test.util.ReflectionTestUtils.setField(emailService, "platformAdminEmail", "admin@studioops.photo");
+
+        SignupRequest signupRequest = new SignupRequest(
+                "Mail Fail Studio",
+                "Fail Owner",
+                "mail-fail@test.local",
+                "Password123!",
+                "778899",
+                "Italy"
+        );
+
+        mockMvc.perform(post("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(signupRequest)))
+                .andExpect(status().isCreated());
+
+        java.util.List<com.studioops.email.SystemEmailLog> logs = systemEmailLogRepository.findAll().stream()
+                .filter(log -> "PLATFORM_BETA_SIGNUP_NOTIFICATION".equals(log.getEmailType()))
+                .toList();
+
+        org.junit.jupiter.api.Assertions.assertFalse(logs.isEmpty(), "Email log should exist");
+        com.studioops.email.SystemEmailLog logEntry = logs.stream()
+                .filter(l -> l.getRecipient().equals("admin@studioops.photo"))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Should have a log for admin@studioops.photo"));
+
+        org.junit.jupiter.api.Assertions.assertEquals("FAILED", logEntry.getStatus(), "Log status must be FAILED on mail exception");
+        org.junit.jupiter.api.Assertions.assertNotNull(logEntry.getErrorMessage(), "Error message must be recorded");
+
+        // Clean up created user, studio, and log
+        User createdUser = userRepository.findByEmail("mail-fail@test.local").orElse(null);
+        if (createdUser != null) {
+            userRepository.delete(createdUser);
+            studioRepository.deleteById(createdUser.getStudioId());
+        }
+        systemEmailLogRepository.delete(logEntry);
+
+        // Restore default properties
+        org.springframework.test.util.ReflectionTestUtils.setField(emailService, "enabled", false);
     }
 }

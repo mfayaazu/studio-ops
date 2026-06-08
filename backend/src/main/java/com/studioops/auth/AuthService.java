@@ -150,6 +150,9 @@ public class AuthService {
 
         userRepository.save(user);
 
+        // Future: replace email-only notification with StudioOps Platform Admin Console and subscription approval workflow.
+        emailService.sendPlatformBetaSignupNotification(savedStudio, user);
+
         return new com.studioops.auth.dto.SignupResponse(
             "Beta workspace request submitted",
             savedStudio.getId(),

@@ -1,6 +1,7 @@
 package com.studioops.email;
 
 import com.studioops.user.User;
+import com.studioops.studio.Studio;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,6 +10,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.ZoneId;
 
 @Service
 public class EmailService {
@@ -26,6 +29,12 @@ public class EmailService {
 
     @Value("${studioops.frontend-url:http://localhost:5173}")
     private String frontendUrl;
+
+    @Value("${studioops.platform-admin.notifications.enabled:false}")
+    private boolean platformAdminNotificationsEnabled;
+
+    @Value("${studioops.platform-admin.email:}")
+    private String platformAdminEmail;
 
     public EmailService(JavaMailSender mailSender, SystemEmailLogService emailLogService) {
         this.mailSender = mailSender;
@@ -124,6 +133,94 @@ public class EmailService {
 
         if (mailException != null) {
             throw new RuntimeException("Email delivery failed: " + mailException.getMessage(), mailException);
+        }
+    }
+
+    public void sendPlatformBetaSignupNotification(Studio studio, User owner) {
+        // Future: replace email-only notification with StudioOps Platform Admin Console and subscription approval workflow.
+        if (!platformAdminNotificationsEnabled) {
+            log.info("Platform admin notifications are disabled. Skipping beta signup notification for studio: {}", studio.getName());
+            return;
+        }
+        if (platformAdminEmail == null || platformAdminEmail.isBlank()) {
+            log.warn("Platform admin notification email is not configured. Skipping beta signup notification for studio: {}", studio.getName());
+            return;
+        }
+
+        String subject = "New StudioOps Beta Signup Request: " + studio.getName();
+        
+        DateTimeFormatter formatter = DateTimeFormatter
+                .ofPattern("yyyy-MM-dd HH:mm:ss")
+                .withZone(ZoneId.of("UTC"));
+        String submittedTimestamp = formatter.format(Instant.now()) + " UTC";
+
+        String htmlContent = "<div style=\"font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0b0f19; color: #f8fafc; border-radius: 8px;\">" +
+                "<h2 style=\"color: #a78bfa;\">Beta Workspace Request</h2>" +
+                "<p>A new beta signup request has been submitted and is pending approval.</p>" +
+                "<hr style=\"border: none; border-top: 1px solid #1e293b; margin: 20px 0;\">" +
+                "<table style=\"width: 100%; border-collapse: collapse;\">" +
+                "<tr><td style=\"padding: 8px 0; color: #94a3b8; width: 180px;\"><strong>Request Type:</strong></td><td style=\"padding: 8px 0;\">Beta Workspace Request</td></tr>" +
+                "<tr><td style=\"padding: 8px 0; color: #94a3b8;\"><strong>Studio Name:</strong></td><td style=\"padding: 8px 0;\">" + studio.getName() + "</td></tr>" +
+                "<tr><td style=\"padding: 8px 0; color: #94a3b8;\"><strong>Studio ID:</strong></td><td style=\"padding: 8px 0; font-family: monospace; font-size: 13px;\">" + studio.getId() + "</td></tr>" +
+                "<tr><td style=\"padding: 8px 0; color: #94a3b8;\"><strong>Studio Status:</strong></td><td style=\"padding: 8px 0; color: #fbbf24;\"><strong>" + studio.getStatus().name() + "</strong></td></tr>" +
+                "<tr><td style=\"padding: 8px 0; color: #94a3b8;\"><strong>Owner Name:</strong></td><td style=\"padding: 8px 0;\">" + owner.getDisplayName() + "</td></tr>" +
+                "<tr><td style=\"padding: 8px 0; color: #94a3b8;\"><strong>Owner Email:</strong></td><td style=\"padding: 8px 0;\">" + owner.getEmail() + "</td></tr>" +
+                "<tr><td style=\"padding: 8px 0; color: #94a3b8;\"><strong>Phone:</strong></td><td style=\"padding: 8px 0;\">" + (studio.getPhone() != null ? studio.getPhone() : "N/A") + "</td></tr>" +
+                "<tr><td style=\"padding: 8px 0; color: #94a3b8;\"><strong>Country:</strong></td><td style=\"padding: 8px 0;\">" + (studio.getCountry() != null ? studio.getCountry() : "N/A") + "</td></tr>" +
+                "<tr><td style=\"padding: 8px 0; color: #94a3b8;\"><strong>Submitted:</strong></td><td style=\"padding: 8px 0;\">" + submittedTimestamp + "</td></tr>" +
+                "<tr><td style=\"padding: 8px 0; color: #94a3b8;\"><strong>Subscription Status:</strong></td><td style=\"padding: 8px 0;\">" + (studio.getSubscriptionStatus() != null ? studio.getSubscriptionStatus().name() : "N/A") + "</td></tr>" +
+                "<tr><td style=\"padding: 8px 0; color: #94a3b8;\"><strong>Subscription Plan:</strong></td><td style=\"padding: 8px 0;\">" + (studio.getSubscriptionPlan() != null ? studio.getSubscriptionPlan().name() : "N/A") + "</td></tr>" +
+                "</table>" +
+                "<hr style=\"border: none; border-top: 1px solid #1e293b; margin: 20px 0;\">" +
+                "<p style=\"font-weight: bold; color: #a78bfa;\">Manual Approval Instruction:</p>" +
+                "<p style=\"background-color: #1e1b4b; border-left: 4px solid #6366f1; padding: 12px; border-radius: 4px; color: #e0e7ff; font-size: 14px;\">" +
+                "Approve this studio using the platform/admin approval API or direct database/admin tooling." +
+                "</p>" +
+                "</div>";
+
+        SystemEmailLog emailLog = new SystemEmailLog();
+        emailLog.setStudioId(studio.getId());
+        emailLog.setUserId(null);
+        emailLog.setRecipient(platformAdminEmail);
+        emailLog.setEmailType("PLATFORM_BETA_SIGNUP_NOTIFICATION");
+        emailLog.setSubject(subject);
+
+        if (!enabled) {
+            log.info("Email service is disabled. Skipping outbound platform admin email to recipient: {}", platformAdminEmail);
+            emailLog.setStatus("SENT");
+            emailLog.setSentAt(Instant.now());
+            try {
+                emailLogService.saveLog(emailLog);
+            } catch (Exception dbEx) {
+                log.error("Failed to write platform system email audit log to database: {}", dbEx.getMessage());
+            }
+            return;
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            
+            helper.setFrom(fromAddress);
+            helper.setTo(platformAdminEmail);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+
+            emailLog.setStatus("SENT");
+            emailLog.setSentAt(Instant.now());
+            log.info("Outbound platform system email sent successfully. Recipient: {}", platformAdminEmail);
+        } catch (Exception e) {
+            log.warn("Failed to send platform admin beta signup notification. Recipient: {}, Error: {}", platformAdminEmail, e.getMessage());
+            emailLog.setStatus("FAILED");
+            emailLog.setErrorMessage(e.getMessage());
+        }
+
+        try {
+            emailLogService.saveLog(emailLog);
+        } catch (Exception dbEx) {
+            log.error("Failed to write platform system email audit log to database: {}", dbEx.getMessage());
         }
     }
 }
