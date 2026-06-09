@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee } from '../api/employeesApi';
 import type { Employee, EmployeeCreateRequest } from '../types';
 import { EmployeeForm } from '../components/EmployeeForm';
 import { EmployeeList } from '../components/EmployeeList';
 import { ClipboardList, Search, Plus, X, AlertTriangle } from 'lucide-react';
 import * as authApi from '../../auth/api/authApi';
+import { useDebounce } from '../../../hooks/useDebounce';
 
 export const EmployeesPage: React.FC = () => {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -18,33 +19,22 @@ export const EmployeesPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleFetchEmployees = (search?: string) => {
-    setLoading(true);
-    fetchEmployees(search)
-      .then((res) => {
-        setEmployees(res);
-        setError(null);
-      })
-      .catch((err) => {
-        setError(err.message || 'Failed to fetch employees');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  };
+  // Employees query (staleTime 60s)
+  const { data: employees = [], isLoading: loading, error: queryError } = useQuery<Employee[]>({
+    queryKey: ['employees', debouncedSearchTerm],
+    queryFn: () => fetchEmployees(debouncedSearchTerm),
+    staleTime: 60000,
+  });
 
-  useEffect(() => {
-    handleFetchEmployees();
-  }, []);
+  const error = queryError ? (queryError as any).message || 'Failed to fetch employees' : null;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleFetchEmployees(searchTerm);
+    queryClient.invalidateQueries({ queryKey: ['employees', debouncedSearchTerm] });
   };
 
   const handleClearSearch = () => {
     setSearchTerm('');
-    handleFetchEmployees();
   };
 
   const openCreateModal = () => {
@@ -78,7 +68,7 @@ export const EmployeesPage: React.FC = () => {
       }
 
       setIsModalOpen(false);
-      handleFetchEmployees(searchTerm);
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
 
       if (savedEmployee.inviteWarning) {
         alert(savedEmployee.inviteWarning);
@@ -97,7 +87,7 @@ export const EmployeesPage: React.FC = () => {
     
     try {
       await deleteEmployee(id);
-      handleFetchEmployees(searchTerm);
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
     } catch (err: any) {
       alert(err.message || 'Failed to delete employee.');
     }

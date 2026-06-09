@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { employeesApi } from '../../employees/api/employeesApi';
 import { eventsApi } from '../../events/api/eventsApi';
 import { assignmentsApi } from '../api/assignmentsApi';
@@ -18,49 +19,43 @@ const getTodayDateString = (): string => {
 };
 
 export const AvailabilityPlannerPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
-
-  // API Data
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [allAssignments, setAllAssignments] = useState<EventAssignment[]>([]);
-  const [events, setEvents] = useState<EventResponse[]>([]);
-
-  // Page States
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Drag and Drop reassignment feedback states
   const [reassignError, setReassignError] = useState<string | null>(null);
   const [reassignConflict, setReassignConflict] = useState<string | null>(null);
 
-  const fetchData = async (date: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      // 1. Fetch employees, assignments, and events on the selected date concurrently
-      const [empList, assignList, eventList] = await Promise.all([
-        employeesApi.list(),
-        assignmentsApi.list(),
-        eventsApi.list(undefined, date, date),
-      ]);
+  // Queries
+  const { data: employees = [], isLoading: loadingEmployees, error: errorEmployees } = useQuery<Employee[]>({
+    queryKey: ['employees'],
+    queryFn: () => employeesApi.list(),
+    staleTime: 60000,
+  });
 
-      setEmployees(empList);
-      setAllAssignments(assignList);
-      setEvents(eventList);
-    } catch (err: any) {
-      setError(err.message || 'Failed to retrieve crew availability data.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: allAssignments = [], isLoading: loadingAssignments, error: errorAssignments } = useQuery<EventAssignment[]>({
+    queryKey: ['assignments'],
+    queryFn: () => assignmentsApi.list(),
+    staleTime: 60000,
+  });
 
-  useEffect(() => {
-    setReassignError(null);
-    setReassignConflict(null);
-    fetchData(selectedDate);
-  }, [selectedDate]);
+  const { data: events = [], isLoading: loadingEvents, error: errorEvents } = useQuery<EventResponse[]>({
+    queryKey: ['events', selectedDate],
+    queryFn: () => eventsApi.list(undefined, selectedDate, selectedDate),
+    staleTime: 60000,
+  });
+
+  const loading = loadingEmployees || loadingAssignments || loadingEvents;
+
+  const error = errorEmployees
+    ? (errorEmployees as any).message
+    : errorAssignments
+    ? (errorAssignments as any).message
+    : errorEvents
+    ? (errorEvents as any).message
+    : null;
 
   const handleReassign = async (assignment: EventAssignment, targetEmployee: Employee) => {
     setReassignError(null);
@@ -95,7 +90,8 @@ export const AvailabilityPlannerPage: React.FC = () => {
       }
 
       // 3. Refresh data
-      await fetchData(selectedDate);
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['events', selectedDate] });
     } catch (err: any) {
       const errorMsg = err.message || 'An unknown network error occurred during reassignment.';
       setReassignError(errorMsg);
@@ -166,7 +162,11 @@ export const AvailabilityPlannerPage: React.FC = () => {
         
         <button
           type="button"
-          onClick={() => fetchData(selectedDate)}
+          onClick={() => {
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            queryClient.invalidateQueries({ queryKey: ['assignments'] });
+            queryClient.invalidateQueries({ queryKey: ['events', selectedDate] });
+          }}
           className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2.5 rounded-lg border border-slate-750 transition-colors cursor-pointer"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -315,7 +315,11 @@ export const AvailabilityPlannerPage: React.FC = () => {
           </div>
           <button
             type="button"
-            onClick={() => fetchData(selectedDate)}
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['employees'] });
+              queryClient.invalidateQueries({ queryKey: ['assignments'] });
+              queryClient.invalidateQueries({ queryKey: ['events', selectedDate] });
+            }}
             className="text-xs bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-semibold px-3 py-1.5 rounded-lg border border-rose-500/30 transition-all cursor-pointer"
           >
             Retry

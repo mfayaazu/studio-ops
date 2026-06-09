@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { postproductionApi } from '../api/postproductionApi';
 import { fetchEmployees } from '../../employees/api/employeesApi';
 import { fetchProjects } from '../../projects/api/projectsApi';
@@ -49,14 +50,7 @@ const PRIORITY_WEIGHTS: Record<string, number> = {
 };
 
 export const PostProductionBoardPage: React.FC = () => {
-  const [tasks, setTasks] = useState<PostProductionTask[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
-
-  const [loading, setLoading] = useState<boolean>(true);
-  const [apiStatus, setApiStatus] = useState<'connected' | 'empty' | 'offline'>('offline');
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [nameLookupWarning, setNameLookupWarning] = useState<boolean>(false);
   const [pageError, setPageError] = useState<string | null>(null);
   
@@ -72,6 +66,52 @@ export const PostProductionBoardPage: React.FC = () => {
   const [filterDeliverable, setFilterDeliverable] = useState<string>('ALL');
   const [filterSearch, setFilterSearch] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('WORKFLOW_INDEX');
+
+  // Queries
+  const { data: tasks = [], isLoading: loadingTasks, error: errorTasks } = useQuery<PostProductionTask[]>({
+    queryKey: ['postproduction', 'tasks'],
+    queryFn: () => postproductionApi.fetchTasks(),
+    staleTime: 60000,
+  });
+
+  const { data: employees = [], isLoading: loadingEmployees } = useQuery<Employee[]>({
+    queryKey: ['employees'],
+    queryFn: () => fetchEmployees().catch((e) => {
+      console.error('[PostProd] Failed to fetch employees:', e?.message || e);
+      setNameLookupWarning(true);
+      return [] as Employee[];
+    }),
+    staleTime: 60000,
+  });
+
+  const { data: projects = [], isLoading: loadingProjects } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    queryFn: () => fetchProjects().catch((e) => {
+      console.error('[PostProd] Failed to fetch projects:', e?.message || e);
+      setNameLookupWarning(true);
+      return [] as Project[];
+    }),
+    staleTime: 60000,
+  });
+
+  const { data: deliverables = [], isLoading: loadingDeliverables } = useQuery<Deliverable[]>({
+    queryKey: ['deliverables'],
+    queryFn: () => fetchDeliverables().catch((e) => {
+      console.error('[PostProd] Failed to fetch deliverables:', e?.message || e);
+      setNameLookupWarning(true);
+      return [] as Deliverable[];
+    }),
+    staleTime: 60000,
+  });
+
+  const loading = loadingTasks || loadingEmployees || loadingProjects || loadingDeliverables;
+  const apiStatus = errorTasks
+    ? 'offline'
+    : tasks.length === 0
+    ? 'empty'
+    : 'connected';
+
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const getTodayStr = () => {
     const d = new Date();
@@ -208,92 +248,49 @@ export const PostProductionBoardPage: React.FC = () => {
     setFilterSearch('');
   };
 
-  const loadAllData = async (silent = false) => {
-    if (!silent) {
-      setLoading(true);
-    }
-    setNameLookupWarning(false);
-    try {
-      const [fetchedTasks, fetchedEmployees, fetchedProjects, fetchedDeliverables] = await Promise.all([
-        postproductionApi.fetchTasks(),
-        fetchEmployees().catch((e) => {
-          console.error('[PostProd] Failed to fetch employees (name lookups will show UUID fallback):', e?.message || e);
-          setNameLookupWarning(true);
-          return [] as Employee[];
-        }),
-        fetchProjects().catch((e) => {
-          console.error('[PostProd] Failed to fetch projects (project grouping will show UUID fallback):', e?.message || e);
-          setNameLookupWarning(true);
-          return [] as Project[];
-        }),
-        fetchDeliverables().catch((e) => {
-          console.error('[PostProd] Failed to fetch deliverables (deliverable names will show UUID fallback):', e?.message || e);
-          setNameLookupWarning(true);
-          return [] as Deliverable[];
-        })
-      ]);
-
-      setTasks(fetchedTasks);
-      setEmployees(fetchedEmployees);
-      setProjects(fetchedProjects);
-      setDeliverables(fetchedDeliverables);
-
-      if (fetchedTasks.length === 0) {
-        setApiStatus('empty');
-      } else {
-        setApiStatus('connected');
-      }
-    } catch (err) {
-      console.error('Failed to load post-production tasks:', err);
-      setApiStatus('offline');
-      setTasks([]);
-    } finally {
-      if (!silent) {
-        setLoading(false);
-      }
-    }
-  };
-
-  useEffect(() => {
-    loadAllData();
-  }, []);
-
   const handleTaskClick = (task: PostProductionTask) => {
     setSelectedTaskId(task.id);
   };
 
   const handleStatusUpdated = async (taskId: string, newStatus: PostProductionTaskStatus) => {
-    // Optimistic status update in state
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
-    );
-    // Reload silently from database to ensure order and full sync
-    await loadAllData(true);
+    // Optimistic status update in state cache
+    const previousTasks = queryClient.getQueryData<PostProductionTask[]>(['postproduction', 'tasks']);
+    if (previousTasks) {
+      queryClient.setQueryData<PostProductionTask[]>(
+        ['postproduction', 'tasks'],
+        previousTasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+      );
+    }
+    queryClient.invalidateQueries({ queryKey: ['postproduction', 'tasks'] });
   };
 
   const handleMoveTaskStatus = async (taskId: string, newStatus: PostProductionTaskStatus) => {
-    const originalTasks = [...tasks];
     setPageError(null);
+    const previousTasks = queryClient.getQueryData<PostProductionTask[]>(['postproduction', 'tasks']);
 
-    // Optimistic status update in state
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
-    );
+    // Optimistic status update in state cache
+    if (previousTasks) {
+      queryClient.setQueryData<PostProductionTask[]>(
+        ['postproduction', 'tasks'],
+        previousTasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+      );
+    }
 
     try {
       await postproductionApi.moveTaskStatus(taskId, newStatus);
-      // Reload silently from database to ensure order and full sync
-      await loadAllData(true);
+      queryClient.invalidateQueries({ queryKey: ['postproduction', 'tasks'] });
     } catch (err: any) {
       console.error('Failed to move task status:', err);
       // Rollback on failure
-      setTasks(originalTasks);
+      if (previousTasks) {
+        queryClient.setQueryData(['postproduction', 'tasks'], previousTasks);
+      }
       setPageError(err?.message || 'Failed to update task status. Reverting changes.');
     }
   };
 
   const handleTaskUpdated = async () => {
-    await loadAllData(true);
+    queryClient.invalidateQueries({ queryKey: ['postproduction', 'tasks'] });
   };
 
   const handleSubtasksUpdated = () => {
@@ -337,7 +334,12 @@ export const PostProductionBoardPage: React.FC = () => {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => loadAllData()}
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['postproduction', 'tasks'] });
+              queryClient.invalidateQueries({ queryKey: ['employees'] });
+              queryClient.invalidateQueries({ queryKey: ['projects'] });
+              queryClient.invalidateQueries({ queryKey: ['deliverables'] });
+            }}
             disabled={loading}
             className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-350 hover:text-white rounded-lg text-xs font-semibold transition-all border border-slate-750 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             title="Refresh Board Data"
@@ -653,7 +655,12 @@ export const PostProductionBoardPage: React.FC = () => {
               <p className="text-xs text-slate-500">Failed to connect to the backend server. Please verify the service is running and try again.</p>
             </div>
             <button
-              onClick={() => loadAllData()}
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['postproduction', 'tasks'] });
+                queryClient.invalidateQueries({ queryKey: ['employees'] });
+                queryClient.invalidateQueries({ queryKey: ['projects'] });
+                queryClient.invalidateQueries({ queryKey: ['deliverables'] });
+              }}
               className="py-1.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-semibold transition-colors border border-rose-500/20 cursor-pointer"
             >
               Retry Connection

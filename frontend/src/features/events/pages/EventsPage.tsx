@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '../api/eventsApi';
 import type { EventResponse, EventCreateRequest } from '../types';
 import { projectsApi } from '../../projects/api/projectsApi';
@@ -12,16 +13,14 @@ import { EventCalendar } from '../components/EventCalendar';
 import { EventDetailDrawer } from '../components/EventDetailDrawer';
 
 export const EventsPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
-  const [events, setEvents] = useState<EventResponse[]>([]);
-  const [projects, setProjects] = useState<ProjectResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [activeFilters, setActiveFilters] = useState({ search: '', from: '', to: '' });
 
   // Modal / Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,37 +33,33 @@ export const EventsPage: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<EventResponse | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const fetchData = async (search?: string, from?: string, to?: string) => {
-    setLoading(true);
-    try {
-      const [eventsList, projectsList] = await Promise.all([
-        eventsApi.list(search, from || undefined, to || undefined),
-        projectsApi.list()
-      ]);
-      setEvents(eventsList);
-      setProjects(projectsList);
-      setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch events data.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Events query (staleTime 60s)
+  const { data: events = [], isLoading: loadingEvents, error: errorEvents } = useQuery<EventResponse[]>({
+    queryKey: ['events', activeFilters],
+    queryFn: () => eventsApi.list(activeFilters.search, activeFilters.from || undefined, activeFilters.to || undefined),
+    staleTime: 60000,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Projects query (staleTime 60s)
+  const { data: projects = [], isLoading: loadingProjects, error: errorProjects } = useQuery<ProjectResponse[]>({
+    queryKey: ['projects'],
+    queryFn: () => projectsApi.list(),
+    staleTime: 60000,
+  });
+
+  const loading = loadingEvents || loadingProjects;
+  const error = errorEvents ? (errorEvents as any).message : errorProjects ? (errorProjects as any).message : null;
 
   const handleFilter = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchData(searchTerm, fromDate, toDate);
+    setActiveFilters({ search: searchTerm, from: fromDate, to: toDate });
   };
 
   const handleClearFilters = () => {
     setSearchTerm('');
     setFromDate('');
     setToDate('');
-    fetchData();
+    setActiveFilters({ search: '', from: '', to: '' });
   };
 
   const openCreateModal = () => {
@@ -113,13 +108,11 @@ export const EventsPage: React.FC = () => {
       
       // Update drawer event reference in case it is open
       if (selectedEvent && selectedEvent.id === (editingEvent?.id || '')) {
-        // Fetch new state for this event if needed, or simply reload everything
-        // For simplicity, we just close the drawer and reload
         setIsDrawerOpen(false);
         setSelectedEvent(null);
       }
 
-      fetchData(searchTerm, fromDate, toDate);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
     } catch (err: any) {
       setFormError(err.message || 'Error occurred while saving event.');
     } finally {
@@ -136,7 +129,7 @@ export const EventsPage: React.FC = () => {
       await eventsApi.delete(id);
       setIsDrawerOpen(false);
       setSelectedEvent(null);
-      fetchData(searchTerm, fromDate, toDate);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
     } catch (err: any) {
       alert(err.message || 'Failed to delete event.');
     }

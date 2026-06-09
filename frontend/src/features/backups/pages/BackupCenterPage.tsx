@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Layers, ListFilter, AlertTriangle } from 'lucide-react';
 import { backupsApi } from '../api/backupsApi';
 import { projectsApi } from '../../projects/api/projectsApi';
@@ -12,11 +13,7 @@ import { BackupForm } from '../components/BackupForm';
 import { BackupList } from '../components/BackupList';
 
 export const BackupCenterPage: React.FC = () => {
-  const [backups, setBackups] = useState<BackupRecord[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // View state: 'matrix' | 'list'
   const [activeTab, setActiveTab] = useState<'matrix' | 'list'>('matrix');
@@ -29,28 +26,34 @@ export const BackupCenterPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<BackupRecord | undefined>(undefined);
 
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [backupsList, projectsList, deliverablesList] = await Promise.all([
-        backupsApi.list(),
-        projectsApi.list(),
-        deliverablesApi.list(),
-      ]);
-      setBackups(backupsList);
-      setProjects(projectsList);
-      setDeliverables(deliverablesList);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load backup data.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Queries
+  const { data: backups = [], isLoading: loadingBackups, error: errorBackups } = useQuery<BackupRecord[]>({
+    queryKey: ['backups'],
+    queryFn: () => backupsApi.list(),
+    staleTime: 60000,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { data: projects = [], isLoading: loadingProjects, error: errorProjects } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    queryFn: () => projectsApi.list(),
+    staleTime: 60000,
+  });
+
+  const { data: deliverables = [], isLoading: loadingDeliverables, error: errorDeliverables } = useQuery<Deliverable[]>({
+    queryKey: ['deliverables'],
+    queryFn: () => deliverablesApi.list(),
+    staleTime: 60000,
+  });
+
+  const loading = loadingBackups || loadingProjects || loadingDeliverables;
+
+  const error = errorBackups 
+    ? (errorBackups as any).message 
+    : errorProjects 
+    ? (errorProjects as any).message 
+    : errorDeliverables 
+    ? (errorDeliverables as any).message 
+    : null;
 
   const openCreateModal = () => {
     setEditingRecord(undefined);
@@ -72,7 +75,7 @@ export const BackupCenterPage: React.FC = () => {
         await backupsApi.create(payload as BackupRecordCreateRequest);
       }
       setIsModalOpen(false);
-      await fetchData();
+      queryClient.invalidateQueries({ queryKey: ['backups'] });
     } catch (err: any) {
       throw new Error(err?.message || 'Error occurred while saving backup record.');
     }
@@ -81,7 +84,7 @@ export const BackupCenterPage: React.FC = () => {
   const handleDeleteRecord = async (id: string) => {
     try {
       await backupsApi.delete(id);
-      await fetchData();
+      queryClient.invalidateQueries({ queryKey: ['backups'] });
     } catch (err: any) {
       alert(err?.message || 'Failed to delete backup record.');
     }

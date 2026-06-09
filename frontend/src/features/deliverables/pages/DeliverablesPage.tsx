@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, LayoutGrid, List, AlertTriangle, Search, X } from 'lucide-react';
 import { deliverablesApi } from '../api/deliverablesApi';
 import { projectsApi } from '../../projects/api/projectsApi';
@@ -32,11 +33,7 @@ const DELIVERABLE_STATUSES: { value: DeliverableStatus; label: string }[] = [
 ];
 
 export const DeliverablesPage: React.FC = () => {
-  const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // View state: 'board' | 'list'
   const [activeTab, setActiveTab] = useState<'board' | 'list'>('board');
@@ -53,31 +50,37 @@ export const DeliverablesPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [deliverablesList, projectsList, employeesList] = await Promise.all([
-        deliverablesApi.list(),
-        projectsApi.list(),
-        fetchEmployees().catch(e => {
-          console.warn('Failed to fetch employees for deliverable lookup:', e);
-          return [] as Employee[];
-        }),
-      ]);
-      setDeliverables(deliverablesList);
-      setProjects(projectsList);
-      setEmployees(employeesList);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load deliverables data.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Queries
+  const { data: deliverables = [], isLoading: loadingDeliverables, error: errorDeliverables } = useQuery<Deliverable[]>({
+    queryKey: ['deliverables'],
+    queryFn: () => deliverablesApi.list(),
+    staleTime: 60000,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { data: projects = [], isLoading: loadingProjects, error: errorProjects } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    queryFn: () => projectsApi.list(),
+    staleTime: 60000,
+  });
+
+  const { data: employees = [], isLoading: loadingEmployees, error: errorEmployees } = useQuery<Employee[]>({
+    queryKey: ['employees'],
+    queryFn: () => fetchEmployees().catch(e => {
+      console.warn('Failed to fetch employees for deliverable lookup:', e);
+      return [] as Employee[];
+    }),
+    staleTime: 60000,
+  });
+
+  const loading = loadingDeliverables || loadingProjects || loadingEmployees;
+
+  const error = errorDeliverables
+    ? (errorDeliverables as any).message
+    : errorProjects
+    ? (errorProjects as any).message
+    : errorEmployees
+    ? (errorEmployees as any).message
+    : null;
 
   const openCreateModal = () => {
     setEditingRecord(null);
@@ -101,7 +104,7 @@ export const DeliverablesPage: React.FC = () => {
         await deliverablesApi.create(payload as DeliverableCreateRequest);
       }
       setIsModalOpen(false);
-      await fetchData();
+      queryClient.invalidateQueries({ queryKey: ['deliverables'] });
     } catch (err: any) {
       setSaveError(err?.message || 'Error occurred while saving deliverable.');
     } finally {
@@ -112,7 +115,7 @@ export const DeliverablesPage: React.FC = () => {
   const handleDeleteRecord = async (id: string) => {
     try {
       await deliverablesApi.delete(id);
-      await fetchData();
+      queryClient.invalidateQueries({ queryKey: ['deliverables'] });
     } catch (err: any) {
       alert(err?.message || 'Failed to delete deliverable.');
     }

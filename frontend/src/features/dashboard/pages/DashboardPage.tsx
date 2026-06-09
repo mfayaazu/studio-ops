@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { dashboardApi } from '../api/dashboardApi';
 import { eventsApi } from '../../events/api/eventsApi';
 import { projectsApi } from '../../projects/api/projectsApi';
 import { deliverablesApi } from '../../deliverables/api/deliverablesApi';
 import { backupsApi } from '../../backups/api/backupsApi';
-import { employeesApi } from '../../employees/api/employeesApi';
-import { assignmentsApi } from '../../assignments/api/assignmentsApi';
 import { useRouter } from '../../../app/router';
 
 import type { DashboardSummaryResponse } from '../types';
@@ -37,45 +36,53 @@ const defaultSummary: DashboardSummaryResponse = {
 
 export const DashboardPage: React.FC = () => {
   const { navigateTo } = useRouter();
+  const queryClient = useQueryClient();
   
-  const [summary, setSummary] = useState<DashboardSummaryResponse>(defaultSummary);
-  const [events, setEvents] = useState<EventResponse[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
-  const [backups, setBackups] = useState<BackupRecord[]>([]);
-  
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Dashboard summary query (staleTime 30s)
+  const { data: summary = defaultSummary, isLoading: loadingSummary, isError: isErrorSummary } = useQuery<DashboardSummaryResponse>({
+    queryKey: ['dashboard-summary'],
+    queryFn: () => dashboardApi.getSummary(),
+    staleTime: 30000,
+  });
 
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [resSummary, resEvents, resProjects, resDeliverables, resBackups] = await Promise.all([
-        dashboardApi.getSummary(),
-        eventsApi.list(),
-        projectsApi.list(),
-        deliverablesApi.list(),
-        backupsApi.list(),
-        employeesApi.list(),
-        assignmentsApi.list(),
-      ]);
-      setSummary(resSummary);
-      setEvents(resEvents);
-      setProjects(resProjects);
-      setDeliverables(resDeliverables);
-      setBackups(resBackups);
-    } catch (err: any) {
-      console.error('Unexpected error loading dashboard:', err);
-      setError('Failed to load operational stats. Please check backend connection.');
-    } finally {
-      setLoading(false);
-    }
+  // Events query (staleTime 60s)
+  const { data: events = [], isLoading: loadingEvents, isError: isErrorEvents } = useQuery<EventResponse[]>({
+    queryKey: ['events'],
+    queryFn: () => eventsApi.list(),
+    staleTime: 60000,
+  });
+
+  // Projects query (staleTime 60s)
+  const { data: projects = [], isLoading: loadingProjects, isError: isErrorProjects } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    queryFn: () => projectsApi.list(),
+    staleTime: 60000,
+  });
+
+  // Deliverables query (staleTime 60s)
+  const { data: deliverables = [], isLoading: loadingDeliverables, isError: isErrorDeliverables } = useQuery<Deliverable[]>({
+    queryKey: ['deliverables'],
+    queryFn: () => deliverablesApi.list(),
+    staleTime: 60000,
+  });
+
+  // Backups query (staleTime 60s)
+  const { data: backups = [], isLoading: loadingBackups, isError: isErrorBackups } = useQuery<BackupRecord[]>({
+    queryKey: ['backups'],
+    queryFn: () => backupsApi.list(),
+    staleTime: 60000,
+  });
+
+  const loading = loadingSummary || loadingEvents || loadingProjects || loadingDeliverables || loadingBackups;
+  const error = isErrorSummary || isErrorEvents || isErrorProjects || isErrorDeliverables || isErrorBackups;
+
+  const handleRetry = () => {
+    queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+    queryClient.invalidateQueries({ queryKey: ['events'] });
+    queryClient.invalidateQueries({ queryKey: ['projects'] });
+    queryClient.invalidateQueries({ queryKey: ['deliverables'] });
+    queryClient.invalidateQueries({ queryKey: ['backups'] });
   };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -153,7 +160,7 @@ export const DashboardPage: React.FC = () => {
             </p>
           </div>
           <button
-            onClick={loadData}
+            onClick={handleRetry}
             className="py-2 px-4 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-semibold transition-colors border border-rose-500/20 cursor-pointer shadow-md"
           >
             Retry Dashboard Load

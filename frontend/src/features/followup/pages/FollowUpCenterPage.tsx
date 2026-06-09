@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FollowUpSummaryCards } from '../components/FollowUpSummaryCards';
 import { FollowUpPipelineBoard } from '../components/FollowUpPipelineBoard';
 import { FollowUpTimeline } from '../components/FollowUpTimeline';
@@ -104,20 +105,16 @@ const mapLeadResponseToLead = (response: LeadResponse): Lead => {
 
 export const FollowUpCenterPage: React.FC = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  // Leads & UI states
-  const [leads, setLeads] = useState<Lead[]>([]);
+  // UI States
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pipeline' | 'sequence' | 'templates' | 'approvals'>('pipeline');
   const [isInquiryFormOpen, setIsInquiryFormOpen] = useState(false);
-
-  // Backend integration states
-  const [templates, setTemplates] = useState<MessageTemplate[]>([]);
-  const [sequences, setSequences] = useState<FollowUpSequence[]>([]);
-  const [steps, setSteps] = useState<FollowUpStep[]>([]);
-  const [dueTasks, setDueTasks] = useState<FollowUpTask[]>([]);
-  const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
-  const [hasError, setHasError] = useState(false);
+  const [isQuotationModalOpen, setIsQuotationModalOpen] = useState(false);
+  const [editingQuotation, setEditingQuotation] = useState<Partial<Quotation> | null>(null);
+  const [isQuotationSaving, setIsQuotationSaving] = useState(false);
+  const [quotationFormError, setQuotationFormError] = useState<string | null>(null);
 
   // Parse hash parameters to switch to correct tab on redirects
   useEffect(() => {
@@ -144,64 +141,106 @@ export const FollowUpCenterPage: React.FC = () => {
     return () => window.removeEventListener('hashchange', parseHashTab);
   }, []);
 
-  const refreshSequenceSteps = async () => {
-    const activeSeq = sequences.find(s => s.active) || sequences[0];
-    if (activeSeq) {
-      try {
-        const fetchedSteps = await fetchFollowUpSteps(activeSeq.id);
-        setSteps(fetchedSteps);
-      } catch (err) {
-        console.warn('Failed to refresh sequence steps:', err);
-      }
-    }
-  };
-  
-  const [apiStatus, setApiStatus] = useState<'connected' | 'offline' | 'empty'>('offline');
-  const [leadApiStatus, setLeadApiStatus] = useState<'connected' | 'empty' | 'offline'>('offline');
-  const [tasksApiStatus, setTasksApiStatus] = useState<'connected' | 'empty' | 'offline'>('offline');
-  const [templatesApiStatus, setTemplatesApiStatus] = useState<'connected' | 'empty' | 'offline'>('offline');
-  const [sequencesApiStatus, setSequencesApiStatus] = useState<'connected' | 'empty' | 'offline'>('offline');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isLeadsLoading, setIsLeadsLoading] = useState<boolean>(true);
+  // TanStack Queries
+  // 1. Leads (staleTime 30s)
+  const { data: rawLeads = [], isLoading: isLeadsLoading, isError: isErrorLeads } = useQuery<LeadResponse[]>({
+    queryKey: ['leads'],
+    queryFn: () => fetchLeads(),
+    staleTime: 30000,
+  });
 
-  // Quotations, Clients, Projects integration states
-  const [quotations, setQuotations] = useState<Quotation[]>([]);
-  const [clients, setClients] = useState<ClientResponse[]>([]);
-  const [projects, setProjects] = useState<ProjectResponse[]>([]);
-  
-  // Quotation form modal states
-  const [isQuotationModalOpen, setIsQuotationModalOpen] = useState(false);
-  const [editingQuotation, setEditingQuotation] = useState<Partial<Quotation> | null>(null);
-  const [isQuotationSaving, setIsQuotationSaving] = useState(false);
-  const [quotationFormError, setQuotationFormError] = useState<string | null>(null);
+  // 2. Message Templates (staleTime 5 mins)
+  const { data: templates = [], isLoading: loadingTemplates, isError: isErrorTemplates } = useQuery<MessageTemplate[]>({
+    queryKey: ['message-templates'],
+    queryFn: fetchMessageTemplates,
+    staleTime: 300000,
+  });
 
+  // 3. Sequences (staleTime 5 mins)
+  const { data: sequences = [], isLoading: loadingSequences, isError: isErrorSequences } = useQuery<FollowUpSequence[]>({
+    queryKey: ['follow-up-sequences'],
+    queryFn: fetchFollowUpSequences,
+    staleTime: 300000,
+  });
+
+  const activeSequenceId = sequences.find(s => s.active)?.id || sequences[0]?.id;
+
+  // 4. Sequence Steps (staleTime 5 mins)
+  const { data: steps = [] } = useQuery<FollowUpStep[]>({
+    queryKey: ['follow-up-steps', activeSequenceId],
+    queryFn: () => fetchFollowUpSteps(activeSequenceId!),
+    enabled: !!activeSequenceId,
+    staleTime: 300000,
+  });
+
+  // 5. Due Tasks (staleTime 30s)
+  const { data: dueTasks = [], isLoading: loadingTasks, isError: isErrorTasks } = useQuery<FollowUpTask[]>({
+    queryKey: ['due-tasks'],
+    queryFn: fetchDueFollowUpTasks,
+    staleTime: 30000,
+  });
+
+  // 6. Comm Logs (staleTime 30s)
+  const { data: communicationLogsRaw = [], isLoading: loadingLogs } = useQuery<CommunicationLog[]>({
+    queryKey: ['communication-logs'],
+    queryFn: () => fetchCommunicationLogs(),
+    staleTime: 30000,
+  });
+
+  // 7. Quotations (staleTime 30s)
+  const { data: quotations = [], isLoading: loadingQuotations } = useQuery<Quotation[]>({
+    queryKey: ['quotations'],
+    queryFn: () => quotationsApi.list(),
+    staleTime: 30000,
+  });
+
+  // 8. Clients (staleTime 60s)
+  const { data: clients = [], isLoading: loadingClients } = useQuery<ClientResponse[]>({
+    queryKey: ['clients'],
+    queryFn: () => fetchClients(),
+    staleTime: 60000,
+  });
+
+  // 9. Projects (staleTime 60s)
+  const { data: projects = [], isLoading: loadingProjects } = useQuery<ProjectResponse[]>({
+    queryKey: ['projects'],
+    queryFn: () => fetchProjects(),
+    staleTime: 60000,
+  });
+
+  // Derived arrays
+  const leads = rawLeads.map(l => mapLeadResponseToLead(l));
+  const communicationLogs = [...communicationLogsRaw].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  // Derived loading / error / status states
+  const isLoading = isLeadsLoading || loadingTemplates || loadingSequences || loadingTasks || loadingLogs || loadingQuotations || loadingClients || loadingProjects;
+  
+  const leadApiStatus = isErrorLeads ? 'offline' : rawLeads.length > 0 ? 'connected' : 'empty';
+  const tasksApiStatus = isErrorTasks ? 'offline' : dueTasks.length > 0 || communicationLogs.length > 0 ? 'connected' : 'empty';
+  const templatesApiStatus = isErrorTemplates ? 'offline' : templates.length > 0 ? 'connected' : 'empty';
+  const sequencesApiStatus = isErrorSequences ? 'offline' : sequences.length > 0 ? 'connected' : 'empty';
+  const apiStatus = isErrorTemplates || isErrorSequences ? 'offline' : templates.length === 0 && sequences.length === 0 ? 'empty' : 'connected';
+  const hasError = isErrorLeads && isErrorTemplates && isErrorSequences && isErrorTasks;
+
+  // Refresh functions
   const refreshLeads = async () => {
-    setIsLeadsLoading(true);
-    try {
-      const fetchedLeads = await fetchLeads();
-      if (fetchedLeads && fetchedLeads.length > 0) {
-        setLeadApiStatus('connected');
-        setLeads(fetchedLeads.map(l => mapLeadResponseToLead(l)));
-      } else {
-        setLeadApiStatus('empty');
-        setLeads([]);
-      }
-    } catch (e) {
-      console.warn('Failed to fetch leads from backend:', e);
-      setLeadApiStatus('offline');
-      setLeads([]);
-    } finally {
-      setIsLeadsLoading(false);
+    await queryClient.invalidateQueries({ queryKey: ['leads'] });
+  };
+
+  const refreshSequenceSteps = async () => {
+    if (activeSequenceId) {
+      await queryClient.invalidateQueries({ queryKey: ['follow-up-steps', activeSequenceId] });
     }
   };
 
-  const refreshQuotations = async () => {
-    try {
-      const list = await quotationsApi.list();
-      setQuotations(list);
-    } catch (e) {
-      console.warn('Failed to fetch quotations:', e);
-    }
+  const loadData = async () => {
+    await queryClient.invalidateQueries();
+  };
+
+  const handleRetry = () => {
+    loadData();
   };
 
   const syncLeadStage = async (leadId: string, status: QuotationStatus) => {
@@ -224,7 +263,6 @@ export const FollowUpCenterPage: React.FC = () => {
 
     if (targetStage) {
       try {
-        /* TODO: Backend automation should eventually enforce lead stage transition on quotation status changes. */
         await handleMoveLeadStage(
           leadId, 
           targetStage, 
@@ -279,7 +317,8 @@ export const FollowUpCenterPage: React.FC = () => {
       }
 
       setIsQuotationModalOpen(false);
-      await Promise.all([refreshLeads(), refreshQuotations()]);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
     } catch (err: any) {
       setQuotationFormError(err.message || 'Error occurred while saving quotation.');
     } finally {
@@ -299,7 +338,8 @@ export const FollowUpCenterPage: React.FC = () => {
         await syncLeadStage(updated.leadId, status);
       }
 
-      await Promise.all([refreshLeads(), refreshQuotations()]);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
     } catch (err: any) {
       setQuotationFormError(err.message || 'Failed to update quotation status.');
     } finally {
@@ -316,135 +356,13 @@ export const FollowUpCenterPage: React.FC = () => {
     try {
       await quotationsApi.delete(id);
       setIsQuotationModalOpen(false);
-      await Promise.all([refreshLeads(), refreshQuotations()]);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
     } catch (err: any) {
       setQuotationFormError(err.message || 'Failed to delete quotation.');
     } finally {
       setIsQuotationSaving(false);
     }
-  };
-
-  const loadData = async () => {
-    setHasError(false);
-    setIsLoading(true);
-    setIsLeadsLoading(true);
-
-    let leadsFailed = false;
-    let templatesFailed = false;
-    let sequencesFailed = false;
-    let tasksFailed = false;
-
-    // 1. Fetch Leads
-    try {
-      const fetchedLeads = await fetchLeads();
-      if (fetchedLeads && fetchedLeads.length > 0) {
-        setLeadApiStatus('connected');
-        setLeads(fetchedLeads.map(l => mapLeadResponseToLead(l)));
-      } else {
-        setLeadApiStatus('empty');
-        setLeads([]);
-      }
-    } catch (e) {
-      console.warn('Failed to fetch leads from backend:', e);
-      setLeadApiStatus('offline');
-      setLeads([]);
-      leadsFailed = true;
-    } finally {
-      setIsLeadsLoading(false);
-    }
-
-    // 2. Fetch Templates
-    let fetchedTemplates: MessageTemplate[] = [];
-    try {
-      fetchedTemplates = await fetchMessageTemplates();
-      setTemplates(fetchedTemplates);
-      setTemplatesApiStatus(fetchedTemplates.length > 0 ? 'connected' : 'empty');
-    } catch (e) {
-      console.warn('Failed to fetch templates from backend:', e);
-      setTemplatesApiStatus('offline');
-      setTemplates([]);
-      templatesFailed = true;
-    }
-
-    // 3. Fetch Sequences & Steps
-    try {
-      const fetchedSequences = await fetchFollowUpSequences();
-      setSequences(fetchedSequences);
-      if (fetchedSequences.length === 0) {
-        setSequencesApiStatus('empty');
-        setSteps([]);
-      } else {
-        setSequencesApiStatus('connected');
-        const activeSeq = fetchedSequences.find(s => s.active) || fetchedSequences[0];
-        if (activeSeq) {
-          try {
-            const fetchedSteps = await fetchFollowUpSteps(activeSeq.id);
-            setSteps(fetchedSteps);
-          } catch (e) {
-            console.warn('Failed to fetch follow-up steps for active sequence:', e);
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to fetch follow-up sequences from backend:', e);
-      setSequencesApiStatus('offline');
-      setSequences([]);
-      setSteps([]);
-      sequencesFailed = true;
-    }
-
-    // 4. Fetch Due Tasks & Logs
-    try {
-      const fetchedTasks = await fetchDueFollowUpTasks();
-      const fetchedLogs = await fetchCommunicationLogs();
-      setDueTasks(fetchedTasks);
-      setCommunicationLogs(fetchedLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-      setTasksApiStatus(fetchedTasks.length > 0 || fetchedLogs.length > 0 ? 'connected' : 'empty');
-    } catch (e) {
-      console.warn('Failed to fetch follow-up tasks or logs from backend:', e);
-      setTasksApiStatus('offline');
-      setDueTasks([]);
-      setCommunicationLogs([]);
-      tasksFailed = true;
-    }
-
-    // 5. Fetch Quotations, Clients, and Projects (secondary data)
-    try {
-      const [qtns, clts, prjs] = await Promise.all([
-        quotationsApi.list(),
-        fetchClients(),
-        fetchProjects()
-      ]);
-      setQuotations(qtns);
-      setClients(clts);
-      setProjects(prjs);
-    } catch (e) {
-      console.warn('Failed to fetch quotations, clients, or projects on mount:', e);
-    }
-
-    // Determine legacy apiStatus for backwards compatibility
-    if (templatesFailed || sequencesFailed) {
-      setApiStatus('offline');
-    } else if (fetchedTemplates.length === 0 && sequences.length === 0) {
-      setApiStatus('empty');
-    } else {
-      setApiStatus('connected');
-    }
-
-    // Global connection error trigger (if all essential sections fail)
-    if (leadsFailed && templatesFailed && sequencesFailed && tasksFailed) {
-      setHasError(true);
-    }
-
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const handleRetry = () => {
-    loadData();
   };
 
 
@@ -465,9 +383,7 @@ export const FollowUpCenterPage: React.FC = () => {
     });
     // After success, refetch leads
     try {
-      const fetched = await fetchLeads();
-      setLeads(fetched.map(l => mapLeadResponseToLead(l)));
-      setLeadApiStatus(fetched.length > 0 ? 'connected' : 'empty');
+      await queryClient.invalidateQueries({ queryKey: ['leads'] });
     } catch (err) {
       console.error('Failed to refetch leads after stage move:', err);
     }
@@ -477,10 +393,8 @@ export const FollowUpCenterPage: React.FC = () => {
     // Re-fetch tasks and logs on action trigger to refresh values
     if (apiStatus === 'connected' || apiStatus === 'empty') {
       try {
-        const fetchedTasks = await fetchDueFollowUpTasks();
-        const fetchedLogs = await fetchCommunicationLogs();
-        setDueTasks(fetchedTasks);
-        setCommunicationLogs(fetchedLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        await queryClient.invalidateQueries({ queryKey: ['due-tasks'] });
+        await queryClient.invalidateQueries({ queryKey: ['communication-logs'] });
       } catch (err) {
         console.error('Failed to refetch pending tasks or logs:', err);
       }
@@ -508,7 +422,19 @@ export const FollowUpCenterPage: React.FC = () => {
   };
 
   const handleUpdateLead = (updatedLead: Lead) => {
-    setLeads(leads.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+    queryClient.setQueryData<LeadResponse[]>(['leads'], (oldLeads) => {
+      if (!oldLeads) return [];
+      return oldLeads.map((ol) => {
+        if (ol.id === updatedLead.id) {
+          return {
+            ...ol,
+            lastContactedAt: updatedLead.lastContacted === 'N/A' ? undefined : new Date(updatedLead.lastContacted).toISOString(),
+            nextFollowUpAt: updatedLead.nextFollowUp === 'Completed' || updatedLead.nextFollowUp === 'Archived' || updatedLead.nextFollowUp === 'N/A' ? undefined : new Date(updatedLead.nextFollowUp).toISOString(),
+          };
+        }
+        return ol;
+      });
+    });
   };
 
   const getDueStatusHelper = (scheduledAt: string): 'due_today' | 'overdue' | 'upcoming' => {

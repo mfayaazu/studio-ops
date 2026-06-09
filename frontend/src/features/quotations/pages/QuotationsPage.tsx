@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { quotationsApi } from '../api/quotationsApi';
 import type { Quotation, QuotationCreateRequest, QuotationStatus } from '../types';
 import { fetchClients } from '../../clients/api/clientsApi';
@@ -17,13 +18,7 @@ import { canEditPage } from '../../auth/permissions';
 export const QuotationsPage: React.FC = () => {
   const { user, permissions } = useAuth();
   const isEditable = canEditPage(permissions, 'QUOTATIONS', user?.role);
-
-  const [quotations, setQuotations] = useState<Quotation[]>([]);
-  const [clients, setClients] = useState<ClientResponse[]>([]);
-  const [projects, setProjects] = useState<ProjectResponse[]>([]);
-  const [leads, setLeads] = useState<LeadResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<'ALL' | QuotationStatus>('ALL');
@@ -34,30 +29,42 @@ export const QuotationsPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [quotationList, clientsList, projectsList, leadsList] = await Promise.all([
-        quotationsApi.list(),
-        fetchClients(),
-        fetchProjects(),
-        fetchLeads()
-      ]);
-      setQuotations(quotationList);
-      setClients(clientsList);
-      setProjects(projectsList);
-      setLeads(leadsList);
-      setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load quotations data.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Queries
+  const { data: quotations = [], isLoading: loadingQuotations, error: errorQuotations } = useQuery<Quotation[]>({
+    queryKey: ['quotations'],
+    queryFn: () => quotationsApi.list(),
+    staleTime: 60000,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { data: clients = [], isLoading: loadingClients, error: errorClients } = useQuery<ClientResponse[]>({
+    queryKey: ['clients'],
+    queryFn: () => fetchClients(),
+    staleTime: 60000,
+  });
+
+  const { data: projects = [], isLoading: loadingProjects, error: errorProjects } = useQuery<ProjectResponse[]>({
+    queryKey: ['projects'],
+    queryFn: () => fetchProjects(),
+    staleTime: 60000,
+  });
+
+  const { data: leads = [], isLoading: loadingLeads, error: errorLeads } = useQuery<LeadResponse[]>({
+    queryKey: ['leads'],
+    queryFn: () => fetchLeads(),
+    staleTime: 60000,
+  });
+
+  const loading = loadingQuotations || loadingClients || loadingProjects || loadingLeads;
+
+  const error = errorQuotations
+    ? (errorQuotations as any).message
+    : errorClients
+    ? (errorClients as any).message
+    : errorProjects
+    ? (errorProjects as any).message
+    : errorLeads
+    ? (errorLeads as any).message
+    : null;
 
   const openCreateModal = () => {
     setEditingQuotation(null);
@@ -91,7 +98,6 @@ export const QuotationsPage: React.FC = () => {
 
     if (targetStage) {
       try {
-        /* TODO: Backend automation should eventually enforce lead stage transition on quotation status changes. */
         const leadExists = leads.some(l => l.id === leadId);
         if (leadExists) {
           await moveLeadStage(leadId, {
@@ -99,6 +105,7 @@ export const QuotationsPage: React.FC = () => {
             lostReason,
             notes: `Lead stage updated automatically via quotation status change to ${status}.`
           });
+          queryClient.invalidateQueries({ queryKey: ['leads'] });
         }
       } catch (err) {
         console.warn('Failed to sync lead stage with quotation status:', err);
@@ -122,7 +129,7 @@ export const QuotationsPage: React.FC = () => {
       }
 
       setIsModalOpen(false);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
     } catch (err: any) {
       setFormError(err.message || 'Error occurred while saving quotation.');
     } finally {
@@ -142,7 +149,7 @@ export const QuotationsPage: React.FC = () => {
         await syncLeadStage(updated.leadId, status);
       }
 
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
     } catch (err: any) {
       setFormError(err.message || 'Failed to update quotation status.');
     } finally {
@@ -159,7 +166,7 @@ export const QuotationsPage: React.FC = () => {
     try {
       await quotationsApi.delete(id);
       setIsModalOpen(false);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
     } catch (err: any) {
       setFormError(err.message || 'Failed to delete quotation.');
     } finally {
@@ -203,7 +210,12 @@ export const QuotationsPage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={fetchData}
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['quotations'] });
+              queryClient.invalidateQueries({ queryKey: ['clients'] });
+              queryClient.invalidateQueries({ queryKey: ['projects'] });
+              queryClient.invalidateQueries({ queryKey: ['leads'] });
+            }}
             title="Refresh proposal pipeline"
             className="p-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 hover:text-white text-slate-450 rounded-lg transition-colors cursor-pointer"
           >
@@ -245,7 +257,7 @@ export const QuotationsPage: React.FC = () => {
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Draft Proposals</span>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-400 font-mono">{draftCount}</span>
-            <Sparkles className="h-4 w-4 text-slate-650 ml-auto" />
+            <Sparkles className="h-4 w-4 text-slate-655 ml-auto" />
           </div>
         </div>
 
@@ -300,7 +312,12 @@ export const QuotationsPage: React.FC = () => {
           <AlertTriangle className="h-5 w-5 flex-shrink-0" />
           <div className="flex-1 text-sm">{error}</div>
           <button
-            onClick={fetchData}
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['quotations'] });
+              queryClient.invalidateQueries({ queryKey: ['clients'] });
+              queryClient.invalidateQueries({ queryKey: ['projects'] });
+              queryClient.invalidateQueries({ queryKey: ['leads'] });
+            }}
             className="text-xs font-bold text-rose-350 hover:underline cursor-pointer"
           >
             Retry Connection

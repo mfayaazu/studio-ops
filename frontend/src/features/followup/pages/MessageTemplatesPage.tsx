@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MessageTemplate, TemplateType } from '../types';
 import { 
   fetchMessageTemplates, 
@@ -26,9 +27,16 @@ export const MessageTemplatesPage: React.FC<{ isEmbedded?: boolean }> = ({ isEmb
   const { user } = useAuth();
   const isEditable = user?.role === 'OWNER' || user?.role === 'ADMIN';
 
-  const [templates, setTemplates] = useState<MessageTemplate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const { data: rawTemplates = [], isLoading, error: queryError, refetch: loadTemplates } = useQuery<MessageTemplate[]>({
+    queryKey: ['message-templates'],
+    queryFn: () => fetchMessageTemplates(),
+    staleTime: 300000,
+  });
+
+  const templates = rawTemplates.filter(t => t.channel === 'WHATSAPP');
+  const error = queryError ? (queryError as any).message || 'Failed to load message templates from the database.' : null;
   
   // Drawer states
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -46,26 +54,6 @@ export const MessageTemplatesPage: React.FC<{ isEmbedded?: boolean }> = ({ isEmb
   const [drawerError, setDrawerError] = useState<string | null>(null);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Load templates
-  const loadTemplates = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const fetched = await fetchMessageTemplates();
-      // Filter templates to WHATSAPP only for beta
-      setTemplates(fetched.filter(t => t.channel === 'WHATSAPP'));
-    } catch (err: any) {
-      console.error('Failed to load message templates:', err);
-      setError('Failed to load message templates from the database.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadTemplates();
-  }, []);
 
   const openCreateDrawer = () => {
     setEditingTemplate(null);
@@ -153,7 +141,7 @@ export const MessageTemplatesPage: React.FC<{ isEmbedded?: boolean }> = ({ isEmb
       } else {
         await createMessageTemplate(payload);
       }
-      await loadTemplates();
+      queryClient.invalidateQueries({ queryKey: ['message-templates'] });
       closeDrawer();
     } catch (err: any) {
       console.error('Failed to save template:', err);
@@ -173,7 +161,7 @@ export const MessageTemplatesPage: React.FC<{ isEmbedded?: boolean }> = ({ isEmb
 
     try {
       await deleteMessageTemplate(editingTemplate.id);
-      await loadTemplates();
+      queryClient.invalidateQueries({ queryKey: ['message-templates'] });
       closeDrawer();
     } catch (err: any) {
       console.error('Failed to delete template:', err);
@@ -268,7 +256,7 @@ export const MessageTemplatesPage: React.FC<{ isEmbedded?: boolean }> = ({ isEmb
           <h3 className="text-white font-semibold">Error Loading Templates</h3>
           <p className="text-xs text-slate-400">{error}</p>
           <button 
-            onClick={loadTemplates}
+            onClick={() => loadTemplates()}
             className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer"
           >
             Retry

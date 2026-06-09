@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchClients, createClient, updateClient, deleteClient } from '../api/clientsApi';
 import type { Client, ClientCreateRequest } from '../types';
 import { ClientForm } from '../components/ClientForm';
 import { ClientList } from '../components/ClientList';
 import { Users, Search, Plus, X, AlertTriangle } from 'lucide-react';
+import { useDebounce } from '../../../hooks/useDebounce';
 
 export const ClientsPage: React.FC = () => {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,33 +18,22 @@ export const ClientsPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleFetchClients = (search?: string) => {
-    setLoading(true);
-    fetchClients(search)
-      .then((res) => {
-        setClients(res);
-        setError(null);
-      })
-      .catch((err) => {
-        setError(err.message || 'Failed to fetch clients');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  };
+  // Clients query (staleTime 60s)
+  const { data: clients = [], isLoading: loading, error: queryError } = useQuery<Client[]>({
+    queryKey: ['clients', debouncedSearchTerm],
+    queryFn: () => fetchClients(debouncedSearchTerm),
+    staleTime: 60000,
+  });
 
-  useEffect(() => {
-    handleFetchClients();
-  }, []);
+  const error = queryError ? (queryError as any).message || 'Failed to fetch clients' : null;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleFetchClients(searchTerm);
+    queryClient.invalidateQueries({ queryKey: ['clients', debouncedSearchTerm] });
   };
 
   const handleClearSearch = () => {
     setSearchTerm('');
-    handleFetchClients();
   };
 
   const openCreateModal = () => {
@@ -68,7 +58,7 @@ export const ClientsPage: React.FC = () => {
         await createClient(payload);
       }
       setIsModalOpen(false);
-      handleFetchClients(searchTerm);
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
     } catch (err: any) {
       setFormError(err.message || 'Error occurred while saving client data.');
     } finally {
@@ -83,7 +73,7 @@ export const ClientsPage: React.FC = () => {
     
     try {
       await deleteClient(id);
-      handleFetchClients(searchTerm);
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
     } catch (err: any) {
       alert(err.message || 'Failed to delete client.');
     }

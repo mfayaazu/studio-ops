@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchProjects, createProject, updateProject, deleteProject } from '../api/projectsApi';
 import type { Project, ProjectCreateRequest } from '../types';
 import { fetchClients } from '../../clients/api/clientsApi';
@@ -8,16 +9,15 @@ import { ProjectList } from '../components/ProjectList';
 import { Briefcase, Search, Plus, X, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider';
 import { canEditPage } from '../../auth/permissions';
+import { useDebounce } from '../../../hooks/useDebounce';
 
 export const ProjectsPage: React.FC = () => {
   const { user, permissions } = useAuth();
   const isEditable = canEditPage(permissions, 'PROJECTS', user?.role);
+  const queryClient = useQueryClient();
 
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [clients, setClients] = useState<ClientResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,35 +25,30 @@ export const ProjectsPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const fetchData = async (search?: string) => {
-    setLoading(true);
-    try {
-      const [projectsList, clientsList] = await Promise.all([
-        fetchProjects(search),
-        fetchClients()
-      ]);
-      setProjects(projectsList);
-      setClients(clientsList);
-      setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load projects data.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Projects query (staleTime 60s)
+  const { data: projects = [], isLoading: loadingProjects, error: errorProjects } = useQuery<Project[]>({
+    queryKey: ['projects', debouncedSearchTerm],
+    queryFn: () => fetchProjects(debouncedSearchTerm),
+    staleTime: 60000,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Clients query (staleTime 60s)
+  const { data: clients = [], isLoading: loadingClients, error: errorClients } = useQuery<ClientResponse[]>({
+    queryKey: ['clients'],
+    queryFn: () => fetchClients(),
+    staleTime: 60000,
+  });
+
+  const loading = loadingProjects || loadingClients;
+  const error = errorProjects ? (errorProjects as any).message : errorClients ? (errorClients as any).message : null;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchData(searchTerm);
+    queryClient.invalidateQueries({ queryKey: ['projects', debouncedSearchTerm] });
   };
 
   const handleClearSearch = () => {
     setSearchTerm('');
-    fetchData();
   };
 
   const openCreateModal = () => {
@@ -78,7 +73,7 @@ export const ProjectsPage: React.FC = () => {
         await createProject(payload);
       }
       setIsModalOpen(false);
-      fetchData(searchTerm);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     } catch (err: any) {
       setFormError(err.message || 'Error occurred while saving project.');
     } finally {
@@ -93,7 +88,7 @@ export const ProjectsPage: React.FC = () => {
     
     try {
       await deleteProject(id);
-      fetchData(searchTerm);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     } catch (err: any) {
       alert(err.message || 'Failed to delete project.');
     }
