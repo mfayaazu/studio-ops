@@ -14,6 +14,7 @@ public class FollowUpSequenceMapper {
         response.setName(sequence.getName());
         response.setDescription(sequence.getDescription());
         response.setActive(sequence.isActive());
+        response.setApplicableStage(sequence.getApplicableStage());
         response.setCreatedAt(sequence.getCreatedAt());
         response.setUpdatedAt(sequence.getUpdatedAt());
         return response;

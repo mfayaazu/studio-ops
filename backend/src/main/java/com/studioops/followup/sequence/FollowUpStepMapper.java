@@ -14,6 +14,12 @@ public class FollowUpStepMapper {
         response.setSequenceId(step.getSequenceId());
         response.setStepOrder(step.getStepOrder());
         response.setDelayDays(step.getDelayDays());
+        response.setStepName(step.getStepName());
+        response.setTriggerStage(step.getTriggerStage());
+        response.setDelayValue(step.getDelayValue());
+        response.setDelayUnit(step.getDelayUnit());
+        response.setDefaultPriority(step.getDefaultPriority());
+        response.setUrgencyThresholdHours(step.getUrgencyThresholdHours());
         response.setChannel(step.getChannel());
         response.setTemplateId(step.getTemplateId());
         response.setGoal(step.getGoal());

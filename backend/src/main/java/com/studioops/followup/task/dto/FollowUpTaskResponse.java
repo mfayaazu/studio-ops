@@ -27,6 +27,10 @@ public class FollowUpTaskResponse {
     private Instant createdAt;
     private Instant updatedAt;
 
+    private boolean isDraft;
+    private String draftMessage;
+    private com.studioops.lead.LeadPriority priority;
+
     public FollowUpTaskResponse() {
     }
 
@@ -204,5 +208,29 @@ public class FollowUpTaskResponse {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public boolean getIsDraft() {
+        return isDraft;
+    }
+
+    public void setIsDraft(boolean isDraft) {
+        this.isDraft = isDraft;
+    }
+
+    public String getDraftMessage() {
+        return draftMessage;
+    }
+
+    public void setDraftMessage(String draftMessage) {
+        this.draftMessage = draftMessage;
+    }
+
+    public com.studioops.lead.LeadPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(com.studioops.lead.LeadPriority priority) {
+        this.priority = priority;
     }
 }

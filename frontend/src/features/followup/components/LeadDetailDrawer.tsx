@@ -1,14 +1,22 @@
 import React, { useState } from 'react';
-import type { Lead, LeadStage, MessageTemplate, ChannelType, LeadPipelineStage, LeadLostReason } from '../types';
+import type { Lead, LeadStage, MessageTemplate, ChannelType, LeadPipelineStage, LeadLostReason, LeadPriority, LeadPaymentStatus, LeadPreferredChannel } from '../types';
 import { formatCurrencyINR } from '../../../lib/formatters';
 import { 
   X, Mail, MessageSquare, Phone, Smartphone, Calendar, 
   Clock, CheckCircle2, 
-  ChevronRight, ThumbsUp, Eye, Sparkles, Ban, Loader2,
+  ThumbsUp, Eye, Sparkles, Loader2,
   FolderPlus, AlertCircle, Plus
 } from 'lucide-react';
 import type { Quotation } from '../../quotations/types';
 import { QuotationStatusBadge } from '../../quotations/components/QuotationStatusBadge';
+import { updateLead } from '../api/followupApi';
+
+const mapChannelToPreferred = (channel: ChannelType): LeadPreferredChannel => {
+  if (channel === 'WHATSAPP') return 'WHATSAPP';
+  if (channel === 'EMAIL') return 'EMAIL';
+  if (channel === 'SMS') return 'SMS';
+  return 'PHONE_CALL';
+};
 
 
 const cleanPhoneNumber = (phone: string | undefined): string => {
@@ -57,10 +65,29 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   const [isConfirmingConvert, setIsConfirmingConvert] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
 
-  // Reset confirmation state when drawer lead changes or drawer closes
+  // CRM Enhancements States
+  const [priority, setPriority] = useState<LeadPriority>('NORMAL');
+  const [quotationTotal, setQuotationTotal] = useState(0);
+  const [amountPaid, setAmountPaid] = useState(0);
+  const [paymentStatus, setPaymentStatus] = useState<LeadPaymentStatus>('UNPAID');
+  const [selectedStage, setSelectedStage] = useState<LeadPipelineStage>('NEW_LEAD');
+  const [backwardNotes, setBackwardNotes] = useState('');
+  const [showBackwardNotes, setShowBackwardNotes] = useState(false);
+  const [isUpdatingStage, setIsUpdatingStage] = useState(false);
+
+  // Reset confirmation and sync lead state when drawer lead changes or drawer closes
   React.useEffect(() => {
     setIsConfirmingConvert(false);
     setIsConverting(false);
+    if (lead) {
+      setPriority(lead.priority || 'NORMAL');
+      setQuotationTotal(lead.quotationTotal || 0);
+      setAmountPaid(lead.amountPaid || 0);
+      setPaymentStatus(lead.paymentStatus || 'UNPAID');
+      setSelectedStage(lead.stage as LeadPipelineStage);
+      setBackwardNotes('');
+      setShowBackwardNotes(false);
+    }
   }, [lead?.id, isOpen]);
 
   if (!lead || !isOpen) return null;
@@ -100,8 +127,6 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
     }
   };
 
-  // Determine next stage
-  const currentStageIndex = FUNNEL_STAGES.indexOf(lead.stage);
   const isTerminal = lead.stage === 'CONFIRMED' || lead.stage === 'LOST';
   
   // Suggested template logic based on lead's current stage
@@ -134,42 +159,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
       .replace(/\{\{guideUrl\}\}/g, 'studioops.photo/guides/wedding-tips');
   };
 
-  // Handlers for stage movement
-  const handleMoveToNextStage = async () => {
-    if (isTerminal || lead.stage === 'FOLLOW_UP_PENDING') return;
-    const nextStage = FUNNEL_STAGES[currentStageIndex + 1];
-    setErrorMessage(null);
-    setIsSaving(true);
-    try {
-      await onMoveStage(nextStage as LeadPipelineStage, undefined, lead.notes);
-      setSimulationLog(`Successfully progressed lead to: ${getStageLabel(nextStage)}`);
-      setIsPreviewOpen(false);
-    } catch (err: any) {
-      console.error('Failed to move stage:', err);
-      setErrorMessage(err?.message || 'Failed to update pipeline stage. Please check connection and try again.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
-  const handleMarkTerminal = async (targetTerminal: 'CONFIRMED' | 'LOST') => {
-    setErrorMessage(null);
-    setIsSaving(true);
-    try {
-      await onMoveStage(
-        targetTerminal as LeadPipelineStage,
-        targetTerminal === 'LOST' ? 'OTHER' : undefined,
-        lead.notes
-      );
-      setSimulationLog(`Lead marked as ${targetTerminal === 'CONFIRMED' ? 'Confirmed (Won) 🎉' : 'Lost ✗'}`);
-      setIsPreviewOpen(false);
-    } catch (err: any) {
-      console.error('Failed to update stage:', err);
-      setErrorMessage(err?.message || `Failed to mark lead as ${targetTerminal.toLowerCase()}.`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   // Handlers for visual-only follow-up buttons
   const handleApproveFollowUp = () => {
@@ -302,9 +292,9 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                 <span className="text-xs font-bold text-slate-200 mt-1 block truncate">{lead.projectTitle}</span>
               </div>
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Est. Deal Value</span>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Commercial Value</span>
                 <span className="text-xs font-bold text-emerald-400 mt-1 block">
-                  {formatCurrencyINR(lead.estimatedValue)}
+                  {formatCurrencyINR(lead.quotationTotal || 0)}
                 </span>
               </div>
               <div>
@@ -355,6 +345,39 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                 <span className="text-xs font-bold text-violet-400 mt-1 block">{getStageLabel(lead.stage)}</span>
               </div>
               <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Lead Priority</span>
+                <select
+                  value={priority}
+                  onChange={async (e) => {
+                    const nextPriority = e.target.value as LeadPriority;
+                    setPriority(nextPriority);
+                    setErrorMessage(null);
+                    try {
+                      await updateLead(lead.id, {
+                        clientName: lead.clientName,
+                        preferredChannel: mapChannelToPreferred(lead.channel),
+                        leadSource: lead.leadSource || 'WEBSITE',
+                        priority: nextPriority,
+                        quotationTotal: lead.quotationTotal,
+                        amountPaid: lead.amountPaid,
+                        paymentStatus: lead.paymentStatus,
+                        eventSegments: lead.eventSegments
+                      });
+                      setSimulationLog(`Lead priority updated to ${nextPriority}`);
+                      onUpdateLead({ ...lead, priority: nextPriority });
+                    } catch (err: any) {
+                      setErrorMessage(err?.message || 'Failed to update priority');
+                    }
+                  }}
+                  className="bg-[#0d1222]/60 border border-slate-800 text-slate-300 rounded p-1 text-[11px] focus:ring-1 focus:ring-violet-500 mt-1 block w-full"
+                >
+                  <option value="LOW">LOW</option>
+                  <option value="NORMAL">NORMAL</option>
+                  <option value="HIGH">HIGH</option>
+                  <option value="URGENT">URGENT</option>
+                </select>
+              </div>
+              <div>
                 <span className="text-[9px] font-mono uppercase text-slate-500 block">Channel Preference</span>
                 <span className="text-xs font-semibold text-slate-350 mt-1 block flex items-center gap-1">
                   <span className="text-slate-500">{getChannelIcon(lead.channel)}</span>
@@ -392,6 +415,130 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
             </div>
           )}
           
+          {/* Payments & Commercials Section */}
+          <div className="space-y-4">
+            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Payments & Commercials</span>
+            <div className="grid grid-cols-2 gap-4 bg-slate-900/20 border border-slate-850 p-4 rounded-xl">
+              <div>
+                <label className="text-[9px] font-mono uppercase text-slate-500 block">Quotation Total (INR)</label>
+                <input
+                  type="number"
+                  value={quotationTotal}
+                  onChange={(e) => setQuotationTotal(Number(e.target.value))}
+                  className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded p-1 text-xs mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-[9px] font-mono uppercase text-slate-500 block">Amount Paid (INR)</label>
+                <input
+                  type="number"
+                  value={amountPaid}
+                  onChange={(e) => setAmountPaid(Number(e.target.value))}
+                  className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded p-1 text-xs mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-[9px] font-mono uppercase text-slate-500 block">Payment Status</label>
+                <select
+                  value={paymentStatus}
+                  onChange={(e) => setPaymentStatus(e.target.value as LeadPaymentStatus)}
+                  className="w-full bg-[#0d1222]/60 border border-slate-800 text-slate-350 rounded p-1 text-xs mt-1"
+                >
+                  <option value="UNPAID">UNPAID</option>
+                  <option value="ADVANCE_PAID">ADVANCE PAID</option>
+                  <option value="PARTIALLY_PAID">PARTIALLY PAID</option>
+                  <option value="PAID">PAID</option>
+                  <option value="REFUNDED">REFUNDED</option>
+                </select>
+              </div>
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block">Amount Remaining</span>
+                <span className="text-xs font-bold text-amber-400 mt-2 block">
+                  {formatCurrencyINR(quotationTotal - amountPaid)}
+                </span>
+              </div>
+              <div className="col-span-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setErrorMessage(null);
+                    setIsSaving(true);
+                    try {
+                      await updateLead(lead.id, {
+                        clientName: lead.clientName,
+                        preferredChannel: mapChannelToPreferred(lead.channel),
+                        leadSource: lead.leadSource || 'WEBSITE',
+                        priority: lead.priority,
+                        quotationTotal,
+                        amountPaid,
+                        paymentStatus,
+                        eventSegments: lead.eventSegments
+                      });
+                      setSimulationLog('Lead payment details successfully updated!');
+                      onUpdateLead({
+                        ...lead,
+                        quotationTotal,
+                        amountPaid,
+                        amountRemaining: quotationTotal - amountPaid,
+                        paymentStatus
+                      });
+                    } catch (err: any) {
+                      setErrorMessage(err?.message || 'Failed to update payment details');
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                  className="py-1 px-3 bg-violet-600/20 hover:bg-violet-600/35 border border-violet-500/30 text-violet-300 rounded text-xs font-semibold cursor-pointer transition-all"
+                >
+                  Save Payments
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Lead Event Segments List */}
+          <div className="space-y-4">
+            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Lead Event Segments ({lead.eventSegments?.length || 0})</span>
+            <div className="space-y-2">
+              {lead.eventSegments && lead.eventSegments.length > 0 ? (
+                lead.eventSegments.map((seg, idx) => (
+                  <div key={idx} className="bg-slate-900/20 border border-slate-850 p-3 rounded-xl text-xs space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-violet-400 font-mono text-[10px] uppercase">{seg.eventType} — {seg.eventName}</span>
+                      {seg.eventDate && (
+                        <span className="text-[10px] text-slate-400 font-mono font-bold flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-slate-500" />
+                          {seg.eventDate}
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-slate-350 text-[11px]">
+                      {seg.startTime && (
+                        <div>
+                          <span className="text-[9px] text-slate-500 uppercase font-mono block">Timings</span>
+                          <span>{seg.startTime} {seg.endTime ? `to ${seg.endTime}` : ''}</span>
+                        </div>
+                      )}
+                      {seg.city && (
+                        <div>
+                          <span className="text-[9px] text-slate-500 uppercase font-mono block">City / Venue</span>
+                          <span>{seg.city} {seg.venueName ? `(${seg.venueName})` : ''}</span>
+                        </div>
+                      )}
+                    </div>
+                    {seg.notes && (
+                      <p className="text-slate-400 text-[11px] italic pt-1 border-t border-slate-850/50 mt-1">Notes: {seg.notes}</p>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="bg-[#0f172a]/20 border border-slate-850 p-4 rounded-xl text-center">
+                  <span className="text-xs text-slate-500">No event segments found.</span>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Quotations Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -541,35 +688,103 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
             )}
           </div>
 
-          {/* Workflow Stage Actions Row */}
-          <div className="space-y-2.5">
-            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Stage Movement Actions</span>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                disabled={isTerminal || lead.stage === 'FOLLOW_UP_PENDING' || isSaving}
-                onClick={handleMoveToNextStage}
-                className="py-2.5 px-3 bg-violet-600/15 hover:bg-violet-600/25 border border-violet-500/20 disabled:opacity-40 disabled:hover:bg-violet-600/15 text-violet-300 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
-                title="Progress to next funnel stage"
-              >
-                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
-                <span>Next Stage</span>
-              </button>
-              <button
-                disabled={lead.stage === 'CONFIRMED' || isSaving}
-                onClick={() => handleMarkTerminal('CONFIRMED')}
-                className="py-2.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 disabled:opacity-40 text-emerald-400 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
-              >
-                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                <span>Mark Won</span>
-              </button>
-              <button
-                disabled={lead.stage === 'LOST' || isSaving}
-                onClick={() => handleMarkTerminal('LOST')}
-                className="py-2.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 disabled:opacity-40 text-rose-400 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
-              >
-                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-4 w-4" />}
-                <span>Mark Lost</span>
-              </button>
+          {/* Bidirectional Stage movement action */}
+          <div className="space-y-3">
+            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Update Pipeline Stage</span>
+            <div className="bg-slate-900/20 border border-slate-850 p-4 rounded-xl space-y-3">
+              <div>
+                <span className="text-[9px] font-mono uppercase text-slate-500 block mb-1.5">Transition Stage</span>
+                <select
+                  value={selectedStage}
+                  onChange={(e) => {
+                    const targetStage = e.target.value as LeadPipelineStage;
+                    setSelectedStage(targetStage);
+                    
+                    const oldIndex = FUNNEL_STAGES.indexOf(lead.stage);
+                    const newIndex = FUNNEL_STAGES.indexOf(targetStage);
+                    
+                    if (newIndex < oldIndex) {
+                      setShowBackwardNotes(true);
+                    } else {
+                      setShowBackwardNotes(false);
+                    }
+                  }}
+                  className="w-full bg-[#0d1222]/60 border border-slate-800 text-slate-300 rounded p-1.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+                >
+                  {FUNNEL_STAGES.map((stg) => (
+                    <option key={stg} value={stg}>{getStageLabel(stg)}</option>
+                  ))}
+                </select>
+              </div>
+
+              {showBackwardNotes && (
+                <div className="space-y-1 animate-fadeIn">
+                  <label className="text-[9px] font-mono uppercase text-rose-400 block">Notes / Reason for backward stage transition *</label>
+                  <textarea
+                    value={backwardNotes}
+                    onChange={(e) => setBackwardNotes(e.target.value)}
+                    placeholder="Enter the reason for moving the lead backward..."
+                    rows={2}
+                    className="w-full bg-[#0d1222]/40 border border-rose-500/30 text-slate-200 rounded p-2 text-xs focus:ring-1 focus:ring-rose-500 focus:outline-none resize-none"
+                  />
+                </div>
+              )}
+
+              {selectedStage === 'LOST' && (
+                <div className="space-y-1.5 animate-fadeIn">
+                  <label className="text-[9px] font-mono uppercase text-slate-500 block">Lost Reason</label>
+                  <select
+                    className="w-full bg-[#0d1222]/60 border border-slate-800 text-slate-350 rounded p-1.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+                    id="lost-reason-select"
+                  >
+                    <option value="PRICE_TOO_HIGH">PRICE TOO HIGH</option>
+                    <option value="BOOKED_COMPETITOR">BOOKED COMPETITOR</option>
+                    <option value="DATE_UNAVAILABLE">DATE UNAVAILABLE</option>
+                    <option value="NO_RESPONSE">NO RESPONSE</option>
+                    <option value="CLIENT_CANCELLED">CLIENT CANCELLED</option>
+                    <option value="OTHER">OTHER</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={isUpdatingStage || (showBackwardNotes && !backwardNotes.trim())}
+                  onClick={async () => {
+                    setErrorMessage(null);
+                    setIsUpdatingStage(true);
+                    
+                    const lostReasonEl = document.getElementById('lost-reason-select') as HTMLSelectElement | null;
+                    const resolvedLostReason = selectedStage === 'LOST' ? (lostReasonEl?.value as LeadLostReason || 'OTHER') : undefined;
+                    
+                    try {
+                      await onMoveStage(
+                        selectedStage,
+                        resolvedLostReason,
+                        showBackwardNotes ? backwardNotes.trim() : lead.notes
+                      );
+                      setSimulationLog(`Successfully transitioned stage to: ${getStageLabel(selectedStage)}`);
+                      setShowBackwardNotes(false);
+                      setBackwardNotes('');
+                    } catch (err: any) {
+                      setErrorMessage(err?.message || 'Failed to transition stage');
+                    } finally {
+                      setIsUpdatingStage(false);
+                    }
+                  }}
+                  className="py-1.5 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-md"
+                >
+                  {isUpdatingStage ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <span>Transition Stage</span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 

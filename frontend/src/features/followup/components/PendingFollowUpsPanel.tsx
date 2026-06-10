@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { FollowUpTask, CommunicationLog, Lead } from '../types';
-import { approveFollowUpTask, skipFollowUpTask } from '../api/followupApi';
-import { Mail, MessageSquare, Phone, Smartphone, Check, X, Eye, ShieldAlert, Sparkles, Loader2 } from 'lucide-react';
+import { approveFollowUpTask, skipFollowUpTask, updateFollowUpTask } from '../api/followupApi';
+import { Mail, MessageSquare, Phone, Smartphone, Check, X, Eye, ShieldAlert, Sparkles, Loader2, Save } from 'lucide-react';
 
 interface PendingFollowUpsPanelProps {
   backendTasks?: FollowUpTask[];
@@ -32,11 +32,11 @@ const isValidPhoneNumber = (phone: string | undefined): boolean => {
   return /^\+[1-9]\d{7,14}$/.test(cleaned);
 };
 
-const handleOpenWhatsApp = (task: UnifiedTask) => {
+const handleOpenWhatsApp = (task: UnifiedTask, currentBody: string) => {
   const cleaned = cleanPhoneNumber(task.recipient);
   const phone = cleaned.replace(/^\+/, '');
   if (!phone) return;
-  const encodedText = encodeURIComponent(task.body);
+  const encodedText = encodeURIComponent(currentBody);
   const url = `https://wa.me/${phone}?text=${encodedText}`;
   window.open(url, '_blank', 'noopener,noreferrer');
 };
@@ -99,10 +99,49 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [editedBody, setEditedBody] = useState('');
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   const tasksToRender = (backendTasks || []).map(t => mapBackendTask(t, leads));
 
   const selectedTask = tasksToRender.find(t => t.id === selectedTaskId) || null;
+
+  React.useEffect(() => {
+    if (selectedTask) {
+      setEditedBody(selectedTask.body);
+    } else {
+      setEditedBody('');
+    }
+  }, [selectedTaskId]);
+
+  const handleSaveDraft = async () => {
+    if (!selectedTaskId) return;
+    setIsSavingDraft(true);
+    setActionStatus(null);
+    try {
+      await updateFollowUpTask(selectedTaskId, {
+        messageBody: editedBody,
+        isDraft: true,
+        draftMessage: editedBody
+      });
+      setActionStatus({ type: 'success', message: '✓ Draft message successfully saved!' });
+      
+      // Update local task body
+      const matched = backendTasks?.find(t => t.id === selectedTaskId);
+      if (matched) {
+        matched.messageBody = editedBody;
+      }
+      
+      if (onActionSuccess) {
+        onActionSuccess();
+      }
+    } catch (err: any) {
+      console.error(err);
+      setActionStatus({ type: 'error', message: `Failed to save draft: ${err.message}` });
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
 
   const getChannelIcon = (channel: string) => {
     switch (channel) {
@@ -131,11 +170,17 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
     }
   };
 
-  const handleAction = async (task: UnifiedTask, action: 'approved' | 'skipped') => {
+  const handleAction = async (task: UnifiedTask, action: 'approved' | 'skipped', currentBody?: string) => {
     setActionLoadingId(task.id);
     setActionStatus(null);
     try {
       if (action === 'approved') {
+        if (currentBody && currentBody !== task.body) {
+          await updateFollowUpTask(task.id, {
+            messageBody: currentBody,
+            draftMessage: currentBody
+          });
+        }
         await approveFollowUpTask(task.id);
         setActionStatus({ type: 'success', message: `✓ Task approved & logged as SENT for ${task.clientName}` });
       } else {
@@ -270,7 +315,8 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                             disabled={!isValidPhoneNumber(task.recipient)}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleOpenWhatsApp(task);
+                              const currentBody = selectedTaskId === task.id ? editedBody : task.body;
+                              handleOpenWhatsApp(task, currentBody);
                             }}
                             className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-[10px] transition-colors ${
                               isValidPhoneNumber(task.recipient)
@@ -286,7 +332,8 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                             disabled={!isValidPhoneNumber(task.recipient)}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleAction(task, 'approved');
+                              const currentBody = selectedTaskId === task.id ? editedBody : task.body;
+                              handleAction(task, 'approved', currentBody);
                             }}
                             className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-[10px] transition-colors ${
                               isValidPhoneNumber(task.recipient)
@@ -332,11 +379,25 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                     </div>
                   )}
 
-                  <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg text-xs font-medium flex-1">
-                    <span className="text-[9px] font-mono text-slate-500 block uppercase mb-1">Body:</span>
-                    <p className="text-slate-300 whitespace-pre-line leading-relaxed font-sans">
-                      {selectedTask.body}
-                    </p>
+                  <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg text-xs font-medium flex-1 space-y-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[9px] font-mono text-slate-500 block uppercase">Body (Editable):</span>
+                      <button
+                        type="button"
+                        disabled={isSavingDraft}
+                        onClick={handleSaveDraft}
+                        className="py-0.5 px-2 bg-violet-600/20 hover:bg-violet-600/35 border border-violet-500/30 text-violet-300 rounded text-[9px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                      >
+                        {isSavingDraft ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Save className="h-2.5 w-2.5" />}
+                        <span>Save Draft</span>
+                      </button>
+                    </div>
+                    <textarea
+                      value={editedBody}
+                      onChange={(e) => setEditedBody(e.target.value)}
+                      className="w-full bg-[#0d1222]/80 border border-slate-800 text-slate-200 rounded p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none resize-y min-h-[140px] font-sans"
+                      placeholder="Type message draft here..."
+                    />
                   </div>
 
                   {selectedTask.channel === 'WHATSAPP' ? (
@@ -346,7 +407,7 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                     </div>
                   ) : (
                     <div className="text-[10px] text-amber-400/80 bg-amber-500/5 border border-amber-500/10 px-2 py-1 rounded flex items-center gap-1">
-                      <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0 text-amber-450" />
+                      <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0 text-amber-455" />
                       <span>Manual demo send — logged only</span>
                     </div>
                   )}
@@ -362,7 +423,7 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                 <div className="flex gap-2 border-t border-slate-800 pt-3">
                   <button
                     onClick={() => handleAction(selectedTask, 'skipped')}
-                    className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-350 rounded-lg font-bold text-xs transition-colors"
+                    className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-350 rounded-lg font-bold text-xs transition-colors cursor-pointer"
                   >
                     Skip Step
                   </button>
@@ -370,8 +431,8 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                     <>
                       <button
                         disabled={!isValidPhoneNumber(selectedTask.recipient)}
-                        onClick={() => handleOpenWhatsApp(selectedTask)}
-                        className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors text-center ${
+                        onClick={() => handleOpenWhatsApp(selectedTask, editedBody)}
+                        className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors text-center cursor-pointer ${
                           isValidPhoneNumber(selectedTask.recipient)
                             ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                             : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
@@ -381,8 +442,8 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                       </button>
                       <button
                         disabled={!isValidPhoneNumber(selectedTask.recipient)}
-                        onClick={() => handleAction(selectedTask, 'approved')}
-                        className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors shadow-md ${
+                        onClick={() => handleAction(selectedTask, 'approved', editedBody)}
+                        className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors shadow-md cursor-pointer ${
                           isValidPhoneNumber(selectedTask.recipient)
                             ? 'bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-500 hover:to-fuchsia-400 text-white'
                             : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'

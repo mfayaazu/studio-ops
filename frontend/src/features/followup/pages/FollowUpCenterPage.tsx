@@ -39,6 +39,7 @@ import type { ProjectResponse } from '../../projects/types';
 import { QuotationForm } from '../../quotations/components/QuotationForm';
 import { quotationsApi } from '../../quotations/api/quotationsApi';
 import type { Quotation, QuotationCreateRequest, QuotationStatus } from '../../quotations/types';
+import { formatCurrencyINR } from '../../../lib/formatters';
 
 const mapLeadResponseToLead = (response: LeadResponse): Lead => {
   const eventDateStr = response.eventDate || '';
@@ -54,15 +55,6 @@ const mapLeadResponseToLead = (response: LeadResponse): Lead => {
     const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const diffTime = nextZero.getTime() - todayZero.getTime();
     urgencyDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }
-
-  // Heuristically assign priority based on estimatedValue
-  let priority: 'low' | 'medium' | 'high' = 'low';
-  const val = response.estimatedValue || 0;
-  if (val >= 150000) {
-    priority = 'high';
-  } else if (val >= 75000) {
-    priority = 'medium';
   }
 
   // Heuristically map preferredChannel to ChannelType
@@ -82,7 +74,7 @@ const mapLeadResponseToLead = (response: LeadResponse): Lead => {
     nextFollowUp: response.pipelineStage === 'CONFIRMED' ? 'Completed' : response.pipelineStage === 'LOST' ? 'Archived' : (nextFollowUpDateStr || 'N/A'),
     channel,
     stage: response.pipelineStage,
-    priority,
+    priority: response.priority || 'NORMAL',
     urgencyDays,
     notes: response.notes,
     sequenceName: 'Backend Sequence',
@@ -100,6 +92,13 @@ const mapLeadResponseToLead = (response: LeadResponse): Lead => {
     projectId: response.projectId,
     studioId: response.studioId,
     convertedAt: response.convertedAt,
+
+    // CRM Enhancements
+    paymentStatus: response.paymentStatus || 'UNPAID',
+    quotationTotal: response.quotationTotal || 0,
+    amountPaid: response.amountPaid || 0,
+    amountRemaining: response.amountRemaining || 0,
+    eventSegments: response.eventSegments || [],
   };
 };
 
@@ -115,6 +114,30 @@ export const FollowUpCenterPage: React.FC = () => {
   const [editingQuotation, setEditingQuotation] = useState<Partial<Quotation> | null>(null);
   const [isQuotationSaving, setIsQuotationSaving] = useState(false);
   const [quotationFormError, setQuotationFormError] = useState<string | null>(null);
+
+  // Search & Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStage, setFilterStage] = useState('ALL');
+  const [filterPriority, setFilterPriority] = useState('ALL');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState('ALL');
+  const [filterEventType, setFilterEventType] = useState('ALL');
+  const [filterDueDate, setFilterDueDate] = useState('ALL');
+  const [filterEventDate, setFilterEventDate] = useState('ALL');
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [isCompact, setIsCompact] = useState<boolean>(() => {
+    return localStorage.getItem('crm_compact_view') === 'true';
+  });
+
+  // Track active sequence in timeline config
+  const [selectedSequenceId, setSelectedSequenceId] = useState<string | null>(null);
+
+  const handleToggleCompact = () => {
+    setIsCompact(prev => {
+      const next = !prev;
+      localStorage.setItem('crm_compact_view', String(next));
+      return next;
+    });
+  };
 
   // Parse hash parameters to switch to correct tab on redirects
   useEffect(() => {
@@ -163,7 +186,7 @@ export const FollowUpCenterPage: React.FC = () => {
     staleTime: 300000,
   });
 
-  const activeSequenceId = sequences.find(s => s.active)?.id || sequences[0]?.id;
+  const activeSequenceId = selectedSequenceId || sequences.find(s => s.active)?.id || sequences[0]?.id;
 
   // 4. Sequence Steps (staleTime 5 mins)
   const { data: steps = [] } = useQuery<FollowUpStep[]>({
@@ -224,6 +247,80 @@ export const FollowUpCenterPage: React.FC = () => {
   const apiStatus = isErrorTemplates || isErrorSequences ? 'offline' : templates.length === 0 && sequences.length === 0 ? 'empty' : 'connected';
   const hasError = isErrorLeads && isErrorTemplates && isErrorSequences && isErrorTasks;
 
+  // Extract unique event types
+  const allEventTypes = Array.from(new Set(
+    leads.flatMap(l => (l.eventSegments || []).map(seg => seg.eventType).filter(Boolean))
+  ));
+
+  // Helper for due date calculation
+  const getDueStatusHelper = (scheduledAt: string): 'due_today' | 'overdue' | 'upcoming' => {
+    const scheduledDate = new Date(scheduledAt);
+    const today = new Date();
+    const scheduledZero = new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate());
+    const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    const diffTime = scheduledZero.getTime() - todayZero.getTime();
+    if (diffTime < 0) {
+      return 'overdue';
+    } else if (diffTime === 0) {
+      return 'due_today';
+    } else {
+      return 'upcoming';
+    }
+  };
+
+  // Filter leads based on Search Query and dropdown filters
+  const filteredLeads = leads.filter(lead => {
+    if (searchQuery.trim()) {
+      const queryLower = searchQuery.toLowerCase().trim();
+      const leadQuotations = quotations.filter(q => q.leadId === lead.id);
+      const matchesQuotation = leadQuotations.some(q => 
+        q.quotationNumber?.toLowerCase().includes(queryLower)
+      );
+      
+      const matchesSearch = 
+        lead.clientName.toLowerCase().includes(queryLower) ||
+        (lead.phone && lead.phone.toLowerCase().includes(queryLower)) ||
+        (lead.email && lead.email.toLowerCase().includes(queryLower)) ||
+        lead.projectTitle.toLowerCase().includes(queryLower) ||
+        (lead.city && lead.city.toLowerCase().includes(queryLower)) ||
+        lead.stage.toLowerCase().includes(queryLower) ||
+        matchesQuotation;
+        
+      if (!matchesSearch) return false;
+    }
+    
+    if (filterStage !== 'ALL' && lead.stage !== filterStage) return false;
+    if (filterPriority !== 'ALL' && lead.priority !== filterPriority) return false;
+    if (filterPaymentStatus !== 'ALL' && lead.paymentStatus !== filterPaymentStatus) return false;
+    
+    if (filterEventType !== 'ALL') {
+      const hasEventType = lead.eventSegments?.some(seg => seg.eventType === filterEventType) || lead.projectTitle === filterEventType;
+      if (!hasEventType) return false;
+    }
+    
+    if (filterDueDate !== 'ALL') {
+      if (!lead.nextFollowUpAt) return false;
+      const dueStatus = getDueStatusHelper(lead.nextFollowUpAt);
+      if (filterDueDate === 'OVERDUE' && dueStatus !== 'overdue') return false;
+      if (filterDueDate === 'TODAY' && dueStatus !== 'due_today') return false;
+      if (filterDueDate === 'UPCOMING' && dueStatus !== 'upcoming') return false;
+    }
+
+    if (filterEventDate !== 'ALL') {
+      if (!lead.eventDate) return false;
+      const evDate = new Date(lead.eventDate);
+      const today = new Date();
+      const diffTime = evDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (filterEventDate === '30_DAYS' && (diffDays < 0 || diffDays > 30)) return false;
+      if (filterEventDate === '90_DAYS' && (diffDays < 0 || diffDays > 90)) return false;
+      if (filterEventDate === 'OVERDUE' && diffDays >= 0) return false;
+    }
+    
+    return true;
+  });
+
   // Refresh functions
   const refreshLeads = async () => {
     await queryClient.invalidateQueries({ queryKey: ['leads'] });
@@ -232,6 +329,7 @@ export const FollowUpCenterPage: React.FC = () => {
   const refreshSequenceSteps = async () => {
     if (activeSequenceId) {
       await queryClient.invalidateQueries({ queryKey: ['follow-up-steps', activeSequenceId] });
+      await queryClient.invalidateQueries({ queryKey: ['follow-up-sequences'] });
     }
   };
 
@@ -286,7 +384,7 @@ export const FollowUpCenterPage: React.FC = () => {
       title: suggestedTitle,
       leadId: lead.id,
       clientId: lead.clientId || undefined,
-      subtotal: lead.estimatedValue || 0,
+      subtotal: lead.quotationTotal || lead.estimatedValue || 0,
       currency: 'INR',
       status: 'DRAFT'
     };
@@ -365,16 +463,12 @@ export const FollowUpCenterPage: React.FC = () => {
     }
   };
 
-
   const handleMoveLeadStage = async (
     leadId: string, 
     stage: LeadPipelineStage, 
     lostReason?: LeadLostReason, 
     notes?: string
   ): Promise<void> => {
-    const lead = leads.find(l => l.id === leadId);
-    if (!lead) return;
-
     // Call move-stage API
     await moveLeadStage(leadId, {
       pipelineStage: stage,
@@ -404,12 +498,10 @@ export const FollowUpCenterPage: React.FC = () => {
   // Find currently selected lead
   const selectedLead = leads.find((l) => l.id === selectedLeadId) || null;
 
-  // Handle lead update (e.g. status transition or sending message)
   const handleConvertToProject = async (leadId: string): Promise<string> => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return '';
 
-    // Send minimal payload as requested
     const title = lead.projectTitle ? `${lead.projectTitle} - ${lead.clientName}` : `Event - ${lead.clientName}`;
     const payload = {
       title,
@@ -430,27 +522,17 @@ export const FollowUpCenterPage: React.FC = () => {
             ...ol,
             lastContactedAt: updatedLead.lastContacted === 'N/A' ? undefined : new Date(updatedLead.lastContacted).toISOString(),
             nextFollowUpAt: updatedLead.nextFollowUp === 'Completed' || updatedLead.nextFollowUp === 'Archived' || updatedLead.nextFollowUp === 'N/A' ? undefined : new Date(updatedLead.nextFollowUp).toISOString(),
+            priority: updatedLead.priority,
+            paymentStatus: updatedLead.paymentStatus,
+            quotationTotal: updatedLead.quotationTotal,
+            amountPaid: updatedLead.amountPaid,
+            amountRemaining: updatedLead.amountRemaining,
+            eventSegments: updatedLead.eventSegments,
           };
         }
         return ol;
       });
     });
-  };
-
-  const getDueStatusHelper = (scheduledAt: string): 'due_today' | 'overdue' | 'upcoming' => {
-    const scheduledDate = new Date(scheduledAt);
-    const today = new Date();
-    const scheduledZero = new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate());
-    const todayZero = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    
-    const diffTime = scheduledZero.getTime() - todayZero.getTime();
-    if (diffTime < 0) {
-      return 'overdue';
-    } else if (diffTime === 0) {
-      return 'due_today';
-    } else {
-      return 'upcoming';
-    }
   };
 
   // Calculate stats dynamically from state
@@ -461,7 +543,7 @@ export const FollowUpCenterPage: React.FC = () => {
   const overdueCount = dueTasks.filter(t => getDueStatusHelper(t.scheduledAt) === 'overdue').length;
   
   const warmLeadsCount = leads.filter((l) => l.stage === 'WARM').length;
-  const estimatedOpenValue = openLeads.reduce((sum, lead) => sum + lead.estimatedValue, 0);
+  const estimatedOpenValue = openLeads.reduce((sum, lead) => sum + (lead.quotationTotal || lead.estimatedValue || 0), 0);
 
   const formattedToday = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
@@ -487,7 +569,7 @@ export const FollowUpCenterPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsInquiryFormOpen(true)}
-            className="py-2 px-3 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-semibold transition-all shadow-md flex items-center gap-1.5"
+            className="py-2 px-3 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-semibold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>New Inquiry</span>
@@ -559,7 +641,6 @@ export const FollowUpCenterPage: React.FC = () => {
 
         {/* API Integration Status Badges */}
         <div className="flex flex-wrap items-center gap-2 px-2 py-1">
-          {/* Leads API Status Badge */}
           {leadApiStatus === 'connected' && (
             <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono animate-fadeIn">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -579,7 +660,6 @@ export const FollowUpCenterPage: React.FC = () => {
             </span>
           )}
 
-          {/* Follow-up Tasks API Status Badge */}
           {tasksApiStatus === 'connected' && (
             <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -599,7 +679,6 @@ export const FollowUpCenterPage: React.FC = () => {
             </span>
           )}
 
-          {/* Templates API Status Badge */}
           {templatesApiStatus === 'connected' && (
             <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -619,7 +698,6 @@ export const FollowUpCenterPage: React.FC = () => {
             </span>
           )}
 
-          {/* Sequence API Status Badge */}
           {sequencesApiStatus === 'connected' && (
             <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-bold flex items-center gap-1.5 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -640,6 +718,154 @@ export const FollowUpCenterPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Search and Filters Section */}
+      {activeTab === 'pipeline' && (
+        <div className="bg-[#0b1222]/40 border border-slate-800/60 rounded-2xl p-4 shadow-md space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            {/* Search bar */}
+            <div className="relative w-full md:max-w-md">
+              <input
+                type="text"
+                placeholder="Search leads by name, phone, email, event, city, quotation..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#070b14]/80 border border-slate-800 text-slate-200 rounded-xl pl-4 pr-10 py-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* View Toggles & Compact button */}
+            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+              <button
+                onClick={() => setViewMode(viewMode === 'board' ? 'list' : 'board')}
+                className="px-3.5 py-2 bg-slate-900 border border-slate-850 hover:bg-slate-800 text-slate-350 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>{viewMode === 'board' ? 'Switch to List' : 'Switch to Board'}</span>
+              </button>
+              {viewMode === 'board' && (
+                <button
+                  onClick={handleToggleCompact}
+                  className={`px-3.5 py-2 border rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    isCompact 
+                      ? 'bg-violet-600 border-violet-500 text-white font-bold' 
+                      : 'bg-slate-900 border-slate-850 text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <span>Compact Cards</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Filter selects row */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            {/* Stage filter */}
+            <div className="space-y-1">
+              <label className="text-[9px] uppercase tracking-wider font-mono text-slate-500 font-bold">Stage</label>
+              <select
+                value={filterStage}
+                onChange={(e) => setFilterStage(e.target.value)}
+                className="w-full bg-[#070b14] border border-slate-800 text-slate-300 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+              >
+                <option value="ALL">All Stages</option>
+                <option value="NEW_LEAD">New Inquiry</option>
+                <option value="QUOTE_SENT">Quote Sent</option>
+                <option value="WARM">Warm Lead</option>
+                <option value="NEGOTIATION">Negotiation</option>
+                <option value="FOLLOW_UP_PENDING">Follow-up Pending</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="LOST">Lost</option>
+              </select>
+            </div>
+
+            {/* Priority filter */}
+            <div className="space-y-1">
+              <label className="text-[9px] uppercase tracking-wider font-mono text-slate-500 font-bold">Priority</label>
+              <select
+                value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value)}
+                className="w-full bg-[#070b14] border border-slate-800 text-slate-300 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+              >
+                <option value="ALL">All Priorities</option>
+                <option value="LOW">LOW</option>
+                <option value="NORMAL">NORMAL</option>
+                <option value="HIGH">HIGH</option>
+                <option value="URGENT">URGENT</option>
+              </select>
+            </div>
+
+            {/* Payment Status filter */}
+            <div className="space-y-1">
+              <label className="text-[9px] uppercase tracking-wider font-mono text-slate-500 font-bold">Payment</label>
+              <select
+                value={filterPaymentStatus}
+                onChange={(e) => setFilterPaymentStatus(e.target.value)}
+                className="w-full bg-[#070b14] border border-slate-800 text-slate-300 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+              >
+                <option value="ALL">All Payments</option>
+                <option value="UNPAID">UNPAID</option>
+                <option value="ADVANCE_PAID">ADVANCE PAID</option>
+                <option value="PARTIALLY_PAID">PARTIALLY PAID</option>
+                <option value="PAID">PAID</option>
+                <option value="REFUNDED">REFUNDED</option>
+              </select>
+            </div>
+
+            {/* Event Type filter */}
+            <div className="space-y-1">
+              <label className="text-[9px] uppercase tracking-wider font-mono text-slate-500 font-bold">Event Type</label>
+              <select
+                value={filterEventType}
+                onChange={(e) => setFilterEventType(e.target.value)}
+                className="w-full bg-[#070b14] border border-slate-800 text-slate-300 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+              >
+                <option value="ALL">All Event Types</option>
+                {allEventTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Follow-up Due filter */}
+            <div className="space-y-1">
+              <label className="text-[9px] uppercase tracking-wider font-mono text-slate-500 font-bold">Follow-up Due</label>
+              <select
+                value={filterDueDate}
+                onChange={(e) => setFilterDueDate(e.target.value)}
+                className="w-full bg-[#070b14] border border-slate-800 text-slate-300 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+              >
+                <option value="ALL">All Times</option>
+                <option value="OVERDUE">Overdue Only</option>
+                <option value="TODAY">Due Today</option>
+                <option value="UPCOMING">Upcoming Only</option>
+              </select>
+            </div>
+
+            {/* Event Date filter */}
+            <div className="space-y-1">
+              <label className="text-[9px] uppercase tracking-wider font-mono text-slate-500 font-bold">Event Date</label>
+              <select
+                value={filterEventDate}
+                onChange={(e) => setFilterEventDate(e.target.value)}
+                className="w-full bg-[#070b14] border border-slate-800 text-slate-300 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+              >
+                <option value="ALL">All Dates</option>
+                <option value="30_DAYS">Next 30 Days</option>
+                <option value="90_DAYS">Next 90 Days</option>
+                <option value="OVERDUE">Completed/Past Events</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Active Tab Screen */}
       <div className="w-full">
@@ -698,10 +924,71 @@ export const FollowUpCenterPage: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <FollowUpPipelineBoard 
-                  leads={leads} 
-                  onLeadClick={(leadId) => setSelectedLeadId(leadId)} 
-                />
+                viewMode === 'board' ? (
+                  <FollowUpPipelineBoard 
+                    leads={filteredLeads} 
+                    steps={steps}
+                    isCompact={isCompact}
+                    onLeadClick={(leadId) => setSelectedLeadId(leadId)} 
+                  />
+                ) : (
+                  <div className="bg-[#0b1222]/50 border border-slate-800/60 rounded-2xl p-4 shadow-xl overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs text-slate-350">
+                      <thead>
+                        <tr className="border-b border-slate-850 text-[10px] uppercase font-mono tracking-wider text-slate-500">
+                          <th className="py-3 px-4 font-bold">Client Name</th>
+                          <th className="py-3 px-4 font-bold">Primary Event</th>
+                          <th className="py-3 px-4 font-bold">Stage</th>
+                          <th className="py-3 px-4 font-bold">Priority</th>
+                          <th className="py-3 px-4 font-bold">Payment</th>
+                          <th className="py-3 px-4 font-bold">Next Follow-up</th>
+                          <th className="py-3 px-4 font-bold">Total / Remaining</th>
+                          <th className="py-3 px-4 font-bold">City</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredLeads.map(lead => (
+                          <tr 
+                            key={lead.id} 
+                            onClick={() => setSelectedLeadId(lead.id)}
+                            className="border-b border-slate-850/40 hover:bg-[#121c35]/40 transition-colors cursor-pointer"
+                          >
+                            <td className="py-3 px-4 font-bold text-slate-200">{lead.clientName}</td>
+                            <td className="py-3 px-4 font-medium">{lead.projectTitle}</td>
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700/50">
+                                {lead.stage}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700/50">
+                                {lead.priority}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 font-semibold">
+                              <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700/50">
+                                {lead.paymentStatus}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 font-mono text-[11px]">{lead.nextFollowUp}</td>
+                            <td className="py-3 px-4 font-mono font-medium text-slate-300">
+                              <div>{formatCurrencyINR(lead.quotationTotal)}</div>
+                              <div className="text-[10px] text-slate-500">Rem: {formatCurrencyINR(lead.amountRemaining)}</div>
+                            </td>
+                            <td className="py-3 px-4">{lead.city || 'TBD'}</td>
+                          </tr>
+                        ))}
+                        {filteredLeads.length === 0 && (
+                          <tr>
+                            <td colSpan={8} className="py-8 text-center text-slate-500 font-semibold">
+                              No leads match current search and filter settings.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )
               )
             )}
             
@@ -733,10 +1020,13 @@ export const FollowUpCenterPage: React.FC = () => {
                 <FollowUpTimeline 
                   steps={steps} 
                   templates={templates}
-                  sequenceName={sequences[0]?.name}
-                  sequenceId={sequences[0]?.id}
+                  sequenceName={sequences.find(s => s.id === activeSequenceId)?.name}
+                  sequenceId={activeSequenceId}
                   userRole={user?.role}
                   onRefresh={refreshSequenceSteps}
+                  sequences={sequences}
+                  activeSequenceId={activeSequenceId}
+                  onChangeSequence={(id) => setSelectedSequenceId(id)}
                 />
               )
             )}

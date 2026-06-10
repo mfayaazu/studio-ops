@@ -24,7 +24,27 @@ public class FollowUpStep {
     private Integer stepOrder;
 
     @Column(name = "delay_days", nullable = false)
-    private Integer delayDays;
+    private Integer delayDays = 1;
+
+    @Column(name = "step_name", length = 150)
+    private String stepName;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "trigger_stage", length = 50)
+    private com.studioops.lead.LeadPipelineStage triggerStage;
+
+    @Column(name = "delay_value", nullable = false)
+    private Integer delayValue = 1;
+
+    @Column(name = "delay_unit", nullable = false, length = 50)
+    private String delayUnit = "DAYS"; // MINUTES, HOURS, DAYS
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "default_priority", nullable = false, length = 50)
+    private com.studioops.lead.LeadPriority defaultPriority = com.studioops.lead.LeadPriority.NORMAL;
+
+    @Column(name = "urgency_threshold_hours")
+    private Integer urgencyThresholdHours = 24;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "channel", nullable = false, length = 50)
@@ -52,11 +72,21 @@ public class FollowUpStep {
     protected void onCreate() {
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
+        syncDelayDays();
     }
 
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = Instant.now();
+        syncDelayDays();
+    }
+
+    private void syncDelayDays() {
+        if ("DAYS".equalsIgnoreCase(delayUnit)) {
+            this.delayDays = this.delayValue;
+        } else {
+            this.delayDays = 0;
+        }
     }
 
     // Getters and Setters
@@ -147,5 +177,53 @@ public class FollowUpStep {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getStepName() {
+        return stepName;
+    }
+
+    public void setStepName(String stepName) {
+        this.stepName = stepName;
+    }
+
+    public com.studioops.lead.LeadPipelineStage getTriggerStage() {
+        return triggerStage;
+    }
+
+    public void setTriggerStage(com.studioops.lead.LeadPipelineStage triggerStage) {
+        this.triggerStage = triggerStage;
+    }
+
+    public Integer getDelayValue() {
+        return delayValue;
+    }
+
+    public void setDelayValue(Integer delayValue) {
+        this.delayValue = delayValue;
+    }
+
+    public String getDelayUnit() {
+        return delayUnit;
+    }
+
+    public void setDelayUnit(String delayUnit) {
+        this.delayUnit = delayUnit;
+    }
+
+    public com.studioops.lead.LeadPriority getDefaultPriority() {
+        return defaultPriority;
+    }
+
+    public void setDefaultPriority(com.studioops.lead.LeadPriority defaultPriority) {
+        this.defaultPriority = defaultPriority;
+    }
+
+    public Integer getUrgencyThresholdHours() {
+        return urgencyThresholdHours;
+    }
+
+    public void setUrgencyThresholdHours(Integer urgencyThresholdHours) {
+        this.urgencyThresholdHours = urgencyThresholdHours;
     }
 }

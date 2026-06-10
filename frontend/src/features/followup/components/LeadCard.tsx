@@ -1,23 +1,72 @@
 import React from 'react';
-import type { Lead } from '../types';
+import type { Lead, FollowUpStep, LeadPriority } from '../types';
 import { Mail, MessageSquare, Phone, Smartphone, Clock } from 'lucide-react';
 import { formatCurrencyINR } from '../../../lib/formatters';
 
 interface LeadCardProps {
   lead: Lead;
+  steps?: FollowUpStep[];
+  isCompact?: boolean;
   onClick?: () => void;
 }
 
-export const LeadCard: React.FC<LeadCardProps> = ({ lead, onClick }) => {
-  const getPriorityColor = (priority: 'low' | 'medium' | 'high') => {
+export const getCalculatedUrgency = (lead: Lead, steps: FollowUpStep[] = []): LeadPriority => {
+  // Manual priority override must take precedence over calculated urgency.
+  if (lead.priority === 'URGENT' || lead.priority === 'HIGH') {
+    return lead.priority;
+  }
+
+  if (lead.stage === 'CONFIRMED' || lead.stage === 'LOST' || !lead.nextFollowUpAt) {
+    return lead.priority || 'NORMAL';
+  }
+
+  // Find corresponding sequence step
+  const activeStep = steps.find(s => s.triggerStage === lead.stage && s.active);
+  const thresholdHours = activeStep?.urgencyThresholdHours ?? 24;
+
+  const dueTime = new Date(lead.nextFollowUpAt).getTime();
+  const now = new Date().getTime();
+  const diffHours = (now - dueTime) / (1000 * 60 * 60);
+
+  if (diffHours > thresholdHours) {
+    return 'URGENT';
+  } else if (diffHours > 0) {
+    return 'HIGH';
+  } else if (diffHours > -12) {
+    // Due within 12 hours
+    return 'NORMAL';
+  }
+  return 'LOW';
+};
+
+export const LeadCard: React.FC<LeadCardProps> = ({ lead, steps = [], isCompact = false, onClick }) => {
+  const urgency = getCalculatedUrgency(lead, steps);
+
+  const getPriorityColor = (priority: LeadPriority) => {
     switch (priority) {
-      case 'high':
+      case 'URGENT':
+        return 'bg-red-500/10 text-red-400 border-red-500/20';
+      case 'HIGH':
         return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-      case 'medium':
+      case 'NORMAL':
         return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-      case 'low':
+      case 'LOW':
       default:
         return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    }
+  };
+
+  const getUrgencyColor = (urgencyLevel: LeadPriority) => {
+    switch (urgencyLevel) {
+      case 'URGENT':
+        return 'bg-red-500/15 text-red-400 border-red-500/30';
+      case 'HIGH':
+        return 'bg-rose-500/15 text-rose-400 border-rose-500/30';
+      case 'NORMAL':
+        return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+      case 'LOW':
+      default:
+        return 'bg-slate-800 text-slate-400 border-slate-700/50';
     }
   };
 
@@ -36,18 +85,26 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onClick }) => {
     }
   };
 
-  const getUrgencyText = (days: number) => {
-    if (days === 99) return 'Confirmed';
-    if (days < 0) return `${Math.abs(days)}d Overdue`;
-    if (days === 0) return 'Due Today';
-    return `${days}d Remaining`;
-  };
+  const getUrgencyText = (_urgencyLevel: LeadPriority) => {
+    if (lead.stage === 'CONFIRMED') return 'Confirmed';
+    if (lead.stage === 'LOST') return 'Archived';
+    
+    if (!lead.nextFollowUpAt) return 'No Follow-up Scheduled';
 
-  const getUrgencyColor = (days: number) => {
-    if (days === 99) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-    if (days < 0) return 'bg-rose-500/15 text-rose-400 border-rose-500/30';
-    if (days === 0) return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
-    return 'bg-slate-800 text-slate-400 border-slate-700/50';
+    const dueTime = new Date(lead.nextFollowUpAt).getTime();
+    const now = new Date().getTime();
+    const diffHours = (now - dueTime) / (1000 * 60 * 60);
+
+    if (diffHours > 0) {
+      const days = Math.floor(diffHours / 24);
+      const hours = Math.floor(diffHours % 24);
+      return days > 0 ? `${days}d ${hours}h Overdue` : `${hours}h Overdue`;
+    } else {
+      const absDiff = Math.abs(diffHours);
+      const days = Math.floor(absDiff / 24);
+      const hours = Math.ceil(absDiff % 24);
+      return days > 0 ? `${days}d ${hours}h Remaining` : `${hours}h Remaining`;
+    }
   };
 
   const getStageLabel = (stage: string) => {
@@ -71,6 +128,37 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onClick }) => {
     }
   };
 
+  // 1. Compact card view layout
+  if (isCompact) {
+    return (
+      <div
+        onClick={onClick}
+        className="bg-[#0f172a]/90 hover:bg-[#121c35] border border-slate-850 hover:border-slate-700/80 rounded-lg p-2.5 transition-all duration-200 shadow-sm group cursor-pointer select-none space-y-1.5"
+      >
+        <div className="flex items-start justify-between gap-1.5">
+          <div className="min-w-0 flex-1">
+            <h4 className="font-bold text-slate-200 text-[11px] group-hover:text-violet-400 transition-colors truncate">
+              {lead.clientName}
+            </h4>
+          </div>
+          <span className={`px-1.5 py-0.2 rounded text-[8px] font-bold uppercase ${getPriorityColor(lead.priority)}`}>
+            {lead.priority}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between text-[9px] text-slate-400">
+          <span className="font-mono text-slate-350">
+            {formatCurrencyINR(lead.quotationTotal || lead.estimatedValue)}
+          </span>
+          <span className={`px-1 py-0.2 rounded border text-[8px] font-bold ${getUrgencyColor(urgency)}`}>
+            {getUrgencyText(urgency)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Standard card view layout
   return (
     <div
       onClick={onClick}
@@ -86,9 +174,11 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onClick }) => {
             {lead.projectTitle}
           </p>
         </div>
-        <span className={`px-2 py-0.5 rounded-full border text-[9px] font-bold tracking-wide uppercase ${getPriorityColor(lead.priority)}`}>
-          {lead.priority}
-        </span>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`px-2 py-0.5 rounded-full border text-[9px] font-bold tracking-wide uppercase ${getPriorityColor(lead.priority)}`}>
+            {lead.priority}
+          </span>
+        </div>
       </div>
 
       {/* Stage Badge & Value Row */}
@@ -97,7 +187,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onClick }) => {
           {getStageLabel(lead.stage)}
         </span>
         <span className="font-mono text-slate-350 font-semibold">
-          {formatCurrencyINR(lead.estimatedValue)}
+          {formatCurrencyINR(lead.quotationTotal || lead.estimatedValue)}
         </span>
       </div>
 
@@ -107,9 +197,9 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onClick }) => {
           {getChannelIcon(lead.channel)}
           <span className="font-mono">{lead.channel}</span>
         </div>
-        <div className={`flex items-center gap-1 px-2 py-0.5 rounded border text-[9px] font-bold ${getUrgencyColor(lead.urgencyDays)}`}>
-          {lead.urgencyDays < 99 && <Clock className="h-2.5 w-2.5" />}
-          <span>{getUrgencyText(lead.urgencyDays)}</span>
+        <div className={`flex items-center gap-1 px-2 py-0.5 rounded border text-[9px] font-bold ${getUrgencyColor(urgency)}`}>
+          {lead.stage !== 'CONFIRMED' && lead.stage !== 'LOST' && <Clock className="h-2.5 w-2.5" />}
+          <span>{getUrgencyText(urgency)}</span>
         </div>
       </div>
     </div>

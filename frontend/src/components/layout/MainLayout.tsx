@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 
@@ -17,13 +17,25 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   onRefreshHealth,
   isRefreshing,
 }) => {
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('sidebar_collapsed') === 'true';
+  });
+
+  const handleToggleCollapse = () => {
+    setIsCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
   return (
     <div className="flex min-h-screen bg-[#090d16] font-sans text-slate-300">
       {/* Sidebar navigation */}
-      <Sidebar />
+      <Sidebar isCollapsed={isCollapsed} onToggleCollapse={handleToggleCollapse} />
 
       {/* Main viewport area */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out">
         <Header
           apiStatus={apiStatus}
           latency={latency}

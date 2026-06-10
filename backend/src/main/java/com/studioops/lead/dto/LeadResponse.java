@@ -4,6 +4,8 @@ import com.studioops.lead.LeadLostReason;
 import com.studioops.lead.LeadPipelineStage;
 import com.studioops.lead.LeadPreferredChannel;
 import com.studioops.lead.LeadSource;
+import com.studioops.lead.LeadPriority;
+import com.studioops.lead.LeadPaymentStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -33,6 +35,13 @@ public class LeadResponse {
     private Instant convertedAt;
     private Instant createdAt;
     private Instant updatedAt;
+
+    private LeadPriority priority;
+    private BigDecimal quotationTotal;
+    private BigDecimal amountPaid;
+    private BigDecimal amountRemaining;
+    private LeadPaymentStatus paymentStatus;
+    private java.util.List<LeadEventSegmentResponse> eventSegments;
 
     public LeadResponse() {
     }
@@ -237,5 +246,53 @@ public class LeadResponse {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public LeadPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(LeadPriority priority) {
+        this.priority = priority;
+    }
+
+    public BigDecimal getQuotationTotal() {
+        return quotationTotal;
+    }
+
+    public void setQuotationTotal(BigDecimal quotationTotal) {
+        this.quotationTotal = quotationTotal;
+    }
+
+    public BigDecimal getAmountPaid() {
+        return amountPaid;
+    }
+
+    public void setAmountPaid(BigDecimal amountPaid) {
+        this.amountPaid = amountPaid;
+    }
+
+    public BigDecimal getAmountRemaining() {
+        return amountRemaining;
+    }
+
+    public void setAmountRemaining(BigDecimal amountRemaining) {
+        this.amountRemaining = amountRemaining;
+    }
+
+    public LeadPaymentStatus getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(LeadPaymentStatus paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public java.util.List<LeadEventSegmentResponse> getEventSegments() {
+        return eventSegments;
+    }
+
+    public void setEventSegments(java.util.List<LeadEventSegmentResponse> eventSegments) {
+        this.eventSegments = eventSegments;
     }
 }

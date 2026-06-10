@@ -123,6 +123,9 @@ public class FollowUpTaskService {
         task.setRecipient(request.getRecipient() != null ? request.getRecipient().trim() : null);
         task.setSubject(request.getSubject() != null ? request.getSubject().trim() : null);
         task.setMessageBody(request.getMessageBody().trim());
+        task.setIsDraft(request.getIsDraft());
+        task.setDraftMessage(request.getDraftMessage());
+        task.setPriority(request.getPriority() != null ? request.getPriority() : com.studioops.lead.LeadPriority.NORMAL);
 
         FollowUpTask saved = followUpTaskRepository.save(task);
         return FollowUpTaskMapper.toResponse(saved);
@@ -180,6 +183,9 @@ public class FollowUpTaskService {
         task.setRecipient(request.getRecipient() != null ? request.getRecipient().trim() : null);
         task.setSubject(request.getSubject() != null ? request.getSubject().trim() : null);
         task.setMessageBody(request.getMessageBody().trim());
+        task.setIsDraft(request.getIsDraft());
+        task.setDraftMessage(request.getDraftMessage());
+        task.setPriority(request.getPriority() != null ? request.getPriority() : com.studioops.lead.LeadPriority.NORMAL);
 
         FollowUpTask updated = followUpTaskRepository.save(task);
         return FollowUpTaskMapper.toResponse(updated);
@@ -208,6 +214,10 @@ public class FollowUpTaskService {
 
         task.setStatus(FollowUpTaskStatus.SENT);
         task.setSentAt(Instant.now());
+        task.setIsDraft(false);
+        if (task.getDraftMessage() != null && !task.getDraftMessage().trim().isEmpty()) {
+            task.setMessageBody(task.getDraftMessage());
+        }
         FollowUpTask saved = followUpTaskRepository.save(task);
 
         // Create outbound communication log for sent/approved task
@@ -244,6 +254,10 @@ public class FollowUpTaskService {
 
         task.setStatus(FollowUpTaskStatus.SKIPPED);
         task.setSkippedAt(Instant.now());
+        task.setIsDraft(false);
+        if (task.getDraftMessage() != null && !task.getDraftMessage().trim().isEmpty()) {
+            task.setMessageBody(task.getDraftMessage());
+        }
         FollowUpTask saved = followUpTaskRepository.save(task);
 
         // Create outbound communication log for skipped task

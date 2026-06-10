@@ -15,13 +15,20 @@ public class FollowUpSequenceUpdateRequest {
     @NotNull(message = "active is required")
     private Boolean active;
 
+    private com.studioops.lead.LeadPipelineStage applicableStage;
+
     public FollowUpSequenceUpdateRequest() {
     }
 
-    public FollowUpSequenceUpdateRequest(String name, String description, Boolean active) {
+    public FollowUpSequenceUpdateRequest(String name, String description, Boolean active, com.studioops.lead.LeadPipelineStage applicableStage) {
         this.name = name;
         this.description = description;
         this.active = active;
+        this.applicableStage = applicableStage;
+    }
+
+    public FollowUpSequenceUpdateRequest(String name, String description, Boolean active) {
+        this(name, description, active, com.studioops.lead.LeadPipelineStage.NEW_LEAD);
     }
 
     public String getName() {
@@ -46,5 +53,13 @@ public class FollowUpSequenceUpdateRequest {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public com.studioops.lead.LeadPipelineStage getApplicableStage() {
+        return applicableStage;
+    }
+
+    public void setApplicableStage(com.studioops.lead.LeadPipelineStage applicableStage) {
+        this.applicableStage = applicableStage;
     }
 }

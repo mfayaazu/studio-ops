@@ -31,6 +31,31 @@ public class LeadMapper {
         response.setConvertedAt(lead.getConvertedAt());
         response.setCreatedAt(lead.getCreatedAt());
         response.setUpdatedAt(lead.getUpdatedAt());
+
+        response.setPriority(lead.getPriority());
+        response.setQuotationTotal(lead.getQuotationTotal());
+        response.setAmountPaid(lead.getAmountPaid());
+        response.setAmountRemaining(lead.getAmountRemaining());
+        response.setPaymentStatus(lead.getPaymentStatus());
+        if (lead.getEventSegments() != null) {
+            response.setEventSegments(lead.getEventSegments().stream()
+                .map(segment -> new com.studioops.lead.dto.LeadEventSegmentResponse(
+                    segment.getId(),
+                    segment.getEventType(),
+                    segment.getEventName(),
+                    segment.getEventDate(),
+                    segment.getStartTime(),
+                    segment.getEndTime(),
+                    segment.getVenueName(),
+                    segment.getAddress(),
+                    segment.getCity(),
+                    segment.getNotes(),
+                    segment.getCreatedAt(),
+                    segment.getUpdatedAt()
+                ))
+                .toList());
+        }
+
         return response;
     }
 }

@@ -1,13 +1,20 @@
 import React from 'react';
-import type { Lead, LeadStage } from '../types';
+import type { Lead, LeadStage, FollowUpStep } from '../types';
 import { PipelineColumn } from './PipelineColumn';
 
 interface FollowUpPipelineBoardProps {
   leads: Lead[];
+  steps?: FollowUpStep[];
+  isCompact?: boolean;
   onLeadClick?: (leadId: string) => void;
 }
 
-export const FollowUpPipelineBoard: React.FC<FollowUpPipelineBoardProps> = ({ leads, onLeadClick }) => {
+export const FollowUpPipelineBoard: React.FC<FollowUpPipelineBoardProps> = ({ 
+  leads, 
+  steps = [], 
+  isCompact = false, 
+  onLeadClick 
+}) => {
   const stages: LeadStage[] = [
     'NEW_LEAD',
     'QUOTE_SENT',
@@ -40,6 +47,8 @@ export const FollowUpPipelineBoard: React.FC<FollowUpPipelineBoardProps> = ({ le
               key={stage}
               stage={stage}
               leads={stageLeads}
+              steps={steps}
+              isCompact={isCompact}
               onLeadClick={onLeadClick}
             />
           );

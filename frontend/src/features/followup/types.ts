@@ -11,6 +11,34 @@ export type LeadSource = 'WEBSITE' | 'WHATSAPP' | 'INSTAGRAM' | 'REFERRAL' | 'WA
 export type LeadPipelineStage = 'NEW_LEAD' | 'QUOTE_SENT' | 'WARM' | 'NEGOTIATION' | 'FOLLOW_UP_PENDING' | 'CONFIRMED' | 'LOST';
 export type LeadLostReason = 'PRICE_TOO_HIGH' | 'BOOKED_COMPETITOR' | 'DATE_UNAVAILABLE' | 'NO_RESPONSE' | 'CLIENT_CANCELLED' | 'OTHER';
 
+export type LeadPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+export type LeadPaymentStatus = 'UNPAID' | 'ADVANCE_PAID' | 'PARTIALLY_PAID' | 'PAID' | 'REFUNDED';
+
+export interface LeadEventSegment {
+  id?: string;
+  eventType: string;
+  eventName: string;
+  eventDate: string;
+  startTime?: string;
+  endTime?: string;
+  venueName?: string;
+  address?: string;
+  city?: string;
+  notes?: string;
+}
+
+export interface LeadEventSegmentRequest {
+  eventType: string;
+  eventName: string;
+  eventDate: string;
+  startTime?: string;
+  endTime?: string;
+  venueName?: string;
+  address?: string;
+  city?: string;
+  notes?: string;
+}
+
 export interface LeadResponse {
   id: string;
   studioId: string;
@@ -34,6 +62,13 @@ export interface LeadResponse {
   convertedAt?: string;
   createdAt: string;
   updatedAt: string;
+  // CRM Enhancements
+  priority: LeadPriority;
+  paymentStatus: LeadPaymentStatus;
+  quotationTotal: number;
+  amountPaid: number;
+  amountRemaining: number;
+  eventSegments: LeadEventSegment[];
 }
 
 export interface LeadMoveStageRequest {
@@ -52,7 +87,7 @@ export interface Lead {
   nextFollowUp: string;
   channel: ChannelType;
   stage: LeadStage;
-  priority: 'low' | 'medium' | 'high';
+  priority: LeadPriority;
   urgencyDays: number;
   notes?: string;
   sequenceName?: string;
@@ -73,6 +108,12 @@ export interface Lead {
   projectId?: string;
   studioId?: string;
   convertedAt?: string;
+  // CRM Enhancements
+  paymentStatus: LeadPaymentStatus;
+  quotationTotal: number;
+  amountPaid: number;
+  amountRemaining: number;
+  eventSegments: LeadEventSegment[];
 }
 
 export interface SequenceStep {
@@ -112,6 +153,7 @@ export interface FollowUpSequence {
   name: string;
   description?: string;
   active: boolean;
+  applicableStage?: LeadPipelineStage;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -126,6 +168,12 @@ export interface FollowUpStep {
   templateId: string;
   goal: string;
   active: boolean;
+  stepName?: string;
+  triggerStage?: LeadPipelineStage;
+  delayValue: number;
+  delayUnit: string; // 'MINUTES' | 'HOURS' | 'DAYS'
+  defaultPriority: LeadPriority;
+  urgencyThresholdHours?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -152,6 +200,10 @@ export interface FollowUpTask {
   failureReason?: string;
   createdAt: string;
   updatedAt: string;
+  // CRM Enhancements
+  isDraft: boolean;
+  draftMessage?: string;
+  priority: LeadPriority;
 }
 
 export type CommunicationDirection = 'OUTBOUND' | 'INBOUND';
@@ -198,6 +250,33 @@ export interface LeadCreateRequest {
   nextFollowUpAt?: string;
   notes?: string;
   studioId?: string;
+  // CRM Enhancements
+  priority?: LeadPriority;
+  paymentStatus?: LeadPaymentStatus;
+  quotationTotal?: number;
+  amountPaid?: number;
+  eventSegments?: LeadEventSegmentRequest[];
+}
+
+export interface LeadUpdateRequest {
+  clientName: string;
+  phone?: string;
+  email?: string;
+  preferredChannel: LeadPreferredChannel;
+  eventType?: string;
+  eventDate?: string;
+  city?: string;
+  estimatedValue?: number;
+  leadSource: LeadSource;
+  assignedUserId?: string;
+  nextFollowUpAt?: string;
+  notes?: string;
+  // CRM Enhancements
+  priority?: LeadPriority;
+  paymentStatus?: LeadPaymentStatus;
+  quotationTotal?: number;
+  amountPaid?: number;
+  eventSegments?: LeadEventSegmentRequest[];
 }
 
 export interface LeadConvertToProjectRequest {

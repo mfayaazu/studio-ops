@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { LeadCreateRequest, LeadPreferredChannel, LeadSource } from '../types';
-import { X, Loader2, User, Phone, Mail, MapPin, IndianRupee, Calendar, Clock, Sparkles } from 'lucide-react';
+import { X, Loader2, User, Phone, Mail, Calendar, Clock } from 'lucide-react';
 
 interface CalendarPopoverProps {
   selectedDate: string;
@@ -450,11 +450,20 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [preferredChannel, setPreferredChannel] = useState<LeadPreferredChannel>('WHATSAPP');
-  const [eventType, setEventType] = useState('');
-  const [eventDate, setEventDate] = useState('');
-  const [city, setCity] = useState('');
-  const [estimatedValue, setEstimatedValue] = useState('');
   const [leadSource, setLeadSource] = useState<LeadSource>('WEBSITE');
+  const [priority, setPriority] = useState<'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'>('NORMAL');
+  const [eventSegments, setEventSegments] = useState<Array<{
+    eventType: string;
+    eventName: string;
+    eventDate: string;
+    startTime?: string;
+    endTime?: string;
+    venueName?: string;
+    city?: string;
+    notes?: string;
+  }>>([
+    { eventType: 'Wedding', eventName: 'Wedding Ceremony', eventDate: '', venueName: '', city: '' }
+  ]);
   const [followUpDate, setFollowUpDate] = useState('');
   const [followUpTime, setFollowUpTime] = useState('');
   const [notes, setNotes] = useState('');
@@ -464,7 +473,7 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  const [activePopover, setActivePopover] = useState<'eventDate' | 'followUpDate' | 'followUpTime' | null>(null);
+  const [activePopover, setActivePopover] = useState<'followUpDate' | 'followUpTime' | null>(null);
 
   useEffect(() => {
     const handleDocumentClick = () => {
@@ -492,13 +501,6 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
       }
     }
 
-    if (estimatedValue.trim()) {
-      const parsedVal = parseFloat(estimatedValue);
-      if (isNaN(parsedVal) || parsedVal <= 0) {
-        errors.estimatedValue = 'Estimated Value must be a positive number';
-      }
-    }
-
     if (followUpTime && !followUpDate) {
       errors.followUpDate = 'Please select a follow-up date as well.';
     }
@@ -511,6 +513,15 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
       }
     }
 
+    eventSegments.forEach((seg, index) => {
+      if (!seg.eventType) {
+        errors[`segment-${index}-eventType`] = 'Event Type is required';
+      }
+      if (!seg.eventDate) {
+        errors[`segment-${index}-eventDate`] = 'Event Date is required';
+      }
+    });
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -522,16 +533,27 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
 
     setIsSubmitting(true);
     try {
+      const firstSeg = eventSegments[0] || {};
       const payload: LeadCreateRequest = {
         clientName: clientName.trim(),
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
         preferredChannel,
-        eventType: eventType.trim() || undefined,
-        eventDate: eventDate || undefined,
-        city: city.trim() || undefined,
-        estimatedValue: estimatedValue.trim() ? parseFloat(estimatedValue) : undefined,
+        eventType: firstSeg.eventType || undefined,
+        eventDate: firstSeg.eventDate || undefined,
+        city: firstSeg.city || undefined,
         leadSource,
+        priority,
+        eventSegments: eventSegments.map(seg => ({
+          eventType: seg.eventType,
+          eventName: seg.eventName || `${seg.eventType} Event`,
+          eventDate: seg.eventDate,
+          startTime: seg.startTime || undefined,
+          endTime: seg.endTime || undefined,
+          venueName: seg.venueName || 'TBD',
+          city: seg.city || 'TBD',
+          notes: seg.notes || undefined
+        })),
         nextFollowUpAt: (() => {
           if (followUpDate) {
             const timePart = followUpTime || '10:00';
@@ -549,11 +571,11 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
       setPhone('');
       setEmail('');
       setPreferredChannel('WHATSAPP');
-      setEventType('');
-      setEventDate('');
-      setCity('');
-      setEstimatedValue('');
       setLeadSource('WEBSITE');
+      setPriority('NORMAL');
+      setEventSegments([
+        { eventType: 'Wedding', eventName: 'Wedding Ceremony', eventDate: '', venueName: '', city: '' }
+      ]);
       setFollowUpDate('');
       setFollowUpTime('');
       setNotes('');
@@ -716,88 +738,174 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
               </div>
             </div>
 
-            {/* Event Type & Event Date (Grid) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider font-mono text-slate-400 flex items-center gap-1.5">
-                  <Sparkles className="h-3 w-3 text-slate-500" />
-                  <span>Event Type</span>
-                </label>
-                <input
-                  type="text"
-                  value={eventType}
-                  onChange={(e) => setEventType(e.target.value)}
-                  placeholder="Wedding Photography"
-                  className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all"
-                />
-              </div>
-
-              <div className="space-y-1 relative">
-                <label className="text-[10px] uppercase tracking-wider font-mono text-slate-400 flex items-center gap-1.5">
-                  <Calendar className="h-3 w-3 text-slate-500" />
-                  <span>Event Date</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActivePopover(activePopover === 'eventDate' ? null : 'eventDate');
-                  }}
-                  className="w-full bg-[#0d1222]/40 border border-slate-800 hover:border-slate-700/80 cursor-pointer text-left text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all flex items-center justify-between"
-                >
-                  <span className={eventDate ? 'text-slate-200 font-medium' : 'text-slate-500'}>
-                    {eventDate ? formatDateDisplay(eventDate) : 'Select event date'}
-                  </span>
-                  <Calendar className="h-3.5 w-3.5 text-slate-500" />
-                </button>
-                {activePopover === 'eventDate' && (
-                  <CalendarPopover
-                    selectedDate={eventDate}
-                    onChange={setEventDate}
-                    onClose={() => setActivePopover(null)}
-                    align="right"
-                  />
-                )}
-              </div>
+            {/* Priority Select */}
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase tracking-wider font-mono text-slate-400">
+                Lead Priority
+              </label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as any)}
+                className="w-full bg-[#0d1222]/60 border border-slate-800 text-slate-300 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all"
+              >
+                <option value="LOW">LOW</option>
+                <option value="NORMAL">NORMAL</option>
+                <option value="HIGH">HIGH</option>
+                <option value="URGENT">URGENT</option>
+              </select>
             </div>
 
-            {/* City & Estimated Value (Grid) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider font-mono text-slate-400 flex items-center gap-1.5">
-                  <MapPin className="h-3 w-3 text-slate-500" />
-                  <span>City / Location</span>
-                </label>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Hyderabad"
-                  className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none transition-all"
-                />
+            {/* Event Segments Section */}
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">Event Segments</h4>
+                <button
+                  type="button"
+                  onClick={() => setEventSegments([...eventSegments, { eventType: 'Wedding', eventName: 'Wedding Ceremony', eventDate: '', venueName: '', city: '' }])}
+                  className="px-2.5 py-1 bg-violet-600/20 hover:bg-violet-600/35 border border-violet-500/30 text-violet-300 rounded text-[10px] font-bold transition-all cursor-pointer"
+                >
+                  + Add Segment
+                </button>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider font-mono text-slate-400 flex items-center gap-1.5">
-                  <IndianRupee className="h-3 w-3 text-slate-500" />
-                  <span>Estimated Value (INR)</span>
-                </label>
-                <div className="relative flex items-center">
-                  <span className="absolute left-3 text-slate-500 text-xs font-semibold select-none">₹</span>
-                  <input
-                    type="number"
-                    value={estimatedValue}
-                    onChange={(e) => setEstimatedValue(e.target.value)}
-                    placeholder="150000"
-                    className={`w-full bg-[#0d1222]/40 border ${
-                      validationErrors.estimatedValue ? 'border-rose-500/50 focus:ring-rose-500' : 'border-slate-800 focus:ring-violet-500'
-                    } text-slate-200 rounded-lg py-2.5 pl-7 pr-2.5 text-xs focus:ring-1 focus:outline-none transition-all`}
-                  />
+              {eventSegments.map((segment, index) => (
+                <div key={index} className="p-4 bg-slate-950/40 border border-slate-800/80 rounded-xl space-y-3 relative">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">Segment #{index + 1}</span>
+                    {eventSegments.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setEventSegments(eventSegments.filter((_, i) => i !== index))}
+                        className="text-[10px] text-rose-400 hover:text-rose-300 font-bold font-mono cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase tracking-wider font-mono text-slate-400">Event Type *</label>
+                      <select
+                        value={segment.eventType}
+                        onChange={(e) => {
+                          const updated = [...eventSegments];
+                          updated[index].eventType = e.target.value;
+                          if (!updated[index].eventName || updated[index].eventName === 'Wedding Ceremony' || updated[index].eventName.endsWith('Ceremony') || updated[index].eventName.endsWith('Event')) {
+                            updated[index].eventName = e.target.value + (e.target.value === 'Wedding' ? ' Ceremony' : ' Event');
+                          }
+                          setEventSegments(updated);
+                        }}
+                        className="w-full bg-[#0d1222]/60 border border-slate-800 text-slate-300 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+                      >
+                        <option value="Haldi">Haldi</option>
+                        <option value="Mehendi">Mehendi</option>
+                        <option value="Sangeet">Sangeet</option>
+                        <option value="Wedding">Wedding</option>
+                        <option value="Reception">Reception</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      {validationErrors[`segment-${index}-eventType`] && (
+                        <span className="text-[9px] text-rose-400 block font-mono">{validationErrors[`segment-${index}-eventType`]}</span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase tracking-wider font-mono text-slate-400">Event Name</label>
+                      <input
+                        type="text"
+                        value={segment.eventName}
+                        onChange={(e) => {
+                          const updated = [...eventSegments];
+                          updated[index].eventName = e.target.value;
+                          setEventSegments(updated);
+                        }}
+                        placeholder="Wedding Ceremony"
+                        className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase tracking-wider font-mono text-slate-400">Event Date *</label>
+                      <input
+                        type="date"
+                        value={segment.eventDate}
+                        onChange={(e) => {
+                          const updated = [...eventSegments];
+                          updated[index].eventDate = e.target.value;
+                          setEventSegments(updated);
+                        }}
+                        className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+                      />
+                      {validationErrors[`segment-${index}-eventDate`] && (
+                        <span className="text-[9px] text-rose-400 block font-mono">{validationErrors[`segment-${index}-eventDate`]}</span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase tracking-wider font-mono text-slate-400">Start Time</label>
+                      <input
+                        type="time"
+                        value={segment.startTime || ''}
+                        onChange={(e) => {
+                          const updated = [...eventSegments];
+                          updated[index].startTime = e.target.value;
+                          setEventSegments(updated);
+                        }}
+                        className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase tracking-wider font-mono text-slate-400">End Time</label>
+                      <input
+                        type="time"
+                        value={segment.endTime || ''}
+                        onChange={(e) => {
+                          const updated = [...eventSegments];
+                          updated[index].endTime = e.target.value;
+                          setEventSegments(updated);
+                        }}
+                        className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase tracking-wider font-mono text-slate-400">Venue</label>
+                      <input
+                        type="text"
+                        value={segment.venueName}
+                        onChange={(e) => {
+                          const updated = [...eventSegments];
+                          updated[index].venueName = e.target.value;
+                          setEventSegments(updated);
+                        }}
+                        placeholder="Grand Ballroom"
+                        className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase tracking-wider font-mono text-slate-400">City</label>
+                      <input
+                        type="text"
+                        value={segment.city}
+                        onChange={(e) => {
+                          const updated = [...eventSegments];
+                          updated[index].city = e.target.value;
+                          setEventSegments(updated);
+                        }}
+                        placeholder="Hyderabad"
+                        className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
-                {validationErrors.estimatedValue && (
-                  <span className="text-[10px] text-rose-400 block font-mono mt-1">{validationErrors.estimatedValue}</span>
-                )}
-              </div>
+              ))}
             </div>
 
             {/* Next Follow-up Date & Time fields */}

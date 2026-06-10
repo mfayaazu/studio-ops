@@ -93,6 +93,12 @@ public class FollowUpStepService {
         step.setSequenceId(request.getSequenceId());
         step.setStepOrder(request.getStepOrder());
         step.setDelayDays(request.getDelayDays());
+        step.setStepName(request.getStepName() != null ? request.getStepName().trim() : null);
+        step.setTriggerStage(request.getTriggerStage());
+        step.setDelayValue(request.getDelayValue() != null ? request.getDelayValue() : (request.getDelayDays() != null ? request.getDelayDays() : 1));
+        step.setDelayUnit(request.getDelayUnit() != null ? request.getDelayUnit() : "DAYS");
+        step.setDefaultPriority(request.getDefaultPriority() != null ? request.getDefaultPriority() : com.studioops.lead.LeadPriority.NORMAL);
+        step.setUrgencyThresholdHours(request.getUrgencyThresholdHours() != null ? request.getUrgencyThresholdHours() : 24);
         step.setChannel(channel);
         step.setTemplateId(request.getTemplateId());
         step.setGoal(request.getGoal() != null ? request.getGoal().trim() : null);
@@ -150,6 +156,12 @@ public class FollowUpStepService {
 
         step.setStepOrder(request.getStepOrder());
         step.setDelayDays(request.getDelayDays());
+        step.setStepName(request.getStepName() != null ? request.getStepName().trim() : null);
+        step.setTriggerStage(request.getTriggerStage());
+        step.setDelayValue(request.getDelayValue() != null ? request.getDelayValue() : (request.getDelayDays() != null ? request.getDelayDays() : 1));
+        step.setDelayUnit(request.getDelayUnit() != null ? request.getDelayUnit() : "DAYS");
+        step.setDefaultPriority(request.getDefaultPriority() != null ? request.getDefaultPriority() : com.studioops.lead.LeadPriority.NORMAL);
+        step.setUrgencyThresholdHours(request.getUrgencyThresholdHours() != null ? request.getUrgencyThresholdHours() : 24);
         step.setChannel(channel);
         step.setTemplateId(request.getTemplateId());
         step.setGoal(request.getGoal() != null ? request.getGoal().trim() : null);

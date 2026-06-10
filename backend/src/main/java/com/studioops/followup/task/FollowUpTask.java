@@ -52,6 +52,16 @@ public class FollowUpTask {
     @Column(name = "message_body", nullable = false, columnDefinition = "TEXT")
     private String messageBody;
 
+    @Column(name = "is_draft", nullable = false)
+    private boolean isDraft = false;
+
+    @Column(name = "draft_message", columnDefinition = "TEXT")
+    private String draftMessage;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority", nullable = false, length = 50)
+    private com.studioops.lead.LeadPriority priority = com.studioops.lead.LeadPriority.NORMAL;
+
     @Column(name = "approved_by_user_id")
     private UUID approvedByUserId;
 
@@ -236,5 +246,29 @@ public class FollowUpTask {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public boolean getIsDraft() {
+        return isDraft;
+    }
+
+    public void setIsDraft(boolean isDraft) {
+        this.isDraft = isDraft;
+    }
+
+    public String getDraftMessage() {
+        return draftMessage;
+    }
+
+    public void setDraftMessage(String draftMessage) {
+        this.draftMessage = draftMessage;
+    }
+
+    public com.studioops.lead.LeadPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(com.studioops.lead.LeadPriority priority) {
+        this.priority = priority;
     }
 }

@@ -25,6 +25,10 @@ public class FollowUpSequence {
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "applicable_stage", length = 50)
+    private com.studioops.lead.LeadPipelineStage applicableStage;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -101,5 +105,13 @@ public class FollowUpSequence {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public com.studioops.lead.LeadPipelineStage getApplicableStage() {
+        return applicableStage;
+    }
+
+    public void setApplicableStage(com.studioops.lead.LeadPipelineStage applicableStage) {
+        this.applicableStage = applicableStage;
     }
 }

@@ -9,6 +9,7 @@ import type {
   LeadResponse,
   LeadMoveStageRequest,
   LeadCreateRequest,
+  LeadUpdateRequest,
   LeadConvertToProjectRequest,
   LeadConvertToProjectResponse
 } from '../types';
@@ -133,4 +134,35 @@ export const updateFollowUpStep = async (
 
 export const deleteFollowUpStep = async (id: string): Promise<void> => {
   return ApiClient.delete<void>(`/api/follow-up-steps/${id}`);
+};
+
+export const updateLead = async (
+  id: string,
+  payload: LeadUpdateRequest
+): Promise<LeadResponse> => {
+  return ApiClient.put<LeadResponse>(`/api/leads/${id}`, payload);
+};
+
+export const updateFollowUpTask = async (
+  id: string,
+  payload: Partial<FollowUpTask>
+): Promise<FollowUpTask> => {
+  return ApiClient.put<FollowUpTask>(`/api/follow-up-tasks/${id}`, payload);
+};
+
+export const createFollowUpSequence = async (
+  payload: Omit<FollowUpSequence, 'id' | 'studioId'>
+): Promise<FollowUpSequence> => {
+  return ApiClient.post<FollowUpSequence>('/api/follow-up-sequences', payload);
+};
+
+export const updateFollowUpSequence = async (
+  id: string,
+  payload: Omit<FollowUpSequence, 'id' | 'studioId'>
+): Promise<FollowUpSequence> => {
+  return ApiClient.put<FollowUpSequence>(`/api/follow-up-sequences/${id}`, payload);
+};
+
+export const deleteFollowUpSequence = async (id: string): Promise<void> => {
+  return ApiClient.delete<void>(`/api/follow-up-sequences/${id}`);
 };

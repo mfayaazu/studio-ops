@@ -1,15 +1,23 @@
 import React from 'react';
-import type { Lead, LeadStage } from '../types';
+import type { Lead, LeadStage, FollowUpStep } from '../types';
 import { LeadCard } from './LeadCard';
 import { formatCurrencyINR } from '../../../lib/formatters';
 
 interface PipelineColumnProps {
   stage: LeadStage;
   leads: Lead[];
+  steps?: FollowUpStep[];
+  isCompact?: boolean;
   onLeadClick?: (leadId: string) => void;
 }
 
-export const PipelineColumn: React.FC<PipelineColumnProps> = ({ stage, leads, onLeadClick }) => {
+export const PipelineColumn: React.FC<PipelineColumnProps> = ({ 
+  stage, 
+  leads, 
+  steps = [], 
+  isCompact = false, 
+  onLeadClick 
+}) => {
   const getStageLabel = (stage: LeadStage) => {
     switch (stage) {
       case 'NEW_LEAD':
@@ -52,7 +60,7 @@ export const PipelineColumn: React.FC<PipelineColumnProps> = ({ stage, leads, on
     }
   };
 
-  const totalValue = leads.reduce((sum, lead) => sum + lead.estimatedValue, 0);
+  const totalValue = leads.reduce((sum, lead) => sum + (lead.quotationTotal || lead.estimatedValue || 0), 0);
 
   return (
     <div className={`flex flex-col w-72 bg-[#090f1e]/40 border border-slate-800/80 rounded-xl p-3.5 space-y-4 max-h-[70vh] ${getStageHeaderColor(stage)}`}>
@@ -82,6 +90,8 @@ export const PipelineColumn: React.FC<PipelineColumnProps> = ({ stage, leads, on
             <LeadCard
               key={lead.id}
               lead={lead}
+              steps={steps}
+              isCompact={isCompact}
               onClick={() => onLeadClick && onLeadClick(lead.id)}
             />
           ))

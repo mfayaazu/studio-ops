@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -50,6 +52,26 @@ public class Lead {
     private BigDecimal estimatedValue;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "priority", nullable = false, length = 50)
+    private LeadPriority priority = LeadPriority.NORMAL;
+
+    @Column(name = "quotation_total", nullable = false, precision = 12, scale = 2)
+    private BigDecimal quotationTotal = BigDecimal.ZERO;
+
+    @Column(name = "amount_paid", nullable = false, precision = 12, scale = 2)
+    private BigDecimal amountPaid = BigDecimal.ZERO;
+
+    @Column(name = "amount_remaining", nullable = false, precision = 12, scale = 2)
+    private BigDecimal amountRemaining = BigDecimal.ZERO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 50)
+    private LeadPaymentStatus paymentStatus = LeadPaymentStatus.UNPAID;
+
+    @OneToMany(mappedBy = "lead", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LeadEventSegment> eventSegments = new ArrayList<>();
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "lead_source", nullable = false, length = 50)
     private LeadSource leadSource;
 
@@ -89,11 +111,22 @@ public class Lead {
     protected void onCreate() {
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
+        syncCompatibilityFields();
     }
 
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = Instant.now();
+        syncCompatibilityFields();
+    }
+
+    private void syncCompatibilityFields() {
+        if (eventSegments != null && !eventSegments.isEmpty()) {
+            LeadEventSegment first = eventSegments.get(0);
+            this.eventType = first.getEventType();
+            this.eventDate = first.getEventDate();
+            this.city = first.getCity();
+        }
     }
 
     // Getters and Setters
@@ -272,5 +305,58 @@ public class Lead {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public LeadPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(LeadPriority priority) {
+        this.priority = priority;
+    }
+
+    public BigDecimal getQuotationTotal() {
+        return quotationTotal;
+    }
+
+    public void setQuotationTotal(BigDecimal quotationTotal) {
+        this.quotationTotal = quotationTotal;
+    }
+
+    public BigDecimal getAmountPaid() {
+        return amountPaid;
+    }
+
+    public void setAmountPaid(BigDecimal amountPaid) {
+        this.amountPaid = amountPaid;
+    }
+
+    public BigDecimal getAmountRemaining() {
+        return amountRemaining;
+    }
+
+    public void setAmountRemaining(BigDecimal amountRemaining) {
+        this.amountRemaining = amountRemaining;
+    }
+
+    public LeadPaymentStatus getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(LeadPaymentStatus paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public List<LeadEventSegment> getEventSegments() {
+        return eventSegments;
+    }
+
+    public void setEventSegments(List<LeadEventSegment> eventSegments) {
+        this.eventSegments = eventSegments;
+        if (eventSegments != null) {
+            for (LeadEventSegment s : eventSegments) {
+                s.setLead(this);
+            }
+        }
     }
 }

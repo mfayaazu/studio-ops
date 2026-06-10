@@ -15,6 +15,10 @@ public class FollowUpTaskUpdateRequest {
     @NotBlank(message = "messageBody is required")
     private String messageBody;
 
+    private boolean isDraft;
+    private String draftMessage;
+    private com.studioops.lead.LeadPriority priority;
+
     public FollowUpTaskUpdateRequest() {
     }
 
@@ -57,5 +61,29 @@ public class FollowUpTaskUpdateRequest {
 
     public void setMessageBody(String messageBody) {
         this.messageBody = messageBody;
+    }
+
+    public boolean getIsDraft() {
+        return isDraft;
+    }
+
+    public void setIsDraft(boolean isDraft) {
+        this.isDraft = isDraft;
+    }
+
+    public String getDraftMessage() {
+        return draftMessage;
+    }
+
+    public void setDraftMessage(String draftMessage) {
+        this.draftMessage = draftMessage;
+    }
+
+    public com.studioops.lead.LeadPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(com.studioops.lead.LeadPriority priority) {
+        this.priority = priority;
     }
 }

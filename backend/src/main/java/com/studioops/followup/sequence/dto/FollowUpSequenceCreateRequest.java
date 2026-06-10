@@ -16,14 +16,21 @@ public class FollowUpSequenceCreateRequest {
 
     private Boolean active;
 
+    private com.studioops.lead.LeadPipelineStage applicableStage;
+
     public FollowUpSequenceCreateRequest() {
     }
 
-    public FollowUpSequenceCreateRequest(UUID studioId, String name, String description, Boolean active) {
+    public FollowUpSequenceCreateRequest(UUID studioId, String name, String description, Boolean active, com.studioops.lead.LeadPipelineStage applicableStage) {
         this.studioId = studioId;
         this.name = name;
         this.description = description;
         this.active = active;
+        this.applicableStage = applicableStage;
+    }
+
+    public FollowUpSequenceCreateRequest(UUID studioId, String name, String description, Boolean active) {
+        this(studioId, name, description, active, com.studioops.lead.LeadPipelineStage.NEW_LEAD);
     }
 
     public UUID getStudioId() {
@@ -56,5 +63,13 @@ public class FollowUpSequenceCreateRequest {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public com.studioops.lead.LeadPipelineStage getApplicableStage() {
+        return applicableStage;
+    }
+
+    public void setApplicableStage(com.studioops.lead.LeadPipelineStage applicableStage) {
+        this.applicableStage = applicableStage;
     }
 }

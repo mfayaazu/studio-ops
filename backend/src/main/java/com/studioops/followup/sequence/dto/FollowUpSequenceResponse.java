@@ -10,20 +10,26 @@ public class FollowUpSequenceResponse {
     private String name;
     private String description;
     private boolean active;
+    private com.studioops.lead.LeadPipelineStage applicableStage;
     private Instant createdAt;
     private Instant updatedAt;
 
     public FollowUpSequenceResponse() {
     }
 
-    public FollowUpSequenceResponse(UUID id, UUID studioId, String name, String description, boolean active, Instant createdAt, Instant updatedAt) {
+    public FollowUpSequenceResponse(UUID id, UUID studioId, String name, String description, boolean active, com.studioops.lead.LeadPipelineStage applicableStage, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.studioId = studioId;
         this.name = name;
         this.description = description;
         this.active = active;
+        this.applicableStage = applicableStage;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+    }
+
+    public FollowUpSequenceResponse(UUID id, UUID studioId, String name, String description, boolean active, Instant createdAt, Instant updatedAt) {
+        this(id, studioId, name, description, active, com.studioops.lead.LeadPipelineStage.NEW_LEAD, createdAt, updatedAt);
     }
 
     public UUID getId() {
@@ -64,6 +70,14 @@ public class FollowUpSequenceResponse {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public com.studioops.lead.LeadPipelineStage getApplicableStage() {
+        return applicableStage;
+    }
+
+    public void setApplicableStage(com.studioops.lead.LeadPipelineStage applicableStage) {
+        this.applicableStage = applicableStage;
     }
 
     public Instant getCreatedAt() {

@@ -45,6 +45,7 @@ public class FollowUpSequenceService {
         sequence.setName(request.getName().trim());
         sequence.setDescription(request.getDescription() != null ? request.getDescription().trim() : null);
         sequence.setActive(request.getActive() != null ? request.getActive() : true);
+        sequence.setApplicableStage(request.getApplicableStage());
 
         FollowUpSequence saved = followUpSequenceRepository.save(sequence);
         return FollowUpSequenceMapper.toResponse(saved);
@@ -86,6 +87,7 @@ public class FollowUpSequenceService {
         sequence.setName(request.getName().trim());
         sequence.setDescription(request.getDescription() != null ? request.getDescription().trim() : null);
         sequence.setActive(request.getActive());
+        sequence.setApplicableStage(request.getApplicableStage());
 
         FollowUpSequence updated = followUpSequenceRepository.save(sequence);
         return FollowUpSequenceMapper.toResponse(updated);

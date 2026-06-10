@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-import type { FollowUpStep, MessageTemplate } from '../types';
+import type { FollowUpStep, MessageTemplate, FollowUpSequence, LeadPipelineStage, LeadPriority } from '../types';
 import { 
   createFollowUpStep, 
   updateFollowUpStep, 
-  deleteFollowUpStep 
+  deleteFollowUpStep,
+  createFollowUpSequence,
+  updateFollowUpSequence,
+  deleteFollowUpSequence
 } from '../api/followupApi';
 import { 
-  Mail, 
-  MessageSquare, 
-  Phone, 
-  Smartphone, 
   Check, 
   Clock, 
   ChevronRight,
@@ -19,7 +18,9 @@ import {
   AlertTriangle,
   Loader2,
   Trash2,
-  Settings
+  Settings,
+  Edit,
+  Activity
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
@@ -30,48 +31,60 @@ interface FollowUpTimelineProps {
   sequenceId?: string;
   userRole?: string;
   onRefresh?: () => void;
+  // Sequence management additions
+  sequences?: FollowUpSequence[];
+  activeSequenceId?: string;
+  onChangeSequence?: (id: string) => void;
 }
 
 export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({ 
   steps = [], 
   templates = [],
-  sequenceName = 'Default 10-Day Follow-up Timeline',
+  sequenceName: _sequenceName = 'Default 10-Day Follow-up Timeline',
   sequenceId,
   userRole = 'EMPLOYEE',
-  onRefresh
+  onRefresh,
+  sequences = [],
+  activeSequenceId: _activeSequenceId,
+  onChangeSequence
 }) => {
   const isEditable = userRole === 'OWNER' || userRole === 'ADMIN';
 
-  // Drawer states
+  // Step Drawer states
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingStep, setEditingStep] = useState<FollowUpStep | null>(null);
 
-  // Form states
+  // Step Form states
   const [stepOrder, setStepOrder] = useState('1');
-  const [delayDays, setDelayDays] = useState('1');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [goal, setGoal] = useState('');
   const [active, setActive] = useState(true);
+  
+  // CRM Enhancements step fields
+  const [stepName, setStepName] = useState('');
+  const [triggerStage, setTriggerStage] = useState<LeadPipelineStage>('NEW_LEAD');
+  const [delayValue, setDelayValue] = useState('1');
+  const [delayUnit, setDelayUnit] = useState<string>('DAYS');
+  const [defaultPriority, setDefaultPriority] = useState<LeadPriority>('NORMAL');
+  const [urgencyThresholdHours, setUrgencyThresholdHours] = useState('24');
 
-  // Action states
+  // Step Action states
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
 
-  const getChannelIcon = (channel: string) => {
-    switch (channel) {
-      case 'EMAIL':
-        return <Mail className="h-3.5 w-3.5" />;
-      case 'WHATSAPP':
-        return <MessageSquare className="h-3.5 w-3.5" />;
-      case 'SMS':
-        return <Smartphone className="h-3.5 w-3.5" />;
-      case 'MANUAL_CALL':
-        return <Phone className="h-3.5 w-3.5" />;
-      default:
-        return null;
-    }
-  };
+  // Sequence Modal states
+  const [isSeqModalOpen, setIsSeqModalOpen] = useState(false);
+  const [isEditingSeq, setIsEditingSeq] = useState(false);
+  const [seqName, setSeqName] = useState('');
+  const [seqDescription, setSeqDescription] = useState('');
+  const [seqActive, setSeqActive] = useState(true);
+  const [seqApplicableStage, setSeqApplicableStage] = useState<LeadPipelineStage>('NEW_LEAD');
+  const [isSavingSeq, setIsSavingSeq] = useState(false);
+  const [isDeletingSeq, setIsDeletingSeq] = useState(false);
+  const [seqError, setSeqError] = useState<string | null>(null);
+
+
 
   const getTemplateTypeLabel = (type: string) => {
     switch (type) {
@@ -108,14 +121,20 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
     const maxOrder = steps.reduce((max, s) => s.stepOrder > max ? s.stepOrder : max, 0);
     setStepOrder((maxOrder + 1).toString());
     
-    // Auto-calculate next delay days
-    const maxDelay = steps.reduce((max, s) => s.delayDays > max ? s.delayDays : max, 0);
-    setDelayDays((maxDelay + 3).toString());
+    // Auto-calculate next delay value
+    const maxDelay = steps.reduce((max, s) => s.delayValue > max ? s.delayValue : max, 0);
+    setDelayValue((maxDelay + 3).toString());
     
     // Default to first active template
     const activeTemplates = templates.filter(t => t.active);
     setSelectedTemplateId(activeTemplates[0]?.id || '');
     
+    setStepName('');
+    setTriggerStage('NEW_LEAD');
+    setDelayValue('1');
+    setDelayUnit('DAYS');
+    setDefaultPriority('NORMAL');
+    setUrgencyThresholdHours('24');
     setGoal('');
     setActive(true);
     setDrawerError(null);
@@ -126,10 +145,18 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
     if (!isEditable) return;
     setEditingStep(step);
     setStepOrder(step.stepOrder.toString());
-    setDelayDays(step.delayDays.toString());
     setSelectedTemplateId(step.templateId || '');
     setGoal(step.goal || '');
     setActive(step.active);
+    
+    // CRM enhancements
+    setStepName(step.stepName || '');
+    setTriggerStage(step.triggerStage || 'NEW_LEAD');
+    setDelayValue((step.delayValue ?? step.delayDays ?? 1).toString());
+    setDelayUnit(step.delayUnit || 'DAYS');
+    setDefaultPriority(step.defaultPriority || 'NORMAL');
+    setUrgencyThresholdHours((step.urgencyThresholdHours ?? 24).toString());
+
     setDrawerError(null);
     setIsDrawerOpen(true);
   };
@@ -152,14 +179,15 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
     }
 
     const orderNum = parseInt(stepOrder, 10);
-    const delayNum = parseInt(delayDays, 10);
+    const delayValNum = parseInt(delayValue, 10);
+    const urgencyThresholdNum = parseInt(urgencyThresholdHours, 10);
 
     if (isNaN(orderNum) || orderNum <= 0) {
       setDrawerError('Step Order must be a positive integer.');
       return;
     }
-    if (isNaN(delayNum) || delayNum < 0) {
-      setDrawerError('Delay days must be 0 or greater.');
+    if (isNaN(delayValNum) || delayValNum < 0) {
+      setDrawerError('Delay value must be 0 or greater.');
       return;
     }
 
@@ -169,11 +197,17 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
     const payload = {
       sequenceId,
       stepOrder: orderNum,
-      delayDays: delayNum,
+      delayDays: delayUnit === 'DAYS' ? delayValNum : Math.ceil(delayValNum / 24),
       channel: 'WHATSAPP' as const,
       templateId: selectedTemplateId,
       goal: goal.trim(),
-      active
+      active,
+      stepName: stepName.trim() || undefined,
+      triggerStage,
+      delayValue: delayValNum,
+      delayUnit,
+      defaultPriority,
+      urgencyThresholdHours: isNaN(urgencyThresholdNum) ? 24 : urgencyThresholdNum
     };
 
     try {
@@ -184,7 +218,13 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
           channel: payload.channel,
           templateId: payload.templateId,
           goal: payload.goal,
-          active: payload.active
+          active: payload.active,
+          stepName: payload.stepName,
+          triggerStage: payload.triggerStage,
+          delayValue: payload.delayValue,
+          delayUnit: payload.delayUnit,
+          defaultPriority: payload.defaultPriority,
+          urgencyThresholdHours: payload.urgencyThresholdHours
         });
       } else {
         await createFollowUpStep(payload);
@@ -220,22 +260,138 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
     }
   };
 
+  // Sequence CRUD Operations
+  const openCreateSeqModal = () => {
+    setIsEditingSeq(false);
+    setSeqName('');
+    setSeqDescription('');
+    setSeqActive(true);
+    setSeqApplicableStage('NEW_LEAD');
+    setSeqError(null);
+    setIsSeqModalOpen(true);
+  };
+
+  const openEditSeqModal = () => {
+    const activeSeq = sequences.find(s => s.id === sequenceId);
+    if (!activeSeq) return;
+    setIsEditingSeq(true);
+    setSeqName(activeSeq.name);
+    setSeqDescription(activeSeq.description || '');
+    setSeqActive(activeSeq.active);
+    setSeqApplicableStage(activeSeq.applicableStage || 'NEW_LEAD');
+    setSeqError(null);
+    setIsSeqModalOpen(true);
+  };
+
+  const handleSaveSequence = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!seqName.trim()) {
+      setSeqError('Sequence name is required.');
+      return;
+    }
+    setIsSavingSeq(true);
+    setSeqError(null);
+    try {
+      if (isEditingSeq && sequenceId) {
+        await updateFollowUpSequence(sequenceId, {
+          name: seqName.trim(),
+          description: seqDescription.trim() || undefined,
+          active: seqActive,
+          applicableStage: seqApplicableStage
+        });
+      } else {
+        const created = await createFollowUpSequence({
+          name: seqName.trim(),
+          description: seqDescription.trim() || undefined,
+          active: seqActive,
+          applicableStage: seqApplicableStage
+        });
+        if (onChangeSequence) {
+          onChangeSequence(created.id);
+        }
+      }
+      if (onRefresh) onRefresh();
+      setIsSeqModalOpen(false);
+    } catch (err: any) {
+      setSeqError(err.message || 'Failed to save sequence.');
+    } finally {
+      setIsSavingSeq(false);
+    }
+  };
+
+  const handleDeleteSequence = async () => {
+    if (!sequenceId) return;
+    if (!window.confirm('Are you sure you want to delete this sequence? All its steps will also be deleted.')) return;
+    setIsDeletingSeq(true);
+    setSeqError(null);
+    try {
+      await deleteFollowUpSequence(sequenceId);
+      if (onChangeSequence && sequences.length > 1) {
+        const remaining = sequences.filter(s => s.id !== sequenceId);
+        onChangeSequence(remaining[0].id);
+      } else if (onChangeSequence) {
+        onChangeSequence('');
+      }
+      if (onRefresh) onRefresh();
+      setIsSeqModalOpen(false);
+    } catch (err: any) {
+      setSeqError(err.message || 'Failed to delete sequence.');
+    } finally {
+      setIsDeletingSeq(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Banner and title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0b1222]/30 border border-slate-800/60 rounded-2xl p-6 shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0b1222]/30 border border-slate-800/60 rounded-2xl p-6 shadow-xl">
+        <div className="space-y-3 flex-1">
+          <div className="flex flex-wrap items-center gap-3">
             <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wide">
-              {sequenceName}
+              Sequence Timeline
             </h3>
-            <span className="text-[9px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full font-bold">
-              Sequence Steps
-            </span>
+            
+            {/* Sequence Selector */}
+            <select
+              value={sequenceId || ''}
+              onChange={(e) => onChangeSequence && onChangeSequence(e.target.value)}
+              className="bg-[#070b14] border border-slate-800 text-slate-300 rounded-lg py-1 px-2.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+            >
+              <option value="" disabled>Select Sequence...</option>
+              {sequences.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name} {s.active ? '(Active)' : ''}
+                </option>
+              ))}
+            </select>
+
+            {isEditable && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={openEditSeqModal}
+                  className="p-1 bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 rounded-md transition-colors"
+                  title="Configure Sequence Info"
+                >
+                  <Edit className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={openCreateSeqModal}
+                  className="p-1 bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 rounded-md transition-colors"
+                  title="Create New Sequence"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+              </div>
+            )}
           </div>
           <p className="text-xs text-slate-400 leading-relaxed max-w-xl">
-            Automatic follow-up flow configuration. When a lead is moved to follow-ups, tasks are generated based on this timeline delay schedule.
+            {sequences.find(s => s.id === sequenceId)?.description || 'No description provided.'}
           </p>
+          {sequences.find(s => s.id === sequenceId)?.applicableStage && (
+            <div className="text-[10px] text-slate-400 font-mono">
+              Applies to Stage: <span className="text-violet-400 font-bold">{sequences.find(s => s.id === sequenceId)?.applicableStage}</span>
+            </div>
+          )}
         </div>
 
         {isEditable && sequenceId && (
@@ -244,7 +400,7 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
             className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-xs font-semibold py-2.5 px-4 rounded-xl transition-all shadow-lg shadow-violet-500/10 cursor-pointer w-fit flex-shrink-0"
           >
             <Plus className="h-4 w-4" />
-            <span>Add Sequence Step</span>
+            <span>Add Step</span>
           </button>
         )}
       </div>
@@ -285,23 +441,32 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
                 <div className="space-y-3">
                   {/* Top Row: Day Offset */}
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold text-violet-400 bg-violet-500/10 px-2.5 py-0.5 rounded-lg border border-violet-500/15">
-                      Step {step.stepOrder} • Day {step.delayDays}
+                    <span className="text-[9px] font-mono font-bold text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded-lg border border-violet-500/15">
+                      Step {step.stepOrder} • {step.delayValue} {step.delayUnit}
                     </span>
                     {index < steps.length - 1 && (
                       <ChevronRight className="hidden lg:block h-4 w-4 text-slate-700" />
                     )}
                   </div>
 
-                  {/* Step info */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-300 font-semibold">
-                      <span className="text-slate-500">{getChannelIcon(step.channel)}</span>
-                      <span>{step.channel}</span>
-                    </div>
-                    <h4 className="text-[10.5px] font-bold text-slate-200 line-clamp-2 leading-relaxed">
+                  {/* Step Name / Template label */}
+                  <div className="space-y-1">
+                    {step.stepName && (
+                      <div className="text-[11px] font-extrabold text-slate-200 uppercase tracking-wide truncate">
+                        {step.stepName}
+                      </div>
+                    )}
+                    <h4 className="text-[10.5px] font-bold text-slate-350 line-clamp-2 leading-relaxed">
                       {getStepTemplateLabel(step)}
                     </h4>
+                  </div>
+
+                  <div className="flex flex-col gap-1 text-[10px] text-slate-400 border-t border-slate-900/60 pt-2 font-mono">
+                    <div>Stage: <span className="text-violet-400 font-semibold">{step.triggerStage || 'N/A'}</span></div>
+                    <div>Priority: <span className="text-slate-300 font-semibold">{step.defaultPriority || 'NORMAL'}</span></div>
+                    {step.urgencyThresholdHours !== undefined && (
+                      <div>Urgency: <span className="text-rose-400 font-semibold">{step.urgencyThresholdHours}h Limit</span></div>
+                    )}
                   </div>
 
                   {/* Goal & Description */}
@@ -335,13 +500,10 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
         </div>
       )}
 
-      {/* Edit Drawer Overlay */}
+      {/* Edit/Create Step Drawer Overlay */}
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/70 backdrop-blur-sm flex justify-end animate-fade-in">
-          {/* Backdrop Closer */}
           <div className="absolute inset-0 cursor-default" onClick={closeDrawer} />
-
-          {/* Drawer container */}
           <div className="relative w-full max-w-lg bg-[#090f1e] border-l border-slate-800/80 shadow-2xl flex flex-col h-full animate-slide-in">
             {/* Header */}
             <div className="h-16 border-b border-slate-800/80 px-6 flex items-center justify-between bg-slate-900/40">
@@ -354,7 +516,7 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
                     {editingStep ? `Configure Step ${editingStep.stepOrder}` : 'Add Sequence Step'}
                   </h3>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    {editingStep ? 'Modify delay offsets and template references' : 'Add a new trigger offset scheduled step'}
+                    Configure delay, trigger stage, priority and urgency rules
                   </p>
                 </div>
               </div>
@@ -377,13 +539,20 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
             {/* Form */}
             <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-5 flex flex-col justify-between h-full">
               <div className="space-y-5">
-                {/* Channel Label */}
-                <div className="bg-emerald-950/20 border border-emerald-900/20 p-3.5 rounded-xl space-y-1">
-                  <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Communication Channel</span>
-                  <p className="text-xs text-slate-350 font-medium">WhatsApp (Forced in Beta)</p>
+                {/* Step Name */}
+                <div className="space-y-1.5">
+                  <label htmlFor="step-name-input" className="text-xs font-bold text-slate-355 block">Step Name *</label>
+                  <input
+                    id="step-name-input"
+                    type="text"
+                    value={stepName}
+                    onChange={(e) => setStepName(e.target.value)}
+                    placeholder="e.g. Intro check-in, Scarcity notification"
+                    className="w-full bg-[#070b14] border border-slate-800/80 focus:border-violet-500 rounded-xl px-4 py-2.5 text-xs text-white outline-none"
+                    required
+                  />
                 </div>
 
-                {/* Step Order and Delay Days in 2 cols */}
                 <div className="grid grid-cols-2 gap-4">
                   {/* Step Order */}
                   <div className="space-y-1.5">
@@ -400,16 +569,89 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
                     />
                   </div>
 
-                  {/* Delay Days */}
+                  {/* Trigger Stage */}
                   <div className="space-y-1.5">
-                    <label htmlFor="delay-days" className="text-xs font-bold text-slate-350 block">Delay (Days) *</label>
+                    <label htmlFor="trigger-stage" className="text-xs font-bold text-slate-350 block">Trigger Stage *</label>
+                    <select
+                      id="trigger-stage"
+                      value={triggerStage}
+                      onChange={(e) => setTriggerStage(e.target.value as LeadPipelineStage)}
+                      className="w-full bg-[#070b14] border border-slate-800/80 focus:border-violet-500 rounded-xl px-3 py-2.5 text-xs text-white outline-none cursor-pointer"
+                      required
+                    >
+                      <option value="NEW_LEAD">New Inquiry</option>
+                      <option value="QUOTE_SENT">Quote Sent</option>
+                      <option value="WARM">Warm Lead</option>
+                      <option value="NEGOTIATION">Negotiation</option>
+                      <option value="FOLLOW_UP_PENDING">Follow-up Pending</option>
+                      <option value="CONFIRMED">Confirmed</option>
+                      <option value="LOST">Lost</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Delay configuration */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Delay Value */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="delay-val" className="text-xs font-bold text-slate-355 block">Delay Value *</label>
                     <input
-                      id="delay-days"
+                      id="delay-val"
                       type="number"
-                      min="0"
-                      value={delayDays}
-                      onChange={(e) => setDelayDays(e.target.value)}
-                      placeholder="e.g. 3"
+                      min="1"
+                      value={delayValue}
+                      onChange={(e) => setDelayValue(e.target.value)}
+                      className="w-full bg-[#070b14] border border-slate-800/80 focus:border-violet-500 rounded-xl px-4 py-2.5 text-xs text-white outline-none"
+                      required
+                    />
+                  </div>
+
+                  {/* Delay Unit */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="delay-unit" className="text-xs font-bold text-slate-355 block">Delay Unit *</label>
+                    <select
+                      id="delay-unit"
+                      value={delayUnit}
+                      onChange={(e) => setDelayUnit(e.target.value)}
+                      className="w-full bg-[#070b14] border border-slate-800/80 focus:border-violet-500 rounded-xl px-3 py-2.5 text-xs text-white outline-none cursor-pointer"
+                      required
+                    >
+                      <option value="MINUTES">Minutes</option>
+                      <option value="HOURS">Hours</option>
+                      <option value="DAYS">Days</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Priorities and Urgency */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Default Priority */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="def-priority" className="text-xs font-bold text-slate-355 block">Default Priority *</label>
+                    <select
+                      id="def-priority"
+                      value={defaultPriority}
+                      onChange={(e) => setDefaultPriority(e.target.value as LeadPriority)}
+                      className="w-full bg-[#070b14] border border-slate-800/80 focus:border-violet-500 rounded-xl px-3 py-2.5 text-xs text-white outline-none cursor-pointer"
+                      required
+                    >
+                      <option value="LOW">LOW</option>
+                      <option value="NORMAL">NORMAL</option>
+                      <option value="HIGH">HIGH</option>
+                      <option value="URGENT">URGENT</option>
+                    </select>
+                  </div>
+
+                  {/* Urgency Threshold (Hours) */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="urgency-hours" className="text-xs font-bold text-slate-355 block">Urgency Threshold (Hours) *</label>
+                    <input
+                      id="urgency-hours"
+                      type="number"
+                      min="1"
+                      value={urgencyThresholdHours}
+                      onChange={(e) => setUrgencyThresholdHours(e.target.value)}
+                      placeholder="e.g. 24"
                       className="w-full bg-[#070b14] border border-slate-800/80 focus:border-violet-500 rounded-xl px-4 py-2.5 text-xs text-white outline-none"
                       required
                     />
@@ -461,7 +703,7 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
                     onClick={() => setActive(!active)}
                     className="flex items-center justify-between bg-[#070b14] border border-slate-800/80 rounded-xl px-4 py-2.5 cursor-pointer select-none hover:border-slate-700/60 transition-colors"
                   >
-                    <span className="text-xs text-slate-350 font-medium">
+                    <span className="text-xs text-slate-355 font-medium">
                       {active ? 'Enabled / Active' : 'Disabled / Inactive'}
                     </span>
                     <div className={cn(
@@ -509,6 +751,133 @@ export const FollowUpTimeline: React.FC<FollowUpTimelineProps> = ({
                   >
                     {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                     <span>Save Step</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Sequence Edit/Create Modal Overlay */}
+      {isSeqModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#090f1e] border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/20">
+              <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                <Activity className="h-4 w-4 text-violet-400" />
+                <span>{isEditingSeq ? 'Edit Sequence Info' : 'New Follow-up Sequence'}</span>
+              </h3>
+              <button
+                onClick={() => setIsSeqModalOpen(false)}
+                className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Error banner */}
+            {seqError && (
+              <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3 flex items-start gap-2.5 text-xs text-red-200">
+                <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+                <p>{seqError}</p>
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSaveSequence} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="seq-name" className="text-xs font-bold text-slate-350 block">Sequence Name *</label>
+                <input
+                  id="seq-name"
+                  type="text"
+                  value={seqName}
+                  onChange={(e) => setSeqName(e.target.value)}
+                  placeholder="e.g. High Budget Lead Sequence"
+                  className="w-full bg-[#070b14] border border-slate-800 focus:border-violet-500 rounded-xl px-4 py-2 text-xs text-white outline-none"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="seq-description" className="text-xs font-bold text-slate-350 block">Description</label>
+                <textarea
+                  id="seq-description"
+                  value={seqDescription}
+                  onChange={(e) => setSeqDescription(e.target.value)}
+                  placeholder="Explain the purpose of this sequence..."
+                  className="w-full bg-[#070b14] border border-slate-800 focus:border-violet-500 rounded-xl px-4 py-2 text-xs text-white outline-none h-20 resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="seq-stage" className="text-xs font-bold text-slate-350 block">Applicable Lead Stage *</label>
+                <select
+                  id="seq-stage"
+                  value={seqApplicableStage}
+                  onChange={(e) => setSeqApplicableStage(e.target.value as LeadPipelineStage)}
+                  className="w-full bg-[#070b14] border border-slate-800 focus:border-violet-500 rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
+                  required
+                >
+                  <option value="NEW_LEAD">New Inquiry</option>
+                  <option value="QUOTE_SENT">Quote Sent</option>
+                  <option value="WARM">Warm Lead</option>
+                  <option value="NEGOTIATION">Negotiation</option>
+                  <option value="FOLLOW_UP_PENDING">Follow-up Pending</option>
+                  <option value="CONFIRMED">Confirmed</option>
+                  <option value="LOST">Lost</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between bg-[#070b14] border border-slate-850 rounded-xl p-3">
+                <span className="text-xs text-slate-300 font-medium">Is Active</span>
+                <div 
+                  onClick={() => setSeqActive(!seqActive)}
+                  className={cn(
+                    "w-8 h-4.5 rounded-full p-0.5 transition-colors duration-200 cursor-pointer select-none",
+                    seqActive ? "bg-emerald-500" : "bg-slate-700"
+                  )}
+                >
+                  <div className={cn(
+                    "w-3.5 h-3.5 rounded-full bg-white transition-transform duration-200 ease-in-out shadow-sm",
+                    seqActive ? "translate-x-3.5" : "translate-x-0"
+                  )} />
+                </div>
+              </div>
+
+              {/* Actions Footer */}
+              <div className="pt-4 border-t border-slate-800 flex justify-between items-center gap-3">
+                <div>
+                  {isEditingSeq && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteSequence}
+                      disabled={isSavingSeq || isDeletingSeq}
+                      className="inline-flex items-center gap-1.5 bg-rose-950/20 hover:bg-rose-900/30 border border-rose-900/30 hover:border-rose-500/20 text-rose-400 text-xs font-semibold py-2 px-3.5 rounded-xl transition-all cursor-pointer"
+                    >
+                      {isDeletingSeq ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      <span>Delete Sequence</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsSeqModalOpen(false)}
+                    disabled={isSavingSeq || isDeletingSeq}
+                    className="bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-semibold py-2 px-4 rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingSeq || isDeletingSeq}
+                    className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-xs font-semibold py-2 px-4.5 rounded-xl transition-all shadow-lg inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {isSavingSeq ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                    <span>Save Sequence</span>
                   </button>
                 </div>
               </div>

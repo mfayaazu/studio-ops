@@ -21,6 +21,18 @@ public class FollowUpStepUpdateRequest {
     @NotNull(message = "templateId is required")
     private UUID templateId;
 
+    private String stepName;
+
+    private com.studioops.lead.LeadPipelineStage triggerStage;
+
+    private Integer delayValue;
+
+    private String delayUnit;
+
+    private com.studioops.lead.LeadPriority defaultPriority;
+
+    private Integer urgencyThresholdHours;
+
     @Size(max = 150, message = "goal must not exceed 150 characters")
     private String goal;
 
@@ -30,13 +42,23 @@ public class FollowUpStepUpdateRequest {
     public FollowUpStepUpdateRequest() {
     }
 
-    public FollowUpStepUpdateRequest(Integer stepOrder, Integer delayDays, CommunicationChannel channel, UUID templateId, String goal, Boolean active) {
+    public FollowUpStepUpdateRequest(Integer stepOrder, Integer delayDays, String stepName, com.studioops.lead.LeadPipelineStage triggerStage, Integer delayValue, String delayUnit, com.studioops.lead.LeadPriority defaultPriority, Integer urgencyThresholdHours, CommunicationChannel channel, UUID templateId, String goal, Boolean active) {
         this.stepOrder = stepOrder;
         this.delayDays = delayDays;
+        this.stepName = stepName;
+        this.triggerStage = triggerStage;
+        this.delayValue = delayValue;
+        this.delayUnit = delayUnit;
+        this.defaultPriority = defaultPriority;
+        this.urgencyThresholdHours = urgencyThresholdHours;
         this.channel = channel;
         this.templateId = templateId;
         this.goal = goal;
         this.active = active;
+    }
+
+    public FollowUpStepUpdateRequest(Integer stepOrder, Integer delayDays, CommunicationChannel channel, UUID templateId, String goal, Boolean active) {
+        this(stepOrder, delayDays, "Step " + stepOrder, com.studioops.lead.LeadPipelineStage.NEW_LEAD, delayDays, "DAYS", com.studioops.lead.LeadPriority.NORMAL, 24, channel, templateId, goal, active);
     }
 
     public Integer getStepOrder() {
@@ -53,6 +75,54 @@ public class FollowUpStepUpdateRequest {
 
     public void setDelayDays(Integer delayDays) {
         this.delayDays = delayDays;
+    }
+
+    public String getStepName() {
+        return stepName;
+    }
+
+    public void setStepName(String stepName) {
+        this.stepName = stepName;
+    }
+
+    public com.studioops.lead.LeadPipelineStage getTriggerStage() {
+        return triggerStage;
+    }
+
+    public void setTriggerStage(com.studioops.lead.LeadPipelineStage triggerStage) {
+        this.triggerStage = triggerStage;
+    }
+
+    public Integer getDelayValue() {
+        return delayValue;
+    }
+
+    public void setDelayValue(Integer delayValue) {
+        this.delayValue = delayValue;
+    }
+
+    public String getDelayUnit() {
+        return delayUnit;
+    }
+
+    public void setDelayUnit(String delayUnit) {
+        this.delayUnit = delayUnit;
+    }
+
+    public com.studioops.lead.LeadPriority getDefaultPriority() {
+        return defaultPriority;
+    }
+
+    public void setDefaultPriority(com.studioops.lead.LeadPriority defaultPriority) {
+        this.defaultPriority = defaultPriority;
+    }
+
+    public Integer getUrgencyThresholdHours() {
+        return urgencyThresholdHours;
+    }
+
+    public void setUrgencyThresholdHours(Integer urgencyThresholdHours) {
+        this.urgencyThresholdHours = urgencyThresholdHours;
     }
 
     public CommunicationChannel getChannel() {

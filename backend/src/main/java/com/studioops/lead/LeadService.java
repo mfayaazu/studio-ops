@@ -24,6 +24,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.math.BigDecimal;
+import com.studioops.lead.dto.LeadEventSegmentRequest;
 import java.util.List;
 import java.util.UUID;
 
@@ -97,9 +100,6 @@ public class LeadService {
             lead.setPreferredChannel(request.getPreferredChannel());
         }
 
-        lead.setEventType(request.getEventType() != null ? request.getEventType().trim() : null);
-        lead.setEventDate(request.getEventDate());
-        lead.setCity(request.getCity() != null ? request.getCity().trim() : null);
         lead.setEstimatedValue(request.getEstimatedValue());
         lead.setLeadSource(request.getLeadSource());
         lead.setPipelineStage(request.getPipelineStage() != null ? request.getPipelineStage() : LeadPipelineStage.NEW_LEAD);
@@ -108,6 +108,48 @@ public class LeadService {
         lead.setNextFollowUpAt(request.getNextFollowUpAt());
         lead.setNotes(request.getNotes() != null ? request.getNotes().trim() : null);
         lead.setLostReason(null); // Creation lostReason defaults to null
+
+        lead.setPriority(request.getPriority() != null ? request.getPriority() : LeadPriority.NORMAL);
+        BigDecimal total = request.getQuotationTotal() != null ? request.getQuotationTotal() : BigDecimal.ZERO;
+        BigDecimal paid = request.getAmountPaid() != null ? request.getAmountPaid() : BigDecimal.ZERO;
+        lead.setQuotationTotal(total);
+        lead.setAmountPaid(paid);
+        lead.setAmountRemaining(total.subtract(paid));
+        lead.setPaymentStatus(request.getPaymentStatus() != null ? request.getPaymentStatus() : LeadPaymentStatus.UNPAID);
+
+        if (request.getEventSegments() != null && !request.getEventSegments().isEmpty()) {
+            for (LeadEventSegmentRequest segReq : request.getEventSegments()) {
+                LeadEventSegment segment = new LeadEventSegment();
+                segment.setLead(lead);
+                segment.setEventType(segReq.getEventType());
+                segment.setEventName(segReq.getEventName());
+                segment.setEventDate(segReq.getEventDate());
+                segment.setStartTime(segReq.getStartTime());
+                segment.setEndTime(segReq.getEndTime());
+                segment.setVenueName(segReq.getVenueName() != null ? segReq.getVenueName() : "TBD");
+                segment.setAddress(segReq.getAddress());
+                segment.setCity(segReq.getCity() != null ? segReq.getCity() : "TBD");
+                segment.setNotes(segReq.getNotes());
+                lead.getEventSegments().add(segment);
+            }
+        } else {
+            LeadEventSegment segment = new LeadEventSegment();
+            segment.setLead(lead);
+            segment.setEventType(request.getEventType() != null ? request.getEventType() : "OTHER");
+            segment.setEventName("Primary Event");
+            segment.setEventDate(request.getEventDate() != null ? request.getEventDate() : LocalDate.now());
+            segment.setVenueName("TBD");
+            segment.setCity(request.getCity() != null ? request.getCity() : "TBD");
+            lead.getEventSegments().add(segment);
+        }
+
+        // Keep root compatibility fields in sync
+        if (!lead.getEventSegments().isEmpty()) {
+            LeadEventSegment first = lead.getEventSegments().get(0);
+            lead.setEventType(first.getEventType());
+            lead.setEventDate(first.getEventDate());
+            lead.setCity(first.getCity());
+        }
 
         Lead saved = leadRepository.save(lead);
         return LeadMapper.toResponse(saved);
@@ -157,15 +199,55 @@ public class LeadService {
         } else {
             lead.setPreferredChannel(request.getPreferredChannel());
         }
-        lead.setEventType(request.getEventType() != null ? request.getEventType().trim() : null);
-        lead.setEventDate(request.getEventDate());
-        lead.setCity(request.getCity() != null ? request.getCity().trim() : null);
         lead.setEstimatedValue(request.getEstimatedValue());
         lead.setLeadSource(request.getLeadSource());
         lead.setAssignedUserId(request.getAssignedUserId());
         lead.setLastContactedAt(request.getLastContactedAt());
         lead.setNextFollowUpAt(request.getNextFollowUpAt());
         lead.setNotes(request.getNotes() != null ? request.getNotes().trim() : null);
+
+        lead.setPriority(request.getPriority() != null ? request.getPriority() : LeadPriority.NORMAL);
+        BigDecimal total = request.getQuotationTotal() != null ? request.getQuotationTotal() : BigDecimal.ZERO;
+        BigDecimal paid = request.getAmountPaid() != null ? request.getAmountPaid() : BigDecimal.ZERO;
+        lead.setQuotationTotal(total);
+        lead.setAmountPaid(paid);
+        lead.setAmountRemaining(total.subtract(paid));
+        lead.setPaymentStatus(request.getPaymentStatus() != null ? request.getPaymentStatus() : LeadPaymentStatus.UNPAID);
+
+        lead.getEventSegments().clear();
+        if (request.getEventSegments() != null && !request.getEventSegments().isEmpty()) {
+            for (LeadEventSegmentRequest segReq : request.getEventSegments()) {
+                LeadEventSegment segment = new LeadEventSegment();
+                segment.setLead(lead);
+                segment.setEventType(segReq.getEventType());
+                segment.setEventName(segReq.getEventName());
+                segment.setEventDate(segReq.getEventDate());
+                segment.setStartTime(segReq.getStartTime());
+                segment.setEndTime(segReq.getEndTime());
+                segment.setVenueName(segReq.getVenueName() != null ? segReq.getVenueName() : "TBD");
+                segment.setAddress(segReq.getAddress());
+                segment.setCity(segReq.getCity() != null ? segReq.getCity() : "TBD");
+                segment.setNotes(segReq.getNotes());
+                lead.getEventSegments().add(segment);
+            }
+        } else {
+            LeadEventSegment segment = new LeadEventSegment();
+            segment.setLead(lead);
+            segment.setEventType(request.getEventType() != null ? request.getEventType() : "OTHER");
+            segment.setEventName("Primary Event");
+            segment.setEventDate(request.getEventDate() != null ? request.getEventDate() : LocalDate.now());
+            segment.setVenueName("TBD");
+            segment.setCity(request.getCity() != null ? request.getCity() : "TBD");
+            lead.getEventSegments().add(segment);
+        }
+
+        // Keep root compatibility fields in sync
+        if (!lead.getEventSegments().isEmpty()) {
+            LeadEventSegment first = lead.getEventSegments().get(0);
+            lead.setEventType(first.getEventType());
+            lead.setEventDate(first.getEventDate());
+            lead.setCity(first.getCity());
+        }
 
         Lead updated = leadRepository.save(lead);
         return LeadMapper.toResponse(updated);

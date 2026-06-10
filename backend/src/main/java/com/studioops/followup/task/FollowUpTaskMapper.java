@@ -28,6 +28,9 @@ public class FollowUpTaskMapper {
         response.setFailureReason(task.getFailureReason());
         response.setCreatedAt(task.getCreatedAt());
         response.setUpdatedAt(task.getUpdatedAt());
+        response.setIsDraft(task.getIsDraft());
+        response.setDraftMessage(task.getDraftMessage());
+        response.setPriority(task.getPriority());
         return response;
     }
 }
