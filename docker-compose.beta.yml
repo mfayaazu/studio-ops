@@ -6,7 +6,7 @@ services:
     container_name: studioops-postgres-beta
     environment:
       POSTGRES_DB: studioops
-      POSTGRES_USER: ${DB_USERNAME:-studioops}
+      POSTGRES_USER: studioops
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "127.0.0.1:5432:5432" # Bind to localhost to prevent public access
@@ -14,7 +14,7 @@ services:
       - postgres_beta_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-studioops} -d studioops"]
+      test: ["CMD-SHELL", "pg_isready -U studioops -d studioops"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,11 +28,12 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "8080:5000"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=5000
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/studioops
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-studioops}
+      - SPRING_DATASOURCE_USERNAME=studioops
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_MAIL_HOST=email-smtp.us-east-1.amazonaws.com
       - SPRING_MAIL_PORT=587
@@ -52,6 +53,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.beta
     container_name: studioops-frontend-beta
+    depends_on:
+      - backend
     ports:
       - "80:80"
     restart: unless-stopped
