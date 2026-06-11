@@ -185,6 +185,7 @@ export interface FollowUpTask {
   studioId: string;
   projectId?: string;
   clientId?: string;
+  leadId?: string;
   sequenceId?: string;
   stepId?: string;
   templateId?: string;

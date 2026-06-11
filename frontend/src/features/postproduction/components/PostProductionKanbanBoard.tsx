@@ -14,6 +14,7 @@ interface PostProductionKanbanBoardProps {
   refreshTrigger?: number;
   onDropTask?: (taskId: string, targetStatus: PostProductionTaskStatus) => void;
   onTaskUpdated?: () => void;
+  isCompact?: boolean;
 }
 
 const BOARD_COLUMNS: PostProductionTaskStatus[] = [
@@ -47,7 +48,8 @@ export const PostProductionKanbanBoard: React.FC<PostProductionKanbanBoardProps>
   onTaskClick,
   refreshTrigger = 0,
   onDropTask,
-  onTaskUpdated
+  onTaskUpdated,
+  isCompact = false
 }) => {
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
 
@@ -87,6 +89,7 @@ export const PostProductionKanbanBoard: React.FC<PostProductionKanbanBoardProps>
                 onDropTask?.(id, targetStatus);
               }}
               onTaskUpdated={onTaskUpdated}
+              isCompact={isCompact}
             />
           );
         })}

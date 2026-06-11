@@ -16,6 +16,7 @@ interface PostProductionTaskCardProps {
   onDragStart?: (taskId: string) => void;
   onDragEnd?: () => void;
   onTaskUpdated?: () => void;
+  isCompact?: boolean;
 }
 
 export const PostProductionTaskCard: React.FC<PostProductionTaskCardProps> = ({
@@ -27,7 +28,8 @@ export const PostProductionTaskCard: React.FC<PostProductionTaskCardProps> = ({
   refreshTrigger = 0,
   onDragStart,
   onDragEnd,
-  onTaskUpdated
+  onTaskUpdated,
+  isCompact = false
 }) => {
   const [subtasks, setSubtasks] = useState<PostProductionSubtask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -101,6 +103,64 @@ export const PostProductionTaskCard: React.FC<PostProductionTaskCardProps> = ({
   const resolvedDeliverableName =
     deliverableName || `Deliverable (${task.deliverableId.substring(0, 8)})`;
 
+  if (isCompact) {
+    return (
+      <div
+        onClick={onClick}
+        draggable="true"
+        onDragStart={(e) => {
+          e.dataTransfer.setData('text/plain', task.id);
+          onDragStart?.(task.id);
+        }}
+        onDragEnd={onDragEnd}
+        className="bg-[#0f172a]/95 hover:bg-[#131c35] border border-slate-855 hover:border-slate-700/80 rounded-lg p-2 transition-all duration-200 shadow-sm group cursor-grab active:cursor-grabbing select-none space-y-1"
+      >
+        <div className="flex items-center justify-between gap-1">
+          <h4 className="font-bold text-slate-200 text-[10px] group-hover:text-violet-400 transition-colors truncate">
+            {task.title}
+          </h4>
+          <span className={`px-1 py-[1px] rounded text-[8px] font-bold uppercase shrink-0 ${getPriorityColorClass(task.priority)}`}>
+            {task.priority}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between text-[8px] text-slate-450 gap-1">
+          <span className="text-slate-500 font-semibold truncate">
+            {getTaskTypeLabel(task.taskType)}
+          </span>
+          <span className={`${isOverdue ? 'text-rose-455 font-bold' : 'text-slate-500'} font-mono`}>
+            {task.dueDate || 'No due'}
+          </span>
+        </div>
+
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center justify-between border-t border-slate-800/30 pt-1 mt-1 gap-1 text-[8px]"
+        >
+          <div className="relative inline-block w-24">
+            <select
+              value={localEmployeeId}
+              onChange={(e) => handleAssigneeChange(e.target.value)}
+              disabled={isUpdating}
+              className="bg-transparent hover:bg-slate-900 border-none rounded py-0.2 px-1 text-[8px] text-slate-400 font-semibold outline-none cursor-pointer w-full"
+            >
+              <option value="" className="bg-slate-950">Unassigned</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.id} className="bg-slate-900">{emp.fullName}</option>
+              ))}
+            </select>
+          </div>
+          
+          {!loading && totalSubtasks > 0 && (
+            <span className="text-slate-550 font-mono shrink-0">
+              ✓ {completedSubtasks}/{totalSubtasks}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       onClick={onClick}
@@ -110,38 +170,38 @@ export const PostProductionTaskCard: React.FC<PostProductionTaskCardProps> = ({
         onDragStart?.(task.id);
       }}
       onDragEnd={onDragEnd}
-      className="bg-[#0f172a]/95 hover:bg-[#131c35] border border-slate-850 hover:border-slate-700/80 rounded-xl p-3.5 transition-all duration-200 shadow-md hover:shadow-lg group space-y-3 cursor-grab active:cursor-grabbing select-none"
+      className="bg-[#0f172a]/95 hover:bg-[#131c35] border border-slate-850 hover:border-slate-700/80 rounded-lg p-2.5 transition-all duration-200 shadow-md group cursor-grab active:cursor-grabbing select-none space-y-2.5"
     >
       {/* Context info: Project & Deliverable */}
       <div className="space-y-0.5">
         {projectName && (
-          <div className="flex items-center gap-1 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-1 text-[8px] text-slate-500 font-bold uppercase tracking-wider">
             <Package className="h-2.5 w-2.5 text-slate-600 flex-shrink-0" />
             <span className="truncate">{projectName}</span>
           </div>
         )}
-        <div className="text-[10px] text-slate-400 font-semibold truncate pl-3.5">
+        <div className="text-[9px] text-slate-400 font-semibold truncate pl-3.5">
           {resolvedDeliverableName}
         </div>
       </div>
 
       {/* Title & Priority Badge */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h4 className="font-bold text-slate-200 text-xs group-hover:text-violet-400 transition-colors line-clamp-2 leading-relaxed">
+      <div className="flex items-start justify-between gap-1.5">
+        <div className="min-w-0 flex-grow">
+          <h4 className="font-bold text-slate-200 text-xs group-hover:text-violet-400 transition-colors line-clamp-2 leading-tight">
             {task.title}
           </h4>
-          <span className="text-[10px] text-slate-500 font-semibold mt-1 inline-block">
+          <span className="text-[9px] text-slate-500 font-semibold mt-0.5 inline-block">
             {getTaskTypeLabel(task.taskType)}
           </span>
         </div>
-        <span className={`px-2 py-0.5 rounded-full border text-[8px] font-extrabold tracking-wide uppercase flex-shrink-0 ${getPriorityColorClass(task.priority)}`}>
+        <span className={`px-1.5 py-0.5 rounded border text-[8px] font-bold tracking-wide uppercase flex-shrink-0 ${getPriorityColorClass(task.priority)}`}>
           {task.priority}
         </span>
       </div>
 
       {/* Due Date & Estimate/Actual Hours */}
-      <div className="flex items-center justify-between text-[11px] text-slate-450 border-t border-slate-800/40 pt-2.5">
+      <div className="flex items-center justify-between text-[10px] text-slate-450 border-t border-slate-800/40 pt-2">
         <div className={`flex items-center gap-1 font-semibold ${isOverdue ? 'text-rose-450 font-bold' : 'text-slate-400'}`}>
           <Calendar className="h-3 w-3 text-slate-500" />
           <span>{task.dueDate || 'No due date'}</span>
@@ -159,10 +219,10 @@ export const PostProductionTaskCard: React.FC<PostProductionTaskCardProps> = ({
 
       {/* Subtasks Progress Bar */}
       {!loading && totalSubtasks > 0 && (
-        <div className="space-y-1.5 border-t border-slate-800/40 pt-2">
+        <div className="space-y-1 border-t border-slate-800/40 pt-1.5">
           <div className="flex justify-between items-center text-[9px] text-slate-500 font-bold font-mono">
             <span className="flex items-center gap-1">
-              <CheckSquare className="h-3 w-3" />
+              <CheckSquare className="h-2.5 w-2.5" />
               <span>Subtasks</span>
             </span>
             <span>{completedSubtasks}/{totalSubtasks}</span>
@@ -178,12 +238,10 @@ export const PostProductionTaskCard: React.FC<PostProductionTaskCardProps> = ({
 
       {/* Assignee Footer with Card-Level Dropdown */}
       <div 
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-        className="flex items-center gap-2 border-t border-slate-800/40 pt-2 text-[10px] text-slate-400 font-semibold"
+        onClick={(e) => e.stopPropagation()}
+        className="flex items-center gap-1.5 border-t border-slate-800/40 pt-2 text-[9px] text-slate-400 font-semibold"
       >
-        <User className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
+        <User className="h-3 w-3 text-slate-500 flex-shrink-0" />
         <div className="relative inline-block w-full">
           <select
             draggable="false"

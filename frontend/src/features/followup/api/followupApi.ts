@@ -150,6 +150,14 @@ export const updateFollowUpTask = async (
   return ApiClient.put<FollowUpTask>(`/api/follow-up-tasks/${id}`, payload);
 };
 
+export const createFollowUpTask = async (
+  payload: Omit<FollowUpTask, 'id' | 'studioId' | 'createdAt' | 'updatedAt' | 'status'> & {
+    status?: FollowUpTaskStatus;
+  }
+): Promise<FollowUpTask> => {
+  return ApiClient.post<FollowUpTask>('/api/follow-up-tasks', payload);
+};
+
 export const createFollowUpSequence = async (
   payload: Omit<FollowUpSequence, 'id' | 'studioId'>
 ): Promise<FollowUpSequence> => {

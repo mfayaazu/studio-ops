@@ -12,6 +12,7 @@ public class FollowUpTaskCreateRequest {
     private UUID studioId;
     private UUID projectId;
     private UUID clientId;
+    private UUID leadId;
     private UUID sequenceId;
     private UUID stepId;
     private UUID templateId;
@@ -75,6 +76,14 @@ public class FollowUpTaskCreateRequest {
 
     public void setClientId(UUID clientId) {
         this.clientId = clientId;
+    }
+
+    public UUID getLeadId() {
+        return leadId;
+    }
+
+    public void setLeadId(UUID leadId) {
+        this.leadId = leadId;
     }
 
     public UUID getSequenceId() {

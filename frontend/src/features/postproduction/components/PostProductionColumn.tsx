@@ -21,6 +21,7 @@ interface PostProductionColumnProps {
   onDropTask?: (taskId: string, targetStatus: PostProductionTaskStatus) => void;
   draggingTaskId?: string | null;
   onTaskUpdated?: () => void;
+  isCompact?: boolean;
 }
 
 const getColumnHeaderColor = (status: PostProductionTaskStatus): string => {
@@ -48,7 +49,8 @@ export const PostProductionColumn: React.FC<PostProductionColumnProps> = ({
   onDragEnd,
   onDropTask,
   draggingTaskId,
-  onTaskUpdated
+  onTaskUpdated,
+  isCompact = false
 }) => {
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const totalEstimatedHours = tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
@@ -90,33 +92,33 @@ export const PostProductionColumn: React.FC<PostProductionColumnProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex flex-col w-72 transition-all duration-200 border rounded-xl p-3.5 space-y-4 max-h-[70vh] flex-shrink-0 ${
+      className={`flex flex-col ${isCompact ? 'w-60 p-1.5 space-y-2' : 'w-64 p-2.5 space-y-3'} transition-all duration-200 border rounded-xl max-h-[76vh] flex-shrink-0 ${
         isDragOver
           ? 'bg-slate-900/90 border-dashed border-violet-500/50 shadow-inner scale-[1.01]'
           : 'bg-[#090f1e]/40 border-slate-800/80'
       } ${getColumnHeaderColor(status)}`}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-1 border-b border-slate-800/30">
         <div>
-          <h3 className="font-bold text-slate-200 text-xs tracking-wider uppercase">
+          <h3 className="font-bold text-slate-300 text-[10px] tracking-wider uppercase">
             {getStatusLabel(status)}
           </h3>
-          <span className="text-[10px] text-slate-500 font-mono font-semibold mt-0.5 block">
-            {totalEstimatedHours > 0 ? `${formatHours(totalEstimatedHours)} Estimated` : 'No hours estimated'}
+          <span className="text-[9px] text-slate-500 font-mono font-semibold block">
+            {totalEstimatedHours > 0 ? `${formatHours(totalEstimatedHours)} Est` : '0h'}
           </span>
         </div>
-        <span className="h-5 min-w-5 px-1.5 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 text-[10px] font-bold font-mono">
+        <span className="h-4 min-w-4 px-1 flex items-center justify-center rounded bg-slate-800 text-slate-400 text-[9px] font-bold font-mono">
           {tasks.length}
         </span>
       </div>
 
       {/* Cards Scroll Area */}
-      <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+      <div className={`flex-1 overflow-y-auto ${isCompact ? 'space-y-2.5' : 'space-y-3'} pr-0.5 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent`}>
         {tasks.length === 0 ? (
-          <div className="border border-dashed border-slate-800/50 rounded-xl py-12 flex flex-col items-center justify-center text-center">
-            <span className="text-[10px] text-slate-600 font-bold tracking-wider uppercase">
-              No tasks in this stage
+          <div className="border border-dashed border-slate-800/30 rounded-lg py-6 flex flex-col items-center justify-center text-center">
+            <span className="text-[9px] text-slate-650 font-bold tracking-wider uppercase">
+              Empty Stage
             </span>
           </div>
         ) : (
@@ -132,29 +134,29 @@ export const PostProductionColumn: React.FC<PostProductionColumnProps> = ({
             );
 
             return (
-              <div key={projectId} className="space-y-2">
+              <div key={projectId} className="space-y-1.5">
                 {/* Project Group Header */}
-                <div className="flex items-center gap-2 px-2.5 py-2 bg-slate-900/60 border border-slate-800/70 rounded-xl">
-                  <FolderOpen className="h-4 w-4 text-indigo-400 flex-shrink-0" />
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-900/60 border border-slate-800/70 rounded-lg">
+                  <FolderOpen className="h-3.5 w-3.5 text-indigo-400 flex-shrink-0" />
                   <div className="flex flex-col min-w-0 flex-grow">
                     <span
-                      className="text-[10px] font-bold text-slate-300 truncate leading-tight"
+                      className="text-[9px] font-bold text-slate-350 truncate leading-tight"
                       title={projectTitle}
                     >
                       {projectTitle}
                     </span>
                     {projectCode && (
-                      <span className="text-[8px] font-mono font-bold text-indigo-400/80 tracking-wide mt-0.5">
+                      <span className="text-[8px] font-mono font-bold text-indigo-400/80 tracking-wide">
                         {projectCode}
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className="px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded-full text-[9px] font-bold font-mono">
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className="px-1 py-0.2 bg-slate-800 text-slate-400 rounded text-[8px] font-bold font-mono">
                       {projectTasks.length}
                     </span>
                     {groupEstHours > 0 && (
-                      <span className="text-[9px] text-slate-500 font-mono font-semibold">
+                      <span className="text-[8px] text-slate-500 font-mono font-semibold">
                         {formatHours(groupEstHours)}
                       </span>
                     )}
@@ -162,7 +164,7 @@ export const PostProductionColumn: React.FC<PostProductionColumnProps> = ({
                 </div>
 
                 {/* Cards for this project group */}
-                <div className="space-y-2 pl-1">
+                <div className="space-y-1.5 pl-0.5">
                   {projectTasks.map((task) => {
                     const deliverable = deliverables.find(d => d.id === task.deliverableId);
                     const delivName = deliverable ? deliverable.name : `Deliverable (${task.deliverableId.substring(0, 8)})`;
@@ -182,6 +184,7 @@ export const PostProductionColumn: React.FC<PostProductionColumnProps> = ({
                           onDragStart={onDragStart}
                           onDragEnd={onDragEnd}
                           onTaskUpdated={onTaskUpdated}
+                          isCompact={isCompact}
                         />
                       </div>
                     );

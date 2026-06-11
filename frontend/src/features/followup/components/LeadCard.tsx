@@ -133,24 +133,39 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, steps = [], isCompact 
     return (
       <div
         onClick={onClick}
-        className="bg-[#0f172a]/90 hover:bg-[#121c35] border border-slate-850 hover:border-slate-700/80 rounded-lg p-2.5 transition-all duration-200 shadow-sm group cursor-pointer select-none space-y-1.5"
+        className="bg-[#0f172a]/95 hover:bg-[#121c35] border border-slate-850 hover:border-slate-700/80 rounded-lg p-2 transition-all duration-200 shadow-sm group cursor-pointer select-none space-y-1"
       >
-        <div className="flex items-start justify-between gap-1.5">
-          <div className="min-w-0 flex-1">
-            <h4 className="font-bold text-slate-200 text-[11px] group-hover:text-violet-400 transition-colors truncate">
-              {lead.clientName}
-            </h4>
-          </div>
-          <span className={`px-1.5 py-0.2 rounded text-[8px] font-bold uppercase ${getPriorityColor(lead.priority)}`}>
+        <div className="flex items-center justify-between gap-1">
+          <h4 className="font-bold text-slate-200 text-[10px] group-hover:text-violet-400 transition-colors truncate">
+            {lead.clientName}
+          </h4>
+          <span className={`px-1 py-[1px] rounded text-[8px] font-bold uppercase shrink-0 ${getPriorityColor(lead.priority)}`}>
             {lead.priority}
           </span>
         </div>
-
-        <div className="flex items-center justify-between text-[9px] text-slate-400">
-          <span className="font-mono text-slate-350">
+        
+        <div className="flex items-center justify-between text-[8px] text-slate-400 gap-1">
+          <div className="flex items-center gap-1 min-w-0">
+            <span className={`px-1 rounded border text-[8px] font-semibold truncate ${getStageBadgeClass(lead.stage)}`}>
+              {getStageLabel(lead.stage)}
+            </span>
+            {lead.paymentStatus && lead.paymentStatus !== 'UNPAID' && (
+              <span className="px-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-[7px] font-bold shrink-0">
+                {lead.paymentStatus.replace('_', ' ')}
+              </span>
+            )}
+          </div>
+          <span className="font-mono text-slate-350 shrink-0">
             {formatCurrencyINR(lead.quotationTotal || lead.estimatedValue)}
           </span>
-          <span className={`px-1 py-0.2 rounded border text-[8px] font-bold ${getUrgencyColor(urgency)}`}>
+        </div>
+
+        <div className="flex items-center justify-between text-[8px] text-slate-400 border-t border-slate-800/30 pt-1 mt-1">
+          <div className="flex items-center gap-1 text-slate-400">
+            {getChannelIcon(lead.channel)}
+            <span className="truncate">{lead.channel.replace('MANUAL_CALL', 'CALL')}</span>
+          </div>
+          <span className={`px-1 py-[1px] rounded border text-[7px] font-bold shrink-0 ${getUrgencyColor(urgency)}`}>
             {getUrgencyText(urgency)}
           </span>
         </div>
@@ -162,43 +177,45 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, steps = [], isCompact 
   return (
     <div
       onClick={onClick}
-      className="bg-[#0f172a]/90 hover:bg-[#121c35] border border-slate-850 hover:border-slate-700/80 rounded-xl p-3.5 transition-all duration-200 shadow-md hover:shadow-lg group space-y-3 cursor-pointer select-none"
+      className="bg-[#0f172a]/95 hover:bg-[#121c35] border border-slate-850 hover:border-slate-700/80 rounded-lg p-2.5 transition-all duration-200 shadow-md group cursor-pointer select-none space-y-2"
     >
-      {/* Top Header */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+      <div className="flex items-start justify-between gap-1.5">
+        <div className="min-w-0 flex-1">
           <h4 className="font-bold text-slate-200 text-xs group-hover:text-violet-400 transition-colors truncate">
             {lead.clientName}
           </h4>
-          <p className="text-slate-400 text-[11px] truncate font-medium mt-0.5">
+          <p className="text-slate-450 text-[10px] truncate mt-0.5">
             {lead.projectTitle}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <span className={`px-2 py-0.5 rounded-full border text-[9px] font-bold tracking-wide uppercase ${getPriorityColor(lead.priority)}`}>
-            {lead.priority}
-          </span>
-        </div>
+        <span className={`px-1.5 py-0.5 rounded border text-[8px] font-bold tracking-wide uppercase shrink-0 ${getPriorityColor(lead.priority)}`}>
+          {lead.priority}
+        </span>
       </div>
 
-      {/* Stage Badge & Value Row */}
-      <div className="flex items-center justify-between text-[11px] text-slate-450 border-t border-slate-800/40 pt-2">
-        <span className={`px-2 py-0.5 rounded border text-[9px] font-semibold ${getStageBadgeClass(lead.stage)}`}>
-          {getStageLabel(lead.stage)}
-        </span>
-        <span className="font-mono text-slate-350 font-semibold">
+      <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800/40 pt-1.5">
+        <div className="flex items-center gap-1">
+          <span className={`px-1.5 py-0.5 rounded border text-[8px] font-semibold ${getStageBadgeClass(lead.stage)}`}>
+            {getStageLabel(lead.stage)}
+          </span>
+          {lead.paymentStatus && lead.paymentStatus !== 'UNPAID' && (
+            <span className="px-1 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-[7px] font-bold">
+              {lead.paymentStatus.replace('_', ' ')}
+            </span>
+          )}
+        </div>
+        <span className="font-mono text-slate-355 font-semibold">
           {formatCurrencyINR(lead.quotationTotal || lead.estimatedValue)}
         </span>
       </div>
 
-      {/* Bottom Status Row */}
-      <div className="flex items-center justify-between gap-2 border-t border-slate-805 pt-2">
-        <div className="flex items-center gap-1.5 text-[9px] bg-slate-900/60 border border-slate-800 px-2 py-0.5 rounded text-slate-350 font-semibold">
+      <div className="flex items-center justify-between gap-2 border-t border-slate-800/30 pt-1.5">
+        <div className="flex items-center gap-1 text-[8px] bg-slate-900/60 border border-slate-800 px-1.5 py-0.5 rounded text-slate-400">
           {getChannelIcon(lead.channel)}
           <span className="font-mono">{lead.channel}</span>
         </div>
-        <div className={`flex items-center gap-1 px-2 py-0.5 rounded border text-[9px] font-bold ${getUrgencyColor(urgency)}`}>
-          {lead.stage !== 'CONFIRMED' && lead.stage !== 'LOST' && <Clock className="h-2.5 w-2.5" />}
+        <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[8px] font-bold ${getUrgencyColor(urgency)}`}>
+          {lead.stage !== 'CONFIRMED' && lead.stage !== 'LOST' && <Clock className="h-2 w-2" />}
           <span>{getUrgencyText(urgency)}</span>
         </div>
       </div>

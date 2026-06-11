@@ -389,4 +389,111 @@ class FollowUpTaskServiceTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> followUpTaskService.approveTask(taskId));
         assertEquals("Cannot mark WhatsApp task as sent without a valid phone number.", ex.getMessage());
     }
+
+    @Test
+    void approveTask_withDraftMessage_logsDraftMessage() {
+        UUID taskId = UUID.randomUUID();
+        FollowUpTask task = new FollowUpTask();
+        task.setId(taskId);
+        task.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        task.setStatus(FollowUpTaskStatus.PENDING_APPROVAL);
+        task.setChannel(CommunicationChannel.EMAIL);
+        task.setRecipient("recipient@example.com");
+        task.setSubject("Approve Test");
+        task.setMessageBody("Original template body");
+        task.setIsDraft(true);
+        task.setDraftMessage("Custom edited draft message");
+
+        when(followUpTaskRepository.findByIdAndStudioId(taskId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(task));
+        when(followUpTaskRepository.save(any(FollowUpTask.class))).thenReturn(task);
+
+        FollowUpTaskResponse response = followUpTaskService.approveTask(taskId);
+        assertEquals(FollowUpTaskStatus.SENT, response.getStatus());
+        assertFalse(response.getIsDraft());
+        assertEquals("Custom edited draft message", response.getMessageBody());
+
+        verify(communicationLogService, times(1)).createLog(argThat(logReq -> 
+            "Custom edited draft message".equals(logReq.getMessageBody())
+        ));
+    }
+
+    @Test
+    void skipTask_withDraftMessage_logsDraftMessage() {
+        UUID taskId = UUID.randomUUID();
+        FollowUpTask task = new FollowUpTask();
+        task.setId(taskId);
+        task.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        task.setStatus(FollowUpTaskStatus.PENDING_APPROVAL);
+        task.setChannel(CommunicationChannel.EMAIL);
+        task.setRecipient("recipient@example.com");
+        task.setSubject("Skip Test");
+        task.setMessageBody("Original template body");
+        task.setIsDraft(true);
+        task.setDraftMessage("Custom edited draft message");
+
+        when(followUpTaskRepository.findByIdAndStudioId(taskId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(task));
+        when(followUpTaskRepository.save(any(FollowUpTask.class))).thenReturn(task);
+
+        FollowUpTaskResponse response = followUpTaskService.skipTask(taskId);
+        assertEquals(FollowUpTaskStatus.SKIPPED, response.getStatus());
+        assertFalse(response.getIsDraft());
+        assertEquals("Custom edited draft message", response.getMessageBody());
+
+        verify(communicationLogService, times(1)).createLog(argThat(logReq -> 
+            "Custom edited draft message".equals(logReq.getMessageBody())
+        ));
+    }
+
+    @Test
+    void saveDraft_persistsDraftMessage() {
+        UUID taskId = UUID.randomUUID();
+        FollowUpTask task = new FollowUpTask();
+        task.setId(taskId);
+        task.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        task.setStatus(FollowUpTaskStatus.PENDING_APPROVAL);
+        task.setChannel(CommunicationChannel.EMAIL);
+        task.setScheduledAt(Instant.now());
+        task.setMessageBody("Original Body");
+
+        FollowUpTaskUpdateRequest request = new FollowUpTaskUpdateRequest(
+                Instant.now(), "new@example.com", "New Subject", "Original Body"
+        );
+        request.setIsDraft(true);
+        request.setDraftMessage("Custom Draft Content");
+
+        when(followUpTaskRepository.findByIdAndStudioId(taskId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(task));
+        when(followUpTaskRepository.save(any(FollowUpTask.class))).thenReturn(task);
+
+        FollowUpTaskResponse response = followUpTaskService.updateTask(taskId, request);
+        assertNotNull(response);
+        assertTrue(response.getIsDraft());
+        assertEquals("Custom Draft Content", response.getDraftMessage());
+    }
+
+    @Test
+    void approveTask_withExplicitMessageBody_logsExplicitMessageBody() {
+        UUID taskId = UUID.randomUUID();
+        FollowUpTask task = new FollowUpTask();
+        task.setId(taskId);
+        task.setStudioId(TenantConstants.DEFAULT_STUDIO_ID);
+        task.setStatus(FollowUpTaskStatus.PENDING_APPROVAL);
+        task.setChannel(CommunicationChannel.EMAIL);
+        task.setRecipient("recipient@example.com");
+        task.setSubject("Approve Test");
+        task.setMessageBody("Original template body");
+        task.setIsDraft(true);
+        task.setDraftMessage("Custom edited draft message");
+
+        when(followUpTaskRepository.findByIdAndStudioId(taskId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(task));
+        when(followUpTaskRepository.save(any(FollowUpTask.class))).thenReturn(task);
+
+        FollowUpTaskResponse response = followUpTaskService.approveTask(taskId, "Explicit final body override");
+        assertEquals(FollowUpTaskStatus.SENT, response.getStatus());
+        assertFalse(response.getIsDraft());
+        assertEquals("Explicit final body override", response.getMessageBody());
+
+        verify(communicationLogService, times(1)).createLog(argThat(logReq -> 
+            "Explicit final body override".equals(logReq.getMessageBody())
+        ));
+    }
 }

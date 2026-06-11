@@ -79,11 +79,21 @@ public class FollowUpTaskUpdateRequest {
         this.draftMessage = draftMessage;
     }
 
+    private java.util.UUID leadId;
+
     public com.studioops.lead.LeadPriority getPriority() {
         return priority;
     }
 
     public void setPriority(com.studioops.lead.LeadPriority priority) {
         this.priority = priority;
+    }
+
+    public java.util.UUID getLeadId() {
+        return leadId;
+    }
+
+    public void setLeadId(java.util.UUID leadId) {
+        this.leadId = leadId;
     }
 }

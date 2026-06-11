@@ -62,8 +62,10 @@ public class FollowUpTaskController {
     }
 
     @PostMapping("/{id}/approve")
-    public ResponseEntity<FollowUpTaskResponse> approveTask(@PathVariable("id") UUID id) {
-        FollowUpTaskResponse response = followUpTaskService.approveTask(id);
+    public ResponseEntity<FollowUpTaskResponse> approveTask(
+            @PathVariable("id") UUID id,
+            @RequestParam(value = "messageBody", required = false) String messageBody) {
+        FollowUpTaskResponse response = followUpTaskService.approveTask(id, messageBody);
         return ResponseEntity.ok(response);
     }
 

@@ -11,6 +11,7 @@ public class FollowUpTaskResponse {
     private UUID studioId;
     private UUID projectId;
     private UUID clientId;
+    private UUID leadId;
     private UUID sequenceId;
     private UUID stepId;
     private UUID templateId;
@@ -232,5 +233,13 @@ public class FollowUpTaskResponse {
 
     public void setPriority(com.studioops.lead.LeadPriority priority) {
         this.priority = priority;
+    }
+
+    public UUID getLeadId() {
+        return leadId;
+    }
+
+    public void setLeadId(UUID leadId) {
+        this.leadId = leadId;
     }
 }

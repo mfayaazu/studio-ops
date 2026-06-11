@@ -106,6 +106,7 @@ public class FollowUpTaskService {
         task.setStudioId(studioId);
         task.setProjectId(request.getProjectId());
         task.setClientId(request.getClientId());
+        task.setLeadId(request.getLeadId());
         task.setSequenceId(request.getSequenceId());
         task.setStepId(request.getStepId());
         task.setTemplateId(request.getTemplateId());
@@ -186,6 +187,9 @@ public class FollowUpTaskService {
         task.setIsDraft(request.getIsDraft());
         task.setDraftMessage(request.getDraftMessage());
         task.setPriority(request.getPriority() != null ? request.getPriority() : com.studioops.lead.LeadPriority.NORMAL);
+        if (request.getLeadId() != null) {
+            task.setLeadId(request.getLeadId());
+        }
 
         FollowUpTask updated = followUpTaskRepository.save(task);
         return FollowUpTaskMapper.toResponse(updated);
@@ -198,6 +202,10 @@ public class FollowUpTaskService {
     }
 
     public FollowUpTaskResponse approveTask(UUID id) {
+        return approveTask(id, null);
+    }
+
+    public FollowUpTaskResponse approveTask(UUID id, String finalMessage) {
         FollowUpTask task = followUpTaskRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Follow-up task not found with id: " + id));
 
@@ -215,9 +223,17 @@ public class FollowUpTaskService {
         task.setStatus(FollowUpTaskStatus.SENT);
         task.setSentAt(Instant.now());
         task.setIsDraft(false);
-        if (task.getDraftMessage() != null && !task.getDraftMessage().trim().isEmpty()) {
+
+        // Priority logic:
+        // 1. Explicit finalMessage if passed
+        // 2. task.draftMessage if present
+        // 3. Keep original messageBody
+        if (finalMessage != null && !finalMessage.trim().isEmpty()) {
+            task.setMessageBody(finalMessage);
+        } else if (task.getDraftMessage() != null && !task.getDraftMessage().trim().isEmpty()) {
             task.setMessageBody(task.getDraftMessage());
         }
+
         FollowUpTask saved = followUpTaskRepository.save(task);
 
         // Create outbound communication log for sent/approved task

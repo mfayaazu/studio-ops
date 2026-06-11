@@ -190,7 +190,7 @@ class FollowUpTaskControllerIntegrationTest {
                 Instant.now(), Instant.now()
         );
 
-        when(followUpTaskService.approveTask(id)).thenReturn(response);
+        when(followUpTaskService.approveTask(id, null)).thenReturn(response);
 
         mockMvc.perform(post("/api/follow-up-tasks/{id}/approve", id))
                 .andExpect(status().isOk())

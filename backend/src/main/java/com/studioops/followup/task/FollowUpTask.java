@@ -23,6 +23,9 @@ public class FollowUpTask {
     @Column(name = "client_id")
     private UUID clientId;
 
+    @Column(name = "lead_id")
+    private UUID leadId;
+
     @Column(name = "sequence_id")
     private UUID sequenceId;
 
@@ -126,6 +129,14 @@ public class FollowUpTask {
 
     public void setClientId(UUID clientId) {
         this.clientId = clientId;
+    }
+
+    public UUID getLeadId() {
+        return leadId;
+    }
+
+    public void setLeadId(UUID leadId) {
+        this.leadId = leadId;
     }
 
     public UUID getSequenceId() {

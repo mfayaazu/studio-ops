@@ -63,27 +63,27 @@ export const FollowUpSummaryCards: React.FC<FollowUpSummaryCardsProps> = ({
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
       {cards.map((card, index) => {
         const Icon = card.icon;
         return (
           <div
             key={index}
-            className={`flex flex-col justify-between p-5 bg-[#0d1424] border rounded-xl shadow-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl ${card.colorClass}`}
+            className={`flex flex-col justify-between p-3 bg-[#0d1424]/90 border rounded-lg shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg ${card.colorClass}`}
           >
             <div className="flex items-center justify-between w-full">
-              <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">
+              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
                 {card.title}
               </span>
-              <div className={`p-2 rounded-lg bg-slate-900/60 border border-slate-800 ${card.iconColor}`}>
-                <Icon className="h-4.5 w-4.5" />
+              <div className={`p-1.5 rounded-lg bg-slate-900/60 border border-slate-800/80 ${card.iconColor}`}>
+                <Icon className="h-3.5 w-3.5" />
               </div>
             </div>
-            <div className="mt-4 space-y-1">
-              <h3 className="text-2xl font-extrabold text-white tracking-tight">
+            <div className="mt-2 space-y-0.5">
+              <h3 className="text-base font-black text-white tracking-tight font-mono">
                 {card.value}
               </h3>
-              <p className="text-[10px] text-slate-500 font-medium">
+              <p className="text-[9px] text-slate-500 font-semibold">
                 {card.description}
               </p>
             </div>

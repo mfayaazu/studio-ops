@@ -13,6 +13,7 @@ public class FollowUpTaskMapper {
         response.setStudioId(task.getStudioId());
         response.setProjectId(task.getProjectId());
         response.setClientId(task.getClientId());
+        response.setLeadId(task.getLeadId());
         response.setSequenceId(task.getSequenceId());
         response.setStepId(task.getStepId());
         response.setTemplateId(task.getTemplateId());

@@ -20,6 +20,9 @@ interface UnifiedTask {
   subject?: string;
   body: string;
   recipient?: string;
+  isDraft: boolean;
+  draftMessage?: string;
+  finalMessage?: string;
 }
 
 const cleanPhoneNumber = (phone: string | undefined): string => {
@@ -43,6 +46,7 @@ const handleOpenWhatsApp = (task: UnifiedTask, currentBody: string) => {
 
 const resolveClientAndProject = (task: FollowUpTask, leads: Lead[] = []) => {
   const matchedLead = leads.find(lead => 
+    lead.id === task.leadId ||
     lead.id === task.clientId || 
     lead.id === task.projectId ||
     lead.clientName.toLowerCase() === task.recipient?.toLowerCase()
@@ -86,7 +90,10 @@ const mapBackendTask = (task: FollowUpTask, leads: Lead[] = []): UnifiedTask => 
     dueStatus: getDueStatus(task.scheduledAt),
     subject: task.subject,
     body: task.messageBody,
-    recipient: task.recipient
+    recipient: task.recipient,
+    isDraft: task.isDraft,
+    draftMessage: task.draftMessage,
+    finalMessage: (task as any).finalMessage
   };
 };
 
@@ -99,38 +106,61 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [editedBody, setEditedBody] = useState('');
+  const [draftText, setDraftText] = useState('');
   const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   const tasksToRender = (backendTasks || []).map(t => mapBackendTask(t, leads));
 
   const selectedTask = tasksToRender.find(t => t.id === selectedTaskId) || null;
 
+  const getInitialMessageBody = (task: UnifiedTask | null): string => {
+    if (!task) return '';
+    if (task.draftMessage && task.draftMessage.trim() !== '') {
+      return task.draftMessage;
+    }
+    if (task.finalMessage && task.finalMessage.trim() !== '') {
+      return task.finalMessage;
+    }
+    return task.body || '';
+  };
+
+  const templateMessage = selectedTask ? selectedTask.body : '';
+  const savedDraftOrBody = selectedTask ? getInitialMessageBody(selectedTask) : '';
+  const hasUnsavedChanges = selectedTask && draftText !== savedDraftOrBody;
+
   React.useEffect(() => {
     if (selectedTask) {
-      setEditedBody(selectedTask.body);
+      setDraftText(getInitialMessageBody(selectedTask));
     } else {
-      setEditedBody('');
+      setDraftText('');
     }
   }, [selectedTaskId]);
 
   const handleSaveDraft = async () => {
     if (!selectedTaskId) return;
+    const matched = backendTasks?.find(t => t.id === selectedTaskId);
+    if (!matched) return;
+    if (!draftText.trim()) {
+      setActionStatus({ type: 'error', message: 'Draft message cannot be empty' });
+      return;
+    }
     setIsSavingDraft(true);
     setActionStatus(null);
     try {
       await updateFollowUpTask(selectedTaskId, {
-        messageBody: editedBody,
+        scheduledAt: matched.scheduledAt,
+        recipient: matched.recipient,
+        subject: matched.subject,
+        messageBody: matched.messageBody,
         isDraft: true,
-        draftMessage: editedBody
+        draftMessage: draftText,
+        priority: matched.priority
       });
-      setActionStatus({ type: 'success', message: '✓ Draft message successfully saved!' });
+      setActionStatus({ type: 'success', message: 'Draft saved' });
       
-      // Update local task body
-      const matched = backendTasks?.find(t => t.id === selectedTaskId);
-      if (matched) {
-        matched.messageBody = editedBody;
-      }
+      // Update local task body and draft state
+      matched.draftMessage = draftText;
+      matched.isDraft = true;
       
       if (onActionSuccess) {
         onActionSuccess();
@@ -140,6 +170,70 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
       setActionStatus({ type: 'error', message: `Failed to save draft: ${err.message}` });
     } finally {
       setIsSavingDraft(false);
+    }
+  };
+
+  const handleResetToTemplate = async () => {
+    if (!selectedTaskId) return;
+    const matched = backendTasks?.find(t => t.id === selectedTaskId);
+    if (!matched) return;
+    setIsSavingDraft(true);
+    setActionStatus(null);
+    try {
+      await updateFollowUpTask(selectedTaskId, {
+        scheduledAt: matched.scheduledAt,
+        recipient: matched.recipient,
+        subject: matched.subject,
+        messageBody: matched.messageBody,
+        isDraft: false,
+        draftMessage: '',
+        priority: matched.priority
+      });
+      setActionStatus({ type: 'success', message: 'Reset to template' });
+      
+      // Update local task body and draft state
+      matched.draftMessage = undefined;
+      matched.isDraft = false;
+      
+      setDraftText(templateMessage);
+      
+      if (onActionSuccess) {
+        onActionSuccess();
+      }
+    } catch (err: any) {
+      console.error(err);
+      setActionStatus({ type: 'error', message: `Failed to reset template: ${err.message}` });
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  const handleOpenWhatsAppAndAutoSave = async (task: UnifiedTask, currentBody: string) => {
+    // Open WhatsApp immediately to avoid browser popup blockers
+    handleOpenWhatsApp(task, currentBody);
+
+    if (selectedTaskId === task.id) {
+      const matched = backendTasks?.find(t => t.id === selectedTaskId);
+      if (matched) {
+        try {
+          await updateFollowUpTask(selectedTaskId, {
+            scheduledAt: matched.scheduledAt,
+            recipient: matched.recipient,
+            subject: matched.subject,
+            messageBody: matched.messageBody,
+            isDraft: true,
+            draftMessage: currentBody,
+            priority: matched.priority
+          });
+          matched.draftMessage = currentBody;
+          matched.isDraft = true;
+          if (onActionSuccess) {
+            onActionSuccess();
+          }
+        } catch (err) {
+          console.warn('Failed to auto-save draft before opening WhatsApp:', err);
+        }
+      }
     }
   };
 
@@ -175,11 +269,21 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
     setActionStatus(null);
     try {
       if (action === 'approved') {
-        if (currentBody && currentBody !== task.body) {
+        const matched = backendTasks?.find(t => t.id === task.id);
+        if (matched) {
+          const finalBody = currentBody || matched.draftMessage || matched.messageBody;
           await updateFollowUpTask(task.id, {
-            messageBody: currentBody,
-            draftMessage: currentBody
+            scheduledAt: matched.scheduledAt,
+            recipient: matched.recipient,
+            subject: matched.subject,
+            messageBody: finalBody,
+            isDraft: false,
+            draftMessage: finalBody,
+            priority: matched.priority
           });
+          matched.messageBody = finalBody;
+          matched.draftMessage = finalBody;
+          matched.isDraft = false;
         }
         await approveFollowUpTask(task.id);
         setActionStatus({ type: 'success', message: `✓ Task approved & logged as SENT for ${task.clientName}` });
@@ -263,8 +367,15 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                   )}
                   {/* Header */}
                   <div className="flex justify-between items-start gap-2">
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-slate-250 text-xs truncate">{task.clientName}</h4>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-bold text-slate-250 text-xs truncate">{task.clientName}</h4>
+                        {(task.isDraft || task.draftMessage) && (
+                          <span className="px-1.5 py-[1px] bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded text-[8px] font-black tracking-wide uppercase shrink-0">
+                            DRAFT SAVED
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[10px] text-slate-500 truncate">{task.projectTitle}</p>
                     </div>
                     <span className={`px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase ${getDueBadge(task.dueStatus)}`}>
@@ -312,15 +423,15 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                       {task.channel === 'WHATSAPP' ? (
                         <>
                           <button
-                            disabled={!isValidPhoneNumber(task.recipient)}
+                            disabled={!isValidPhoneNumber(task.recipient) || !(selectedTaskId === task.id ? draftText : (task.draftMessage || task.body)).trim()}
                             onClick={(e) => {
                               e.stopPropagation();
-                              const currentBody = selectedTaskId === task.id ? editedBody : task.body;
-                              handleOpenWhatsApp(task, currentBody);
+                              const currentBody = selectedTaskId === task.id ? draftText : (task.draftMessage || task.body);
+                              handleOpenWhatsAppAndAutoSave(task, currentBody);
                             }}
                             className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-[10px] transition-colors ${
-                              isValidPhoneNumber(task.recipient)
-                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                              isValidPhoneNumber(task.recipient) && (selectedTaskId === task.id ? draftText : (task.draftMessage || task.body)).trim()
+                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer'
                                 : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
                             }`}
                             title={isValidPhoneNumber(task.recipient) ? "Open WhatsApp" : "Valid WhatsApp number with country code required."}
@@ -329,15 +440,15 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                             <span>Open WA</span>
                           </button>
                           <button
-                            disabled={!isValidPhoneNumber(task.recipient)}
+                            disabled={!isValidPhoneNumber(task.recipient) || !(selectedTaskId === task.id ? draftText : (task.draftMessage || task.body)).trim()}
                             onClick={(e) => {
                               e.stopPropagation();
-                              const currentBody = selectedTaskId === task.id ? editedBody : task.body;
+                              const currentBody = selectedTaskId === task.id ? draftText : (task.draftMessage || task.body);
                               handleAction(task, 'approved', currentBody);
                             }}
                             className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-[10px] transition-colors ${
-                              isValidPhoneNumber(task.recipient)
-                                ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400'
+                              isValidPhoneNumber(task.recipient) && (selectedTaskId === task.id ? draftText : (task.draftMessage || task.body)).trim()
+                                ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400 cursor-pointer'
                                 : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
                             }`}
                             title={isValidPhoneNumber(task.recipient) ? "Mark as Sent" : "Valid WhatsApp number with country code required."}
@@ -356,7 +467,7 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
               ))
             )}
           </div>
-
+ 
           {/* Right Side: Message Preview Pane */}
           <div className="border border-slate-850 bg-[#0c1322] rounded-xl p-4.5 flex flex-col justify-between min-h-[300px] relative">
             {selectedTask && actionLoadingId === selectedTask.id && (
@@ -368,7 +479,14 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
               <div className="space-y-4 h-full flex flex-col justify-between">
                 <div className="space-y-3">
                   <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                    <span className="text-xs font-bold text-slate-300">Message Draft Preview</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-300">Message Draft Preview</span>
+                      {(selectedTask.isDraft || selectedTask.draftMessage) && (
+                        <span className="px-1.5 py-[1px] bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded text-[8px] font-black tracking-wide uppercase shrink-0">
+                          DRAFT SAVED
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[10px] text-slate-500 font-mono truncate max-w-[120px]">ID: {selectedTask.id}</span>
                   </div>
                   
@@ -378,28 +496,44 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                       <span className="text-slate-200 font-medium">{selectedTask.subject}</span>
                     </div>
                   )}
-
-                  <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg text-xs font-medium flex-1 space-y-1">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[9px] font-mono text-slate-500 block uppercase">Body (Editable):</span>
+ 
+                  <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg text-xs font-medium flex-1 flex flex-col space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[9px] font-mono text-slate-500 block uppercase">WhatsApp Draft Message</span>
+                      {hasUnsavedChanges && (
+                        <span className="text-[10px] text-amber-400 font-semibold italic animate-pulse">Unsaved changes</span>
+                      )}
+                    </div>
+                    <textarea
+                      value={draftText}
+                      onChange={(e) => setDraftText(e.target.value)}
+                      className="w-full flex-grow bg-[#0d1222]/80 border border-slate-800 text-slate-200 rounded p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none resize-none min-h-[140px] font-sans"
+                      placeholder="Type message draft here..."
+                    />
+                    <div className="flex justify-between items-center gap-2">
                       <button
                         type="button"
-                        disabled={isSavingDraft}
-                        onClick={handleSaveDraft}
-                        className="py-0.5 px-2 bg-violet-600/20 hover:bg-violet-600/35 border border-violet-500/30 text-violet-300 rounded text-[9px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                        onClick={handleResetToTemplate}
+                        className="py-1.5 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
                       >
-                        {isSavingDraft ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Save className="h-2.5 w-2.5" />}
+                        Reset to Template
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isSavingDraft || !draftText.trim()}
+                        onClick={handleSaveDraft}
+                        className={`py-1.5 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                          draftText.trim()
+                            ? 'bg-violet-600 hover:bg-violet-500 text-white shadow-md'
+                            : 'bg-slate-800 text-slate-550 cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        {isSavingDraft ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                         <span>Save Draft</span>
                       </button>
                     </div>
-                    <textarea
-                      value={editedBody}
-                      onChange={(e) => setEditedBody(e.target.value)}
-                      className="w-full bg-[#0d1222]/80 border border-slate-800 text-slate-200 rounded p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none resize-y min-h-[140px] font-sans"
-                      placeholder="Type message draft here..."
-                    />
                   </div>
-
+ 
                   {selectedTask.channel === 'WHATSAPP' ? (
                     <div className="text-[10px] text-emerald-400/90 bg-emerald-500/5 border border-emerald-500/10 px-2 py-1 rounded flex items-center gap-1">
                       <MessageSquare className="h-3.5 w-3.5 flex-shrink-0 text-emerald-400" />
@@ -411,7 +545,7 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                       <span>Manual demo send — logged only</span>
                     </div>
                   )}
-
+ 
                   {selectedTask.channel === 'WHATSAPP' && !isValidPhoneNumber(selectedTask.recipient) && (
                     <div className="text-[10px] text-rose-400 bg-rose-500/5 border border-rose-500/10 px-2 py-1 rounded flex items-center gap-1">
                       <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0 text-rose-400" />
@@ -419,21 +553,21 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                     </div>
                   )}
                 </div>
-
+ 
                 <div className="flex gap-2 border-t border-slate-800 pt-3">
                   <button
                     onClick={() => handleAction(selectedTask, 'skipped')}
-                    className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-350 rounded-lg font-bold text-xs transition-colors cursor-pointer"
+                    className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-355 rounded-lg font-bold text-xs transition-colors cursor-pointer"
                   >
                     Skip Step
                   </button>
                   {selectedTask.channel === 'WHATSAPP' ? (
                     <>
                       <button
-                        disabled={!isValidPhoneNumber(selectedTask.recipient)}
-                        onClick={() => handleOpenWhatsApp(selectedTask, editedBody)}
+                        disabled={!isValidPhoneNumber(selectedTask.recipient) || !draftText.trim()}
+                        onClick={() => handleOpenWhatsAppAndAutoSave(selectedTask, draftText)}
                         className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors text-center cursor-pointer ${
-                          isValidPhoneNumber(selectedTask.recipient)
+                          isValidPhoneNumber(selectedTask.recipient) && draftText.trim()
                             ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                             : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
                         }`}
@@ -441,10 +575,10 @@ export const PendingFollowUpsPanel: React.FC<PendingFollowUpsPanelProps> = ({
                         Open WhatsApp
                       </button>
                       <button
-                        disabled={!isValidPhoneNumber(selectedTask.recipient)}
-                        onClick={() => handleAction(selectedTask, 'approved', editedBody)}
+                        disabled={!isValidPhoneNumber(selectedTask.recipient) || !draftText.trim()}
+                        onClick={() => handleAction(selectedTask, 'approved', draftText)}
                         className={`flex-1 py-2 rounded-lg font-bold text-xs transition-colors shadow-md cursor-pointer ${
-                          isValidPhoneNumber(selectedTask.recipient)
+                          isValidPhoneNumber(selectedTask.recipient) && draftText.trim()
                             ? 'bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-500 hover:to-fuchsia-400 text-white'
                             : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
                         }`}
