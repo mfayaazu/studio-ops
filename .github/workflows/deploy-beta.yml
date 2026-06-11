@@ -82,6 +82,18 @@ jobs:
           tar -czf ../deploy-package.tar.gz .
 
       # 4. Upload Assets to EC2
+      - name: Prepare EC2 folders
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            mkdir -p /home/${{ secrets.EC2_USERNAME }}/studio-ops-temp
+            mkdir -p /home/${{ secrets.EC2_USERNAME }}/studio-ops
+            chmod 755 /home/${{ secrets.EC2_USERNAME }}/studio-ops-temp
+            chmod 755 /home/${{ secrets.EC2_USERNAME }}/studio-ops
+
       - name: Copy deployment package to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
