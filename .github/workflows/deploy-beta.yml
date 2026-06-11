@@ -37,8 +37,6 @@ jobs:
           npm ci
 
       - name: Build Frontend
-        env:
-          VITE_API_URL: https://beta.infinitoshutters.se
         run: |
           cd frontend
           npm run build

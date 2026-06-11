@@ -46,9 +46,7 @@ export async function updateUserPermissions(
  */
 export async function logout(): Promise<void> {
   try {
-    const baseUrl = import.meta.env.VITE_API_URL || '';
-    const url = `${baseUrl}/api/auth/logout`;
-    const response = await fetch(url, {
+    const response = await fetch('/api/auth/logout', {
       method: "POST",
       credentials: "include",
     });
