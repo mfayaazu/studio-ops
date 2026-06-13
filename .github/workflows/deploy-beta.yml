@@ -75,7 +75,7 @@ jobs:
           # Copy config and scripts
           cp docker-compose.beta.yml deploy/
           cp scripts/deploy/fetch-ssm-env.sh deploy/scripts/deploy/
-          cp scripts/deploy/deploy-ec2.sh deploy/scripts/deploy/
+          cp scripts/deploy/run-deploy.sh deploy/scripts/deploy/
 
           # Compress deployment package
           cd deploy
@@ -88,37 +88,41 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # 5. Upload Deployment Bundle to S3
-      - name: Upload deployment package to S3
+      # 5. Upload Assets to AWS S3
+      - name: Upload bundle to S3
         run: |
           aws s3 cp deploy-package.tar.gz s3://${{ secrets.DEPLOY_BUCKET }}/deployments/${{ github.sha }}/deploy-package.tar.gz
 
-      # 6. Execute Remote Deployment via SSM Run Command
-      - name: Execute remote deployment via SSM
+      # 6. Trigger EC2 Deployment via SSM Run Command
+      - name: Trigger EC2 Deployment via SSM Run Command
         run: |
-          COMMAND_ID=$(aws ssm send-command \
+          CMD_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
-            --parameters 'commands=[
-              "mkdir -p /home/ubuntu/studio-ops",
-              "mkdir -p /home/ubuntu/studio-ops-temp",
+            --comment "Deploying commit ${{ github.sha }} to beta environment" \
+            --parameters '{"commands":[
+              "mkdir -p /home/ubuntu/studio-ops /home/ubuntu/studio-ops-temp",
               "aws s3 cp s3://${{ secrets.DEPLOY_BUCKET }}/deployments/${{ github.sha }}/deploy-package.tar.gz /home/ubuntu/studio-ops-temp/deploy-package.tar.gz",
               "cd /home/ubuntu/studio-ops",
               "tar -xzf /home/ubuntu/studio-ops-temp/deploy-package.tar.gz -C .",
               "rm -f /home/ubuntu/studio-ops-temp/deploy-package.tar.gz",
-              "chmod +x scripts/deploy/deploy-ec2.sh",
-              "./scripts/deploy/deploy-ec2.sh"
-            ]' \
+              "chmod +x scripts/deploy/run-deploy.sh",
+              "./scripts/deploy/run-deploy.sh"
+            ]}' \
             --query "Command.CommandId" \
             --output text)
           
-          echo "SSM Command ID: $COMMAND_ID"
-          
-          # Poll command invocation status
-          echo "Polling SSM Command execution status..."
+          echo "SSM Run Command triggered successfully."
+          echo "Command ID: $CMD_ID"
+          echo "CMD_ID=$CMD_ID" >> $GITHUB_ENV
+
+      # 7. Poll SSM Command Execution Status and Output Logs
+      - name: Poll SSM Command Execution Status
+        run: |
+          echo "Polling status for SSM Command ID: ${{ env.CMD_ID }}"
           while true; do
             STATUS=$(aws ssm get-command-invocation \
-              --command-id "$COMMAND_ID" \
+              --command-id "${{ env.CMD_ID }}" \
               --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
               --query "Status" \
               --output text 2>/dev/null || echo "Pending")
@@ -126,38 +130,32 @@ jobs:
             echo "Current status: $STATUS"
             
             if [ "$STATUS" = "Success" ]; then
-              echo "Deployment successful!"
+              echo "SSM Deployment Command completed successfully!"
+              echo "=== Command Execution Standard Output ==="
               aws ssm get-command-invocation \
-                --command-id "$COMMAND_ID" \
+                --command-id "${{ env.CMD_ID }}" \
                 --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
                 --query "StandardOutputContent" \
                 --output text
               break
             elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
-              echo "Deployment failed with status: $STATUS"
-              echo "=== Standard Error Logs ==="
+              echo "SSM Deployment Command FAILED with status: $STATUS"
+              
+              echo "=== Command Execution Standard Output ==="
               aws ssm get-command-invocation \
-                --command-id "$COMMAND_ID" \
-                --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
-                --query "StandardErrorContent" \
-                --output text
-              echo "=== Standard Output Logs ==="
-              aws ssm get-command-invocation \
-                --command-id "$COMMAND_ID" \
+                --command-id "${{ env.CMD_ID }}" \
                 --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
                 --query "StandardOutputContent" \
                 --output text
+              
+              echo "=== Command Execution Standard Error ==="
+              aws ssm get-command-invocation \
+                --command-id "${{ env.CMD_ID }}" \
+                --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+                --query "StandardErrorContent" \
+                --output text
+              
               exit 1
             fi
             sleep 10
           done
-
-      # 7. External Verification
-      - name: Verify external domain health check
-        run: |
-          echo "Verifying external domain health check..."
-          if curl -s -f http://beta.infinotiveitkonsult.se/api/health > /dev/null; then
-            echo "External Health Check PASSED: http://beta.infinotiveitkonsult.se/api/health is UP."
-          else
-            echo "External Health Check WARNING: Could not access health check externally."
-          fi
