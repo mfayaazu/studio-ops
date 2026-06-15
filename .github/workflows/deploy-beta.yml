@@ -8,6 +8,7 @@ on:
       - 'backend/**'
       - 'frontend/**'
       - 'docker-compose.beta.yml'
+      - 'Caddyfile.beta'
       - 'scripts/deploy/**'
       - '.github/workflows/deploy-beta.yml'
   workflow_dispatch:
@@ -74,6 +75,7 @@ jobs:
 
           # Copy config and scripts
           cp docker-compose.beta.yml deploy/
+          cp Caddyfile.beta deploy/
           cp scripts/deploy/fetch-ssm-env.sh deploy/scripts/deploy/
           cp scripts/deploy/run-deploy.sh deploy/scripts/deploy/
 
