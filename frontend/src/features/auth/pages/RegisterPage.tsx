@@ -19,6 +19,19 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onBackToLogin }) => 
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  const handleBackToLogin = () => {
+    setIsSuccess(false);
+    setStudioName('');
+    setOwnerName('');
+    setEmail('');
+    setPassword('');
+    setPhone('');
+    setCountry('');
+    setError(null);
+    setValidationError(null);
+    onBackToLogin();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -85,10 +98,10 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onBackToLogin }) => 
           </div>
 
           <button
-            onClick={onBackToLogin}
+            onClick={handleBackToLogin}
             className="w-full bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold py-2.5 rounded-xl transition-all cursor-pointer"
           >
-            Back to Sign In
+            Proceed to Sign In
           </button>
         </div>
       </div>
@@ -275,7 +288,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onBackToLogin }) => 
 
             <button
               type="button"
-              onClick={onBackToLogin}
+              onClick={handleBackToLogin}
               disabled={isLoading}
               className="w-full text-slate-400 hover:text-white text-xs font-medium py-2 text-center transition-colors cursor-pointer block mt-1"
             >

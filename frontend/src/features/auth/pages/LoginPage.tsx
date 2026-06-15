@@ -173,34 +173,36 @@ export const LoginPage: React.FC = () => {
           </form>
 
           {/* Development Hints / Seed Credentials Helper */}
-          <div className="mt-8 pt-6 border-t border-slate-800/80">
-            <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl p-4">
-              <span className="text-[11px] font-bold text-violet-400 uppercase tracking-wider block mb-2">
-                Development Environment Check
-              </span>
-              <p className="text-[11px] text-slate-400 leading-relaxed mb-3">
-                This system runs Phase 1 Local Session Authentication. Use the seed Owner credentials to sign in and begin.
-              </p>
-              <button
-                type="button"
-                onClick={handleFillDevCredentials}
-                disabled={isLoading}
-                className="w-full bg-[#090d16] hover:bg-slate-800/50 text-slate-300 hover:text-white border border-slate-800 rounded-lg py-2 px-3 text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-              >
-                <span>Autofill Seed Owner Credentials</span>
-              </button>
-              <div className="mt-2.5 flex flex-col gap-1 text-[10px] text-slate-500 font-mono">
-                <div className="flex justify-between">
-                  <span>Email:</span>
-                  <span className="text-slate-400">owner@studioops.local</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Password:</span>
-                  <span className="text-slate-400">ChangeMe123!</span>
+          {import.meta.env.DEV && (
+            <div className="mt-8 pt-6 border-t border-slate-800/80">
+              <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl p-4">
+                <span className="text-[11px] font-bold text-violet-400 uppercase tracking-wider block mb-2">
+                  Development Environment Check
+                </span>
+                <p className="text-[11px] text-slate-400 leading-relaxed mb-3">
+                  This system runs Phase 1 Local Session Authentication. Use the seed Owner credentials to sign in and begin.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleFillDevCredentials}
+                  disabled={isLoading}
+                  className="w-full bg-[#090d16] hover:bg-slate-800/50 text-slate-300 hover:text-white border border-slate-800 rounded-lg py-2 px-3 text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <span>Autofill Seed Owner Credentials</span>
+                </button>
+                <div className="mt-2.5 flex flex-col gap-1 text-[10px] text-slate-500 font-mono">
+                  <div className="flex justify-between">
+                    <span>Email:</span>
+                    <span className="text-slate-400">owner@studioops.local</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Password:</span>
+                    <span className="text-slate-400">ChangeMe123!</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
