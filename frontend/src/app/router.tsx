@@ -26,6 +26,8 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       if (validRoutes.includes(hash)) {
         setCurrentRoute(hash);
+      } else if (!hash) {
+        setCurrentRoute('dashboard');
       }
     };
 

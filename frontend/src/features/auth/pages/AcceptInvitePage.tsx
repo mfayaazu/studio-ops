@@ -10,6 +10,14 @@ export const AcceptInvitePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const handleProceedToLogin = () => {
+    setSuccess(false);
+    setPassword('');
+    setConfirmPassword('');
+    setError(null);
+    window.location.hash = '#/';
+  };
+
   useEffect(() => {
     const getQueryParam = (name: string): string | null => {
       const rawHash = window.location.hash;
@@ -92,7 +100,7 @@ export const AcceptInvitePage: React.FC = () => {
               </div>
               <button
                 type="button"
-                onClick={() => { window.location.hash = '#/'; }}
+                onClick={handleProceedToLogin}
                 className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-sm font-semibold py-3 rounded-xl shadow-lg hover:shadow-violet-500/20 transition-all cursor-pointer"
               >
                 Proceed to Login
@@ -179,7 +187,7 @@ export const AcceptInvitePage: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => { window.location.hash = '#/'; }}
+                onClick={handleProceedToLogin}
                 disabled={isLoading}
                 className="w-full text-slate-450 hover:text-white text-xs font-semibold py-2 text-center transition-colors cursor-pointer block mt-3"
               >
