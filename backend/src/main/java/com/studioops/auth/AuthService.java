@@ -35,6 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuthService.class);
+
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
     private final StudioRepository studioRepository;
@@ -204,7 +206,11 @@ public class AuthService {
         user.setPasswordResetTokenExpiresAt(Instant.now().plus(java.time.Duration.ofHours(1))); // 1 hour expiration
         userRepository.save(user);
 
-        emailService.sendPasswordResetEmail(user, token);
+        try {
+            emailService.sendPasswordResetEmail(user, token);
+        } catch (Exception e) {
+            log.warn("Failed to send password reset email to {}: {}", user.getEmail(), e.getMessage());
+        }
     }
 
     @Transactional

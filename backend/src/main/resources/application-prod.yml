@@ -34,6 +34,7 @@ studioops:
   email:
     enabled: ${STUDIOOPS_EMAIL_ENABLED:false}
     from: ${STUDIOOPS_EMAIL_FROM:no-reply@studioops.photo}
+    from-name: ${STUDIOOPS_EMAIL_FROM_NAME:StudioOps Beta}
   frontend-url: ${STUDIOOPS_FRONTEND_URL:https://beta.studioops.photo}
   platform-admin:
     notifications:

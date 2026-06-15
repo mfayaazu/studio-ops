@@ -25,6 +25,10 @@ DB_PASSWORD=$(get_param "/studio-ops/beta/db-password")
 SPRING_MAIL_USERNAME=$(get_param "/studio-ops/beta/spring-mail-username")
 SPRING_MAIL_PASSWORD=$(get_param "/studio-ops/beta/spring-mail-password")
 EMAIL_FROM=$(get_param "/studio-ops/beta/email-from")
+EMAIL_FROM_NAME=$(get_param "/studio-ops/beta/email-from-name")
+if [ -z "$EMAIL_FROM_NAME" ] || [[ "$EMAIL_FROM_NAME" == *"MISSING_VALUE"* ]]; then
+  EMAIL_FROM_NAME="StudioOps Beta"
+fi
 FRONTEND_URL=$(get_param "/studio-ops/beta/frontend-url")
 CORS_ALLOWED_ORIGINS=$(get_param "/studio-ops/beta/cors-allowed-origins")
 PLATFORM_ADMIN_EMAILS=$(get_param "/studio-ops/beta/platform-admin-emails")
@@ -42,6 +46,7 @@ DB_PASSWORD=$DB_PASSWORD
 SPRING_MAIL_USERNAME=$SPRING_MAIL_USERNAME
 SPRING_MAIL_PASSWORD=$SPRING_MAIL_PASSWORD
 EMAIL_FROM=$EMAIL_FROM
+EMAIL_FROM_NAME=$EMAIL_FROM_NAME
 EMAIL_ENABLED=$EMAIL_ENABLED
 
 # Application Settings

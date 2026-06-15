@@ -27,11 +27,17 @@ public class EmailService {
     @Value("${studioops.email.from:no-reply@studioops.photo}")
     private String fromAddress;
 
+    @Value("${studioops.email.from-name:StudioOps Beta}")
+    private String fromName;
+
     @Value("${studioops.frontend-url:http://localhost:5173}")
     private String frontendUrl;
 
     @Value("${studioops.platform-admin.notifications.enabled:false}")
     private boolean platformAdminNotificationsEnabled;
+
+    @Value("${studioops.platform-admin.emails:a.fayaaz@gmail.com}")
+    private java.util.List<String> platformAdminEmails;
 
     @Value("${studioops.platform-admin.email:}")
     private String platformAdminEmail;
@@ -41,8 +47,12 @@ public class EmailService {
         this.emailLogService = emailLogService;
     }
 
-    public void sendEmployeeInviteEmail(User user, String studioName, String inviteToken) {
-        String subject = "Invitation to join " + studioName + " on StudioOps";
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void sendEmployeeInviteEmail(User user, String studioName, String inviteToken, String replyToEmail) {
+        String subject = "You have been invited to " + studioName + " on StudioOps";
         String inviteUrl = frontendUrl + "/#/accept-invite?token=" + inviteToken;
         
         String htmlContent = "<div style=\"font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0b0f19; color: #f8fafc; border-radius: 8px;\">" +
@@ -59,7 +69,7 @@ public class EmailService {
                 "<p style=\"font-size: 11px; color: #64748b;\">This invitation link will expire in 48 hours.</p>" +
                 "</div>";
 
-        sendEmail(user, "EMPLOYEE_INVITE", subject, htmlContent);
+        sendEmail(user, "EMPLOYEE_INVITE", subject, htmlContent, replyToEmail);
     }
 
     public void sendPasswordResetEmail(User user, String resetToken) {
@@ -80,10 +90,10 @@ public class EmailService {
                 "<p style=\"font-size: 11px; color: #64748b;\">This password reset link will expire in 1 hour. If you did not request this, you can safely ignore this email.</p>" +
                 "</div>";
 
-        sendEmail(user, "PASSWORD_RESET", subject, htmlContent);
+        sendEmail(user, "PASSWORD_RESET", subject, htmlContent, fromAddress);
     }
 
-    private void sendEmail(User user, String emailType, String subject, String body) {
+    private void sendEmail(User user, String emailType, String subject, String body, String replyTo) {
         SystemEmailLog emailLog = new SystemEmailLog();
         emailLog.setStudioId(user.getStudioId());
         emailLog.setUserId(user.getId());
@@ -93,8 +103,7 @@ public class EmailService {
 
         if (!enabled) {
             log.info("Email service is disabled. Skipping outbound email type: {} to recipient: {}", emailType, user.getEmail());
-            emailLog.setStatus("SENT");
-            emailLog.setSentAt(Instant.now());
+            emailLog.setStatus("SKIPPED");
             try {
                 emailLogService.saveLog(emailLog);
             } catch (Exception dbEx) {
@@ -108,10 +117,15 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             
-            helper.setFrom(fromAddress);
+            helper.setFrom(fromAddress, fromName);
             helper.setTo(user.getEmail());
             helper.setSubject(subject);
             helper.setText(body, true);
+            if (replyTo != null && !replyTo.isBlank()) {
+                helper.setReplyTo(replyTo);
+            } else {
+                helper.setReplyTo(fromAddress);
+            }
 
             mailSender.send(message);
 
@@ -137,17 +151,30 @@ public class EmailService {
     }
 
     public void sendPlatformBetaSignupNotification(Studio studio, User owner) {
-        // Future: replace email-only notification with StudioOps Platform Admin Console and subscription approval workflow.
         if (!platformAdminNotificationsEnabled) {
             log.info("Platform admin notifications are disabled. Skipping beta signup notification for studio: {}", studio.getName());
             return;
         }
-        if (platformAdminEmail == null || platformAdminEmail.isBlank()) {
-            log.warn("Platform admin notification email is not configured. Skipping beta signup notification for studio: {}", studio.getName());
+
+        java.util.List<String> recipientsList = new java.util.ArrayList<>();
+        if (platformAdminEmail != null && !platformAdminEmail.isBlank()) {
+            recipientsList.add(platformAdminEmail.trim());
+        } else if (platformAdminEmails != null) {
+            for (String email : platformAdminEmails) {
+                if (email != null && !email.isBlank()) {
+                    recipientsList.add(email.trim());
+                }
+            }
+        }
+
+        if (recipientsList.isEmpty()) {
+            log.warn("No platform admin notification emails found in config. Skipping beta signup notification for studio: {}", studio.getName());
             return;
         }
 
-        String subject = "New StudioOps Beta Signup Request: " + studio.getName();
+        String[] recipients = recipientsList.toArray(new String[0]);
+
+        String subject = "New StudioOps beta access request: " + studio.getName();
         
         DateTimeFormatter formatter = DateTimeFormatter
                 .ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -178,54 +205,56 @@ public class EmailService {
                 "</p>" +
                 "</div>";
 
-        SystemEmailLog emailLog = new SystemEmailLog();
-        emailLog.setStudioId(studio.getId());
-        emailLog.setUserId(null);
-        emailLog.setRecipient(platformAdminEmail);
-        emailLog.setEmailType("PLATFORM_BETA_SIGNUP_NOTIFICATION");
-        emailLog.setSubject(subject);
+        for (String recipient : recipients) {
+            SystemEmailLog emailLog = new SystemEmailLog();
+            emailLog.setStudioId(studio.getId());
+            emailLog.setUserId(null);
+            emailLog.setRecipient(recipient);
+            emailLog.setEmailType("PLATFORM_BETA_SIGNUP_NOTIFICATION");
+            emailLog.setSubject(subject);
 
-        if (!enabled) {
-            log.info("Email service is disabled. Skipping outbound platform admin email to recipient: {}", platformAdminEmail);
-            emailLog.setStatus("SENT");
-            emailLog.setSentAt(Instant.now());
+            if (!enabled) {
+                log.info("Email service is disabled. Skipping outbound platform admin email to recipient: {}", recipient);
+                emailLog.setStatus("SKIPPED");
+                try {
+                    emailLogService.saveLog(emailLog);
+                } catch (Exception dbEx) {
+                    log.error("Failed to write platform system email audit log to database: {}", dbEx.getMessage());
+                }
+                continue;
+            }
+
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                
+                helper.setFrom(fromAddress, fromName);
+                helper.setTo(recipient);
+                helper.setSubject(subject);
+                helper.setText(htmlContent, true);
+                helper.setReplyTo(fromAddress);
+
+                mailSender.send(message);
+
+                emailLog.setStatus("SENT");
+                emailLog.setSentAt(Instant.now());
+                log.info("Outbound platform system email sent successfully. Recipient: {}", recipient);
+            } catch (Exception e) {
+                log.warn("Failed to send platform admin beta signup notification. Recipient: {}, Error: {}", recipient, e.getMessage());
+                emailLog.setStatus("FAILED");
+                emailLog.setErrorMessage(e.getMessage());
+            }
+
             try {
                 emailLogService.saveLog(emailLog);
             } catch (Exception dbEx) {
                 log.error("Failed to write platform system email audit log to database: {}", dbEx.getMessage());
             }
-            return;
-        }
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            
-            helper.setFrom(fromAddress);
-            helper.setTo(platformAdminEmail);
-            helper.setSubject(subject);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
-
-            emailLog.setStatus("SENT");
-            emailLog.setSentAt(Instant.now());
-            log.info("Outbound platform system email sent successfully. Recipient: {}", platformAdminEmail);
-        } catch (Exception e) {
-            log.warn("Failed to send platform admin beta signup notification. Recipient: {}, Error: {}", platformAdminEmail, e.getMessage());
-            emailLog.setStatus("FAILED");
-            emailLog.setErrorMessage(e.getMessage());
-        }
-
-        try {
-            emailLogService.saveLog(emailLog);
-        } catch (Exception dbEx) {
-            log.error("Failed to write platform system email audit log to database: {}", dbEx.getMessage());
         }
     }
 
     public void sendStudioApprovedEmail(User owner, String studioName) {
-        String subject = "Your StudioOps Beta Workspace is Approved!";
+        String subject = "Your StudioOps beta access has been approved";
         String workspaceUrl = frontendUrl + "/#/login";
 
         String htmlContent = "<div style=\"font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0b0f19; color: #f8fafc; border-radius: 8px;\">" +
@@ -242,6 +271,28 @@ public class EmailService {
                 "<p style=\"font-size: 11px; color: #64748b;\">Thank you for joining the StudioOps beta program!</p>" +
                 "</div>";
 
-        sendEmail(owner, "STUDIO_APPROVED", subject, htmlContent);
+        sendEmail(owner, "STUDIO_APPROVED", subject, htmlContent, fromAddress);
+    }
+
+    public void sendStudioRejectedEmail(User owner, String studioName) {
+        String subject = "Your StudioOps beta request update";
+        String loginUrl = frontendUrl + "/#/login";
+
+        String htmlContent = "<div style=\"font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0b0f19; color: #f8fafc; border-radius: 8px;\">" +
+                "<h2 style=\"color: #f87171;\">Beta Request Update</h2>" +
+                "<p>Hello " + (owner.getDisplayName() != null ? owner.getDisplayName() : "") + ",</p>" +
+                "<p>Thank you for your interest in StudioOps. We have reviewed your request for the beta workspace <strong>" + studioName + "</strong>.</p>" +
+                "<p>Unfortunately, we are unable to approve your beta access request at this time.</p>" +
+                "<p>If you have any questions, you can contact us at " + fromAddress + " or visit the platform at:</p>" +
+                "<div style=\"margin: 30px 0; text-align: center;\">" +
+                "<a href=\"" + loginUrl + "\" style=\"background-color: #374151; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;\">Go to StudioOps</a>" +
+                "</div>" +
+                "<p style=\"font-size: 12px; color: #94a3b8;\">If the button above does not work, copy and paste this link in your browser:</p>" +
+                "<p style=\"font-size: 12px; color: #a78bfa; word-break: break-all;\">" + loginUrl + "</p>" +
+                "<hr style=\"border: none; border-top: 1px solid #1e293b; margin: 20px 0;\">" +
+                "<p style=\"font-size: 11px; color: #64748b;\">Thank you for your time.</p>" +
+                "</div>";
+
+        sendEmail(owner, "STUDIO_REJECTED", subject, htmlContent, fromAddress);
     }
 }

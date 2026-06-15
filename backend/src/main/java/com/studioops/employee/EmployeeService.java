@@ -123,14 +123,24 @@ public class EmployeeService {
                 String studioName = studioRepository.findById(studioId)
                         .map(com.studioops.studio.Studio::getName)
                         .orElse("StudioOps");
-                try {
-                    emailService.sendEmployeeInviteEmail(savedUser, studioName, savedUser.getInviteToken());
-                } catch (Exception e) {
-                    warning = "Employee login created, but invite email could not be sent.";
+                String replyToEmail = null;
+                List<User> owners = userRepository.findByStudioIdAndRole(studioId, UserRole.OWNER);
+                if (!owners.isEmpty()) {
+                    replyToEmail = owners.get(0).getEmail();
+                }
+                
+                if (!emailService.isEnabled()) {
+                    warning = "Employee created. Email sending is disabled.";
+                } else {
+                    try {
+                        emailService.sendEmployeeInviteEmail(savedUser, studioName, savedUser.getInviteToken(), replyToEmail);
+                        warning = "Employee created. Invite email sent.";
+                    } catch (Exception e) {
+                        warning = "Employee created, but invite email could not be sent.";
+                    }
                 }
             }
         }
-
         Employee saved = employeeRepository.save(employee);
         EmployeeResponse response = mapToResponse(saved);
         if (warning != null) {
@@ -236,10 +246,21 @@ public class EmployeeService {
                     String studioName = studioRepository.findById(employee.getStudioId())
                             .map(com.studioops.studio.Studio::getName)
                             .orElse("StudioOps");
-                    try {
-                        emailService.sendEmployeeInviteEmail(savedUser, studioName, savedUser.getInviteToken());
-                    } catch (Exception e) {
-                        warning = "Employee login updated, but invite email could not be sent.";
+                    String replyToEmail = null;
+                    List<User> owners = userRepository.findByStudioIdAndRole(employee.getStudioId(), UserRole.OWNER);
+                    if (!owners.isEmpty()) {
+                        replyToEmail = owners.get(0).getEmail();
+                    }
+
+                    if (!emailService.isEnabled()) {
+                        warning = "Employee created. Email sending is disabled.";
+                    } else {
+                        try {
+                            emailService.sendEmployeeInviteEmail(savedUser, studioName, savedUser.getInviteToken(), replyToEmail);
+                            warning = "Employee created. Invite email sent.";
+                        } catch (Exception e) {
+                            warning = "Employee created, but invite email could not be sent.";
+                        }
                     }
                 } else {
                     userRepository.save(linkedUser);
@@ -274,10 +295,21 @@ public class EmployeeService {
                     String studioName = studioRepository.findById(employee.getStudioId())
                             .map(com.studioops.studio.Studio::getName)
                             .orElse("StudioOps");
-                    try {
-                        emailService.sendEmployeeInviteEmail(savedUser, studioName, savedUser.getInviteToken());
-                    } catch (Exception e) {
-                        warning = "Employee login created, but invite email could not be sent.";
+                    String replyToEmail = null;
+                    List<User> owners = userRepository.findByStudioIdAndRole(employee.getStudioId(), UserRole.OWNER);
+                    if (!owners.isEmpty()) {
+                        replyToEmail = owners.get(0).getEmail();
+                    }
+
+                    if (!emailService.isEnabled()) {
+                        warning = "Employee created. Email sending is disabled.";
+                    } else {
+                        try {
+                            emailService.sendEmployeeInviteEmail(savedUser, studioName, savedUser.getInviteToken(), replyToEmail);
+                            warning = "Employee created. Invite email sent.";
+                        } catch (Exception e) {
+                            warning = "Employee created, but invite email could not be sent.";
+                        }
                     }
                 }
             }

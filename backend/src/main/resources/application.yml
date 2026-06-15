@@ -33,6 +33,7 @@ studioops:
   email:
     enabled: false
     from: no-reply@studioops.photo
+    from-name: StudioOps Beta
   frontend-url: ${STUDIOOPS_FRONTEND_URL:http://localhost:5173}
   cors:
     allowed-origins: ${STUDIOOPS_CORS_ALLOWED_ORIGINS:http://localhost:5173}

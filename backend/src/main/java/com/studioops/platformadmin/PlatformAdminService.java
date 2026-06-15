@@ -112,7 +112,6 @@ public class PlatformAdminService {
 
         return mapToPlatformStudioResponse(saved);
     }
-
     public PlatformStudioResponse rejectStudio(UUID studioId) {
         checkPlatformAdminAccess();
         Studio studio = studioRepository.findById(studioId)
@@ -122,6 +121,20 @@ public class PlatformAdminService {
         // Future: replace email-only notification with StudioOps Platform Admin Console and subscription approval workflow.
         studio.setStatus(StudioStatus.SUSPENDED);
         Studio saved = studioRepository.save(studio);
+
+        // Send email to owner
+        List<User> owners = userRepository.findByStudioIdAndRole(studioId, UserRole.OWNER);
+        if (!owners.isEmpty()) {
+            User owner = owners.get(0);
+            try {
+                emailService.sendStudioRejectedEmail(owner, studio.getName());
+            } catch (Exception e) {
+                log.warn("Failed to send rejection email to owner: {}. Error: {}", owner.getEmail(), e.getMessage());
+            }
+        } else {
+            log.warn("No owner user found for studio: {}. Skipping rejection email.", studio.getName());
+        }
+
         return mapToPlatformStudioResponse(saved);
     }
 

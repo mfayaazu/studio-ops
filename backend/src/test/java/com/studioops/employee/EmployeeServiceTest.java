@@ -159,6 +159,7 @@ class EmployeeServiceTest {
         savedUser.setRole(UserRole.EDITOR);
         savedUser.setInviteToken("my-test-token");
 
+        when(emailService.isEnabled()).thenReturn(true);
         when(employeeRepository.findByEmail("bob@example.com")).thenReturn(Optional.empty());
         when(userRepository.findByEmail("bob.login@example.com")).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
@@ -175,9 +176,9 @@ class EmployeeServiceTest {
         assertTrue(response.isLoginEnabled());
         assertEquals("bob.login@example.com", response.getLoginEmail());
         assertEquals("EDITOR", response.getUserRole());
-        assertNull(response.getInviteWarning());
+        assertEquals("Employee created. Invite email sent.", response.getInviteWarning());
         verify(userRepository, times(1)).save(any(User.class));
-        verify(emailService, times(1)).sendEmployeeInviteEmail(eq(savedUser), anyString(), eq("my-test-token"));
+        verify(emailService, times(1)).sendEmployeeInviteEmail(eq(savedUser), anyString(), eq("my-test-token"), any());
     }
 
     @Test
@@ -204,6 +205,7 @@ class EmployeeServiceTest {
         savedUser.setRole(UserRole.EDITOR);
         savedUser.setInviteToken("my-test-token");
 
+        when(emailService.isEnabled()).thenReturn(true);
         when(employeeRepository.findByEmail("bob@example.com")).thenReturn(Optional.empty());
         when(userRepository.findByEmail("bob.login@example.com")).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
@@ -215,15 +217,15 @@ class EmployeeServiceTest {
         when(userRepository.findById(savedUser.getId())).thenReturn(Optional.of(savedUser));
 
         doThrow(new RuntimeException("SMTP Server Unavailable"))
-                .when(emailService).sendEmployeeInviteEmail(any(User.class), anyString(), anyString());
+                .when(emailService).sendEmployeeInviteEmail(any(User.class), anyString(), anyString(), any());
 
         EmployeeResponse response = employeeService.createEmployee(request);
 
         assertNotNull(response);
         assertTrue(response.isLoginEnabled());
-        assertEquals("Employee login created, but invite email could not be sent.", response.getInviteWarning());
+        assertEquals("Employee created, but invite email could not be sent.", response.getInviteWarning());
         verify(userRepository, times(1)).save(any(User.class));
-        verify(emailService, times(1)).sendEmployeeInviteEmail(eq(savedUser), anyString(), eq("my-test-token"));
+        verify(emailService, times(1)).sendEmployeeInviteEmail(eq(savedUser), anyString(), eq("my-test-token"), any());
     }
 
     @Test
@@ -263,7 +265,7 @@ class EmployeeServiceTest {
 
         assertNotNull(response);
         verify(userRepository, times(1)).save(any(User.class));
-        verify(emailService, never()).sendEmployeeInviteEmail(any(User.class), anyString(), anyString());
+        verify(emailService, never()).sendEmployeeInviteEmail(any(User.class), anyString(), anyString(), any());
     }
 
     @Test
@@ -415,7 +417,7 @@ class EmployeeServiceTest {
             u.getRole().equals(UserRole.EDITOR) &&
             u.getPasswordHash().equals("encoded_newPassword")
         ));
-        verify(emailService, never()).sendEmployeeInviteEmail(any(User.class), anyString(), anyString());
+        verify(emailService, never()).sendEmployeeInviteEmail(any(User.class), anyString(), anyString(), any());
     }
 
     @Test
@@ -442,6 +444,7 @@ class EmployeeServiceTest {
         existingUser.setEmail("jane.old@example.com");
         existingUser.setRole(UserRole.EMPLOYEE);
 
+        when(emailService.isEnabled()).thenReturn(true);
         when(employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(existing));
         when(employeeRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(existing));
         when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
@@ -456,8 +459,8 @@ class EmployeeServiceTest {
         EmployeeResponse response = employeeService.updateEmployee(id, request);
 
         assertNotNull(response);
-        assertNull(response.getInviteWarning());
-        verify(emailService, times(1)).sendEmployeeInviteEmail(any(User.class), anyString(), eq("my-update-token"));
+        assertEquals("Employee created. Invite email sent.", response.getInviteWarning());
+        verify(emailService, times(1)).sendEmployeeInviteEmail(any(User.class), anyString(), eq("my-update-token"), any());
     }
 
     @Test
@@ -484,6 +487,7 @@ class EmployeeServiceTest {
         existingUser.setEmail("jane.old@example.com");
         existingUser.setRole(UserRole.EMPLOYEE);
 
+        when(emailService.isEnabled()).thenReturn(true);
         when(employeeRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(existing));
         when(employeeRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(existing));
         when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
@@ -496,13 +500,13 @@ class EmployeeServiceTest {
         });
 
         doThrow(new RuntimeException("SMTP Failure"))
-                .when(emailService).sendEmployeeInviteEmail(any(User.class), anyString(), anyString());
+                .when(emailService).sendEmployeeInviteEmail(any(User.class), anyString(), anyString(), any());
 
         EmployeeResponse response = employeeService.updateEmployee(id, request);
 
         assertNotNull(response);
-        assertEquals("Employee login updated, but invite email could not be sent.", response.getInviteWarning());
-        verify(emailService, times(1)).sendEmployeeInviteEmail(any(User.class), anyString(), eq("my-update-token"));
+        assertEquals("Employee created, but invite email could not be sent.", response.getInviteWarning());
+        verify(emailService, times(1)).sendEmployeeInviteEmail(any(User.class), anyString(), eq("my-update-token"), any());
     }
 
     @Test

@@ -60,6 +60,23 @@ class AuthControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        userRepository.findByEmail("notify-enabled@test.local").ifPresent(u -> {
+            userRepository.delete(u);
+            studioRepository.deleteById(u.getStudioId());
+        });
+        userRepository.findByEmail("notify-disabled@test.local").ifPresent(u -> {
+            userRepository.delete(u);
+            studioRepository.deleteById(u.getStudioId());
+        });
+        userRepository.findByEmail("mail-fail@test.local").ifPresent(u -> {
+            userRepository.delete(u);
+            studioRepository.deleteById(u.getStudioId());
+        });
+        userRepository.findByEmail("onboarding@test.local").ifPresent(u -> {
+            userRepository.delete(u);
+            studioRepository.deleteById(u.getStudioId());
+        });
+
         testStudio = new Studio();
         testStudio.setName("Test Auth Studio");
         testStudio.setSlug("test-auth-studio");
