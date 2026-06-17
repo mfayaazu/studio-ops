@@ -17,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,6 +33,9 @@ public class EmployeeService {
     private final TenantContext tenantContext;
     private final com.studioops.user.PermissionService permissionService;
     private final com.studioops.email.EmailService emailService;
+
+    @Value("${studioops.ses-sandbox-verification.enabled:false}")
+    private boolean sesVerificationEnabled;
 
     public EmployeeService(EmployeeRepository employeeRepository, 
                            StudioRepository studioRepository, 
@@ -136,7 +140,9 @@ public class EmployeeService {
                         emailService.sendEmployeeInviteEmail(savedUser, studioName, savedUser.getInviteToken(), replyToEmail);
                         warning = "Employee created. Invite email sent.";
                     } catch (Exception e) {
-                        warning = "Employee created, but invite email could not be sent.";
+                        warning = sesVerificationEnabled
+                            ? "Employee created, but invite email could not be sent. During beta, the employee may need to verify their email first."
+                            : "Employee created, but invite email could not be sent.";
                     }
                 }
             }
@@ -259,7 +265,9 @@ public class EmployeeService {
                             emailService.sendEmployeeInviteEmail(savedUser, studioName, savedUser.getInviteToken(), replyToEmail);
                             warning = "Employee created. Invite email sent.";
                         } catch (Exception e) {
-                            warning = "Employee created, but invite email could not be sent.";
+                            warning = sesVerificationEnabled
+                                ? "Employee created, but invite email could not be sent. During beta, the employee may need to verify their email first."
+                                : "Employee created, but invite email could not be sent.";
                         }
                     }
                 } else {
@@ -308,7 +316,9 @@ public class EmployeeService {
                             emailService.sendEmployeeInviteEmail(savedUser, studioName, savedUser.getInviteToken(), replyToEmail);
                             warning = "Employee created. Invite email sent.";
                         } catch (Exception e) {
-                            warning = "Employee created, but invite email could not be sent.";
+                            warning = sesVerificationEnabled
+                                ? "Employee created, but invite email could not be sent. During beta, the employee may need to verify their email first."
+                                : "Employee created, but invite email could not be sent.";
                         }
                     }
                 }

@@ -41,4 +41,10 @@ public class PlatformAdminController {
     public ResponseEntity<PlatformStudioResponse> suspendStudio(@PathVariable("id") UUID id) {
         return ResponseEntity.ok(platformAdminService.suspendStudio(id));
     }
+
+    @PostMapping("/studios/{id}/resend-ses-verification")
+    public ResponseEntity<Void> resendSesVerification(@PathVariable("id") UUID id) {
+        platformAdminService.resendSesVerification(id);
+        return ResponseEntity.ok().build();
+    }
 }

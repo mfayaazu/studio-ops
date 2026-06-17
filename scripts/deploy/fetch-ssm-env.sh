@@ -35,6 +35,7 @@ PLATFORM_ADMIN_EMAILS=$(get_param "/studio-ops/beta/platform-admin-emails")
 ADMIN_NOTIFICATIONS_ENABLED=$(get_param "/studio-ops/beta/platform-admin-notifications-enabled")
 EMAIL_ENABLED=$(get_param "/studio-ops/beta/email-enabled")
 BETA_WHATSAPP_ONLY=$(get_param "/studio-ops/beta/beta-whatsapp-only")
+SES_SANDBOX_VERIFICATION_ENABLED=$(get_param "/studio-ops/beta/ses-sandbox-verification-enabled")
 
 # Write to .env.beta
 cat << EOF >> "$ENV_FILE"
@@ -55,6 +56,7 @@ CORS_ALLOWED_ORIGINS=$CORS_ALLOWED_ORIGINS
 PLATFORM_ADMIN_EMAILS=$PLATFORM_ADMIN_EMAILS
 ADMIN_NOTIFICATIONS_ENABLED=$ADMIN_NOTIFICATIONS_ENABLED
 BETA_WHATSAPP_ONLY=$BETA_WHATSAPP_ONLY
+STUDIOOPS_SES_SANDBOX_VERIFICATION_ENABLED=$SES_SANDBOX_VERIFICATION_ENABLED
 EOF
 
 # Set secure permissions

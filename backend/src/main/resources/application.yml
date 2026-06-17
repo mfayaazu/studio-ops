@@ -30,6 +30,8 @@ spring:
 studioops:
   beta:
     whatsapp-only: true
+  ses-sandbox-verification:
+    enabled: ${STUDIOOPS_SES_SANDBOX_VERIFICATION_ENABLED:false}
   email:
     enabled: false
     from: no-reply@studioops.photo

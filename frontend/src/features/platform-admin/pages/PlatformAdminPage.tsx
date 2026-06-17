@@ -9,7 +9,8 @@ import {
   getPerformanceSummary,
   getTopEndpoints,
   getRecentErrors,
-  getRecentSlowRequests
+  getRecentSlowRequests,
+  resendSesVerification
 } from '../api/platformAdminApi';
 import type { 
   PlatformStudioResponse,
@@ -162,6 +163,22 @@ export const PlatformAdminPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['platform-admin-studios'] });
     } catch (err: any) {
       setActionError(err.message || `Failed to suspend studio "${name}".`);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleResendVerification = async (id: string, email: string) => {
+    setProcessingId(id);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      await resendSesVerification(id);
+      setActionSuccess(`AWS SES verification email sent to "${email}". Please ask the user to check their inbox.`);
+      queryClient.invalidateQueries({ queryKey: ['platform-admin-pending'] });
+      queryClient.invalidateQueries({ queryKey: ['platform-admin-studios'] });
+    } catch (err: any) {
+      setActionError(err.message || `Failed to resend SES verification email to "${email}".`);
     } finally {
       setProcessingId(null);
     }
@@ -472,6 +489,34 @@ export const PlatformAdminPage: React.FC = () => {
                               </a>
                             </div>
                           </div>
+                          {studio.ownerEmailVerificationStatus && (
+                            <div className="flex items-center gap-2 text-slate-350">
+                              <Shield className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
+                              <div>
+                                <span className="text-[10px] text-slate-500 block">SES Verification Status</span>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold font-mono ${
+                                    studio.ownerEmailVerificationStatus === 'VERIFIED'
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                      : studio.ownerEmailVerificationStatus === 'PENDING'
+                                      ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                                      : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                                  }`}>
+                                    {studio.ownerEmailVerificationStatus}
+                                  </span>
+                                  {studio.ownerEmailVerificationStatus !== 'VERIFIED' && (
+                                    <button
+                                      onClick={() => handleResendVerification(studio.id, studio.ownerEmail)}
+                                      disabled={processingId !== null}
+                                      className="px-2 py-0.5 text-[10px] bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                                    >
+                                      Resend Verification
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         <div className="space-y-3">
@@ -576,6 +621,28 @@ export const PlatformAdminPage: React.FC = () => {
                               </a>
                               {studio.phone && (
                                 <span className="text-[10px] text-slate-500 block truncate">{studio.phone}</span>
+                              )}
+                              {studio.ownerEmailVerificationStatus && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold font-mono ${
+                                    studio.ownerEmailVerificationStatus === 'VERIFIED'
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                      : studio.ownerEmailVerificationStatus === 'PENDING'
+                                      ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                                      : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                                  }`}>
+                                    SES: {studio.ownerEmailVerificationStatus}
+                                  </span>
+                                  {studio.ownerEmailVerificationStatus !== 'VERIFIED' && (
+                                    <button
+                                      onClick={() => handleResendVerification(studio.id, studio.ownerEmail)}
+                                      disabled={processingId !== null}
+                                      className="px-1.5 py-0.2 text-[8px] bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                                    >
+                                      Resend
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </td>

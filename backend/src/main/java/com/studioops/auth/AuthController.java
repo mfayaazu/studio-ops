@@ -67,9 +67,9 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody com.studioops.auth.dto.ForgotPasswordRequest request) {
-        authService.forgotPassword(request);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<java.util.Map<String, String>> forgotPassword(@Valid @RequestBody com.studioops.auth.dto.ForgotPasswordRequest request) {
+        String message = authService.forgotPassword(request);
+        return ResponseEntity.ok(java.util.Map.of("message", message));
     }
 
     @PostMapping("/reset-password")

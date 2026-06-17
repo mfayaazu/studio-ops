@@ -43,6 +43,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.studioops.email.EmailService emailService;
+    private final com.studioops.email.SesVerificationService sesVerificationService;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 
     @Value("${studioops.platform-admin.emails:a.fayaaz@gmail.com,owner@studioops.local}")
@@ -53,13 +54,15 @@ public class AuthService {
                        StudioRepository studioRepository,
                        UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       com.studioops.email.EmailService emailService) {
+                       com.studioops.email.EmailService emailService,
+                       com.studioops.email.SesVerificationService sesVerificationService) {
         this.authenticationManager = authenticationManager;
         this.userService = userService;
         this.studioRepository = studioRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.sesVerificationService = sesVerificationService;
     }
 
     public LoginResponse login(LoginRequest request, HttpServletRequest servletRequest,
@@ -176,8 +179,19 @@ public class AuthService {
             log.error("Failed to send studio owner beta signup confirmation: {}", e.getMessage());
         }
 
+        try {
+            sesVerificationService.requestEmailVerification(user.getEmail(), savedStudio.getId(), user.getId());
+        } catch (Exception e) {
+            log.error("Failed to request SES email verification: {}", e.getMessage());
+        }
+
+        String responseMessage = "Beta workspace request submitted";
+        if (sesVerificationService.isEnabled()) {
+            responseMessage = "Your beta request has been submitted. Because StudioOps Beta email is currently in AWS SES sandbox, please check your inbox for an AWS verification email and click the verification link. After verification, you will receive approval and password reset emails normally.";
+        }
+
         return new com.studioops.auth.dto.SignupResponse(
-            "Beta workspace request submitted",
+            responseMessage,
             savedStudio.getId(),
             savedStudio.getName(),
             savedStudio.getStatus().name(),
@@ -206,10 +220,17 @@ public class AuthService {
     }
 
     @Transactional
-    public void forgotPassword(ForgotPasswordRequest request) {
+    public String forgotPassword(ForgotPasswordRequest request) {
         String trimmedEmail = request.getEmail().trim().toLowerCase();
-        User user = userRepository.findByEmail(trimmedEmail)
-                .orElseThrow(() -> new IllegalArgumentException("Email address not found: " + trimmedEmail));
+        boolean enabled = sesVerificationService.isEnabled();
+
+        User user = userRepository.findByEmail(trimmedEmail).orElse(null);
+        if (user == null) {
+            if (enabled) {
+                return "If your account exists, we’ll send instructions. During beta, you may need to verify your email first.";
+            }
+            throw new IllegalArgumentException("Email address not found: " + trimmedEmail);
+        }
 
         String token = UUID.randomUUID().toString();
         user.setPasswordResetToken(token);
@@ -220,7 +241,15 @@ public class AuthService {
             emailService.sendPasswordResetEmail(user, token);
         } catch (Exception e) {
             log.warn("Failed to send password reset email to {}: {}", user.getEmail(), e.getMessage());
+            if (enabled) {
+                return "If your account exists, we’ll send instructions. During beta, you may need to verify your email first.";
+            }
         }
+
+        if (enabled) {
+            return "If your account exists, we’ll send instructions. During beta, you may need to verify your email first.";
+        }
+        return "If your account exists, you will receive an email with instructions shortly.";
     }
 
     @Transactional

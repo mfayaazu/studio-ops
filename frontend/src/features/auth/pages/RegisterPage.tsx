@@ -16,11 +16,13 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onBackToLogin }) => 
   
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleBackToLogin = () => {
     setIsSuccess(false);
+    setSuccessMessage(null);
     setStudioName('');
     setOwnerName('');
     setEmail('');
@@ -60,7 +62,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onBackToLogin }) => 
 
     setIsLoading(true);
     try {
-      await authApi.signup({
+      const response = await authApi.signup({
         studioName: studioName.trim(),
         ownerName: ownerName.trim(),
         email: email.trim(),
@@ -68,6 +70,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onBackToLogin }) => 
         phone: phone.trim() || undefined,
         country: country.trim() || undefined
       });
+      setSuccessMessage(response.message);
       setIsSuccess(true);
     } catch (err: any) {
       setError(err.message || 'Failed to request beta access. Please check details and try again.');
@@ -93,7 +96,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onBackToLogin }) => 
               Request Submitted!
             </h2>
             <p className="text-slate-400 text-xs mt-2 px-4 leading-relaxed">
-              Your beta request for <strong className="text-slate-200">{studioName}</strong> has been registered. An admin will manually provision your beta workspace soon.
+              {successMessage || `Your beta request for ${studioName} has been registered. An admin will manually provision your beta workspace soon.`}
             </p>
           </div>
 

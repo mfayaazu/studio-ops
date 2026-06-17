@@ -109,4 +109,14 @@ public class PlatformStudioResponse {
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
+
+    private String ownerEmailVerificationStatus;
+
+    public String getOwnerEmailVerificationStatus() {
+        return ownerEmailVerificationStatus;
+    }
+
+    public void setOwnerEmailVerificationStatus(String ownerEmailVerificationStatus) {
+        this.ownerEmailVerificationStatus = ownerEmailVerificationStatus;
+    }
 }

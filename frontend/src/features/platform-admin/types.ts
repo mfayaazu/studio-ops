@@ -10,6 +10,7 @@ export interface PlatformStudioResponse {
   phone: string;
   country: string;
   createdAt: string;
+  ownerEmailVerificationStatus?: 'VERIFIED' | 'PENDING' | 'UNKNOWN';
 }
 
 export interface PerformanceSummary {

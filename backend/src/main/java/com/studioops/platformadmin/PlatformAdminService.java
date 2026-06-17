@@ -2,6 +2,7 @@ package com.studioops.platformadmin;
 
 import com.studioops.common.exception.ResourceNotFoundException;
 import com.studioops.email.EmailService;
+import com.studioops.email.SesVerificationService;
 import com.studioops.platformadmin.dto.PlatformStudioResponse;
 import com.studioops.studio.Studio;
 import com.studioops.studio.StudioRepository;
@@ -33,14 +34,16 @@ public class PlatformAdminService {
     private final StudioRepository studioRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final SesVerificationService sesVerificationService;
 
     @Value("${studioops.platform-admin.emails:a.fayaaz@gmail.com,owner@studioops.local}")
     private List<String> platformAdminEmails;
 
-    public PlatformAdminService(StudioRepository studioRepository, UserRepository userRepository, EmailService emailService) {
+    public PlatformAdminService(StudioRepository studioRepository, UserRepository userRepository, EmailService emailService, SesVerificationService sesVerificationService) {
         this.studioRepository = studioRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.sesVerificationService = sesVerificationService;
     }
 
     public void checkPlatformAdminAccess() {
@@ -148,6 +151,18 @@ public class PlatformAdminService {
         return mapToPlatformStudioResponse(saved);
     }
 
+    public void resendSesVerification(UUID studioId) {
+        checkPlatformAdminAccess();
+        Studio studio = studioRepository.findById(studioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Studio not found"));
+        List<User> owners = userRepository.findByStudioIdAndRole(studioId, UserRole.OWNER);
+        if (owners.isEmpty()) {
+            throw new ResourceNotFoundException("Owner user not found for studio");
+        }
+        User owner = owners.get(0);
+        sesVerificationService.requestEmailVerification(owner.getEmail(), studioId, owner.getId());
+    }
+
     private PlatformStudioResponse mapToPlatformStudioResponse(Studio studio) {
         PlatformStudioResponse response = new PlatformStudioResponse();
         response.setId(studio.getId());
@@ -165,9 +180,11 @@ public class PlatformAdminService {
             User owner = owners.get(0);
             response.setOwnerName(owner.getDisplayName());
             response.setOwnerEmail(owner.getEmail());
+            response.setOwnerEmailVerificationStatus(sesVerificationService.getEmailVerificationStatus(owner.getEmail()));
         } else {
             response.setOwnerName("N/A");
             response.setOwnerEmail("N/A");
+            response.setOwnerEmailVerificationStatus("UNKNOWN");
         }
 
         return response;

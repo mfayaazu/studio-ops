@@ -41,3 +41,7 @@ export async function getRecentErrors(): Promise<ApiRequestLogResponse[]> {
 export async function getRecentSlowRequests(): Promise<ApiRequestLogResponse[]> {
   return ApiClient.get<ApiRequestLogResponse[]>('/api/platform-admin/performance/slow-requests');
 }
+
+export async function resendSesVerification(id: string): Promise<void> {
+  return ApiClient.post<void>(`/api/platform-admin/studios/${id}/resend-ses-verification`, {});
+}

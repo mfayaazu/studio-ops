@@ -29,6 +29,8 @@ spring:
 studioops:
   beta:
     whatsapp-only: ${STUDIOOPS_BETA_WHATSAPP_ONLY:true}
+  ses-sandbox-verification:
+    enabled: ${STUDIOOPS_SES_SANDBOX_VERIFICATION_ENABLED:false}
   cors:
     allowed-origins: ${STUDIOOPS_CORS_ALLOWED_ORIGINS:https://beta.studioops.photo}
   email:

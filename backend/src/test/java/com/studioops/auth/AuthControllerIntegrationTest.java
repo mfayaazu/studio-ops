@@ -55,6 +55,9 @@ class AuthControllerIntegrationTest {
     @Autowired
     private com.studioops.email.SystemEmailLogRepository systemEmailLogRepository;
 
+    @Autowired
+    private com.studioops.email.SesVerificationService sesVerificationService;
+
     private Studio testStudio;
     private User disabledUser;
 
@@ -79,6 +82,14 @@ class AuthControllerIntegrationTest {
             studioRepository.deleteById(u.getStudioId());
         });
         userRepository.findByEmail("confirmation-test@test.local").ifPresent(u -> {
+            userRepository.delete(u);
+            studioRepository.deleteById(u.getStudioId());
+        });
+        userRepository.findByEmail("ses-success@test.local").ifPresent(u -> {
+            userRepository.delete(u);
+            studioRepository.deleteById(u.getStudioId());
+        });
+        userRepository.findByEmail("ses-fail@test.local").ifPresent(u -> {
             userRepository.delete(u);
             studioRepository.deleteById(u.getStudioId());
         });
@@ -550,5 +561,65 @@ class AuthControllerIntegrationTest {
             studioRepository.deleteById(createdUser.getStudioId());
         }
         systemEmailLogRepository.delete(logEntry);
+    }
+
+    @Test
+    void signup_SesVerificationEnabled_ResponseContainsSandboxMessage() throws Exception {
+        boolean originalEnabled = sesVerificationService.isEnabled();
+        org.springframework.test.util.ReflectionTestUtils.setField(sesVerificationService, "enabled", true);
+
+        SignupRequest signupRequest = new SignupRequest(
+                "SES Success Studio",
+                "Success Owner",
+                "ses-success@test.local",
+                "Password123!",
+                "123456",
+                "Sweden"
+        );
+
+        mockMvc.perform(post("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(signupRequest)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Because StudioOps Beta email is currently in AWS SES sandbox")));
+
+        // Clean up
+        User createdUser = userRepository.findByEmail("ses-success@test.local").orElse(null);
+        if (createdUser != null) {
+            userRepository.delete(createdUser);
+            studioRepository.deleteById(createdUser.getStudioId());
+        }
+        org.springframework.test.util.ReflectionTestUtils.setField(sesVerificationService, "enabled", originalEnabled);
+    }
+
+    @Test
+    void signup_SesVerificationEnabled_SesFails_SignupSucceeds() throws Exception {
+        boolean originalEnabled = sesVerificationService.isEnabled();
+        org.springframework.test.util.ReflectionTestUtils.setField(sesVerificationService, "enabled", true);
+        
+        // Mock a faulty client or let it fail naturally because of lack of AWS environment credentials during test
+        // The service catches exceptions internally, so signup must succeed either way.
+        SignupRequest signupRequest = new SignupRequest(
+                "SES Fail Studio",
+                "Fail Owner",
+                "ses-fail@test.local",
+                "Password123!",
+                "123456",
+                "Sweden"
+        );
+
+        mockMvc.perform(post("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(signupRequest)))
+                .andExpect(status().isCreated());
+
+        // Verify user was indeed created successfully
+        User createdUser = userRepository.findByEmail("ses-fail@test.local")
+                .orElseThrow(() -> new AssertionError("User should have been created successfully despite SES failure"));
+
+        // Clean up
+        userRepository.delete(createdUser);
+        studioRepository.deleteById(createdUser.getStudioId());
+        org.springframework.test.util.ReflectionTestUtils.setField(sesVerificationService, "enabled", originalEnabled);
     }
 }
