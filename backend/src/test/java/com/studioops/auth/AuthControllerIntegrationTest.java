@@ -60,6 +60,8 @@ class AuthControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        systemEmailLogRepository.deleteAll();
+
         userRepository.findByEmail("notify-enabled@test.local").ifPresent(u -> {
             userRepository.delete(u);
             studioRepository.deleteById(u.getStudioId());
@@ -73,6 +75,10 @@ class AuthControllerIntegrationTest {
             studioRepository.deleteById(u.getStudioId());
         });
         userRepository.findByEmail("onboarding@test.local").ifPresent(u -> {
+            userRepository.delete(u);
+            studioRepository.deleteById(u.getStudioId());
+        });
+        userRepository.findByEmail("confirmation-test@test.local").ifPresent(u -> {
             userRepository.delete(u);
             studioRepository.deleteById(u.getStudioId());
         });
@@ -411,21 +417,21 @@ class AuthControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertNotNull(logEntry.getStudioId(), "Studio ID must be set");
         org.junit.jupiter.api.Assertions.assertNotNull(logEntry.getStatus(), "Status must be set");
 
-        // Clean up created user, studio, and log
+        // Clean up created user, studio, and logs
         User createdUser = userRepository.findByEmail("notify-enabled@test.local").orElse(null);
         if (createdUser != null) {
             userRepository.delete(createdUser);
             studioRepository.deleteById(createdUser.getStudioId());
         }
-        systemEmailLogRepository.delete(logEntry);
+        systemEmailLogRepository.deleteAll(systemEmailLogRepository.findAll().stream()
+                .filter(l -> l.getRecipient().equals("admin@studioops.photo") || l.getRecipient().equals("notify-enabled@test.local"))
+                .toList());
     }
 
     @Test
-    void signup_PlatformAdminNotificationsDisabled_NoLogSaved() throws Exception {
+    void signup_PlatformAdminNotificationsDisabled_NoAdminLogSaved() throws Exception {
         org.springframework.test.util.ReflectionTestUtils.setField(emailService, "platformAdminNotificationsEnabled", false);
         org.springframework.test.util.ReflectionTestUtils.setField(emailService, "platformAdminEmail", "admin@studioops.photo");
-
-        long initialLogCount = systemEmailLogRepository.count();
 
         SignupRequest signupRequest = new SignupRequest(
                 "Notify Disabled Studio",
@@ -441,15 +447,21 @@ class AuthControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(signupRequest)))
                 .andExpect(status().isCreated());
 
-        long postLogCount = systemEmailLogRepository.count();
-        org.junit.jupiter.api.Assertions.assertEquals(initialLogCount, postLogCount, "No new email logs should be saved when notifications are disabled");
+        java.util.List<com.studioops.email.SystemEmailLog> adminLogs = systemEmailLogRepository.findAll().stream()
+                .filter(log -> "PLATFORM_BETA_SIGNUP_NOTIFICATION".equals(log.getEmailType()))
+                .toList();
 
-        // Clean up created user & studio
+        org.junit.jupiter.api.Assertions.assertTrue(adminLogs.isEmpty(), "No platform admin email logs should be saved");
+
+        // Clean up created user & studio & logs
         User createdUser = userRepository.findByEmail("notify-disabled@test.local").orElse(null);
         if (createdUser != null) {
             userRepository.delete(createdUser);
             studioRepository.deleteById(createdUser.getStudioId());
         }
+        systemEmailLogRepository.deleteAll(systemEmailLogRepository.findAll().stream()
+                .filter(l -> l.getRecipient().equals("notify-disabled@test.local"))
+                .toList());
     }
 
     @Test
@@ -485,15 +497,58 @@ class AuthControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertEquals("FAILED", logEntry.getStatus(), "Log status must be FAILED on mail exception");
         org.junit.jupiter.api.Assertions.assertNotNull(logEntry.getErrorMessage(), "Error message must be recorded");
 
-        // Clean up created user, studio, and log
+        // Clean up created user, studio, and logs
         User createdUser = userRepository.findByEmail("mail-fail@test.local").orElse(null);
         if (createdUser != null) {
             userRepository.delete(createdUser);
             studioRepository.deleteById(createdUser.getStudioId());
         }
-        systemEmailLogRepository.delete(logEntry);
+        systemEmailLogRepository.deleteAll(systemEmailLogRepository.findAll().stream()
+                .filter(l -> l.getRecipient().equals("admin@studioops.photo") || l.getRecipient().equals("mail-fail@test.local"))
+                .toList());
 
         // Restore default properties
         org.springframework.test.util.ReflectionTestUtils.setField(emailService, "enabled", false);
+    }
+
+    @Test
+    void signup_RequesterConfirmationEmail_LogSaved() throws Exception {
+        org.springframework.test.util.ReflectionTestUtils.setField(emailService, "enabled", false); // keeps it SKIPPED
+
+        SignupRequest signupRequest = new SignupRequest(
+                "Confirmation Test Studio",
+                "Confirmation Owner",
+                "confirmation-test@test.local",
+                "Password123!",
+                "11223344",
+                "Sweden"
+        );
+
+        mockMvc.perform(post("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(signupRequest)))
+                .andExpect(status().isCreated());
+
+        java.util.List<com.studioops.email.SystemEmailLog> logs = systemEmailLogRepository.findAll().stream()
+                .filter(log -> "BETA_SIGNUP_CONFIRMATION".equals(log.getEmailType()))
+                .toList();
+
+        org.junit.jupiter.api.Assertions.assertFalse(logs.isEmpty(), "Requester confirmation email log should exist");
+        com.studioops.email.SystemEmailLog logEntry = logs.stream()
+                .filter(l -> l.getRecipient().equals("confirmation-test@test.local"))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Should have a log for confirmation-test@test.local"));
+
+        org.junit.jupiter.api.Assertions.assertEquals("SKIPPED", logEntry.getStatus(), "Log status must be SKIPPED when email is disabled");
+        org.junit.jupiter.api.Assertions.assertNotNull(logEntry.getUserId(), "User ID must be set for requester confirmation");
+        org.junit.jupiter.api.Assertions.assertNotNull(logEntry.getStudioId(), "Studio ID must be set");
+
+        // Clean up created user, studio, and log
+        User createdUser = userRepository.findByEmail("confirmation-test@test.local").orElse(null);
+        if (createdUser != null) {
+            userRepository.delete(createdUser);
+            studioRepository.deleteById(createdUser.getStudioId());
+        }
+        systemEmailLogRepository.delete(logEntry);
     }
 }

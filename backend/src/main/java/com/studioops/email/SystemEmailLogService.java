@@ -13,7 +13,7 @@ public class SystemEmailLogService {
         this.logRepository = logRepository;
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public SystemEmailLog saveLog(SystemEmailLog log) {
         return logRepository.save(log);
     }

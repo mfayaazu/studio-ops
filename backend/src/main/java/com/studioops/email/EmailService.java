@@ -295,4 +295,23 @@ public class EmailService {
 
         sendEmail(owner, "STUDIO_REJECTED", subject, htmlContent, fromAddress);
     }
+
+    public void sendStudioOwnerBetaSignupConfirmation(Studio studio, User owner) {
+        String subject = "We received your StudioOps beta access request";
+
+        String htmlContent = "<div style=\"font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0b0f19; color: #f8fafc; border-radius: 8px;\">" +
+                "<h2 style=\"color: #a78bfa;\">Beta Access Request Received</h2>" +
+                "<p>Hi " + (owner.getDisplayName() != null ? owner.getDisplayName() : "") + ",</p>" +
+                "<p>Thank you for requesting access to StudioOps Beta for <strong>" + studio.getName() + "</strong>.</p>" +
+                "<p>We have received your request and our team will review it shortly. Once approved, you will receive another email with instructions to access your StudioOps workspace.</p>" +
+                "<hr style=\"border: none; border-top: 1px solid #1e293b; margin: 20px 0;\">" +
+                "<p style=\"font-size: 12px; color: #94a3b8;\">Best regards,<br>StudioOps Beta Team</p>" +
+                "</div>";
+
+        try {
+            sendEmail(owner, "BETA_SIGNUP_CONFIRMATION", subject, htmlContent, fromAddress);
+        } catch (Exception e) {
+            log.warn("Failed to send studio owner beta signup confirmation to recipient: {}, Error: {}", owner.getEmail(), e.getMessage());
+        }
+    }
 }

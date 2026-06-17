@@ -150,7 +150,7 @@ public class AuthService {
         studio.setSubscriptionPlan(SubscriptionPlan.STARTER);
         studio.setSubscriptionStatus(SubscriptionStatus.TRIAL);
         
-        Studio savedStudio = studioRepository.save(studio);
+        Studio savedStudio = studioRepository.saveAndFlush(studio);
 
         // Create User
         User user = new User();
@@ -161,10 +161,20 @@ public class AuthService {
         user.setStatus(UserStatus.ACTIVE);
         user.setStudioId(savedStudio.getId());
 
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
 
         // Future: replace email-only notification with StudioOps Platform Admin Console and subscription approval workflow.
-        emailService.sendPlatformBetaSignupNotification(savedStudio, user);
+        try {
+            emailService.sendPlatformBetaSignupNotification(savedStudio, user);
+        } catch (Exception e) {
+            log.error("Failed to send platform beta signup notification: {}", e.getMessage());
+        }
+
+        try {
+            emailService.sendStudioOwnerBetaSignupConfirmation(savedStudio, user);
+        } catch (Exception e) {
+            log.error("Failed to send studio owner beta signup confirmation: {}", e.getMessage());
+        }
 
         return new com.studioops.auth.dto.SignupResponse(
             "Beta workspace request submitted",
