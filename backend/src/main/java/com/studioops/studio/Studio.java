@@ -22,6 +22,9 @@ public class Studio {
     @Column(name = "business_email", length = 255)
     private String businessEmail;
 
+    @Column(name = "short_code", length = 50)
+    private String shortCode;
+
     @Column(name = "phone", length = 50)
     private String phone;
 
@@ -159,5 +162,13 @@ public class Studio {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getShortCode() {
+        return shortCode;
+    }
+
+    public void setShortCode(String shortCode) {
+        this.shortCode = shortCode;
     }
 }

@@ -3,8 +3,8 @@ package com.studioops.studio.dto;
 import com.studioops.studio.StudioStatus;
 import com.studioops.studio.SubscriptionPlan;
 import com.studioops.studio.SubscriptionStatus;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class StudioCreateRequest {
@@ -17,9 +17,12 @@ public class StudioCreateRequest {
     @Size(max = 100, message = "slug must not exceed 100 characters")
     private String slug;
 
-    @Email(message = "Invalid businessEmail format")
+    @Pattern(regexp = "^$|^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", message = "Please enter a valid email address.")
     @Size(max = 255, message = "businessEmail must not exceed 255 characters")
     private String businessEmail;
+
+    @Size(max = 50, message = "shortCode must not exceed 50 characters")
+    private String shortCode;
 
     @Size(max = 50, message = "phone must not exceed 50 characters")
     private String phone;
@@ -118,5 +121,13 @@ public class StudioCreateRequest {
 
     public void setSubscriptionStatus(SubscriptionStatus subscriptionStatus) {
         this.subscriptionStatus = subscriptionStatus;
+    }
+
+    public String getShortCode() {
+        return shortCode;
+    }
+
+    public void setShortCode(String shortCode) {
+        this.shortCode = shortCode;
     }
 }

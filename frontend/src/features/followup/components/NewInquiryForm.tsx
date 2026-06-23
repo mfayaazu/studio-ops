@@ -495,9 +495,9 @@ export const NewInquiryForm: React.FC<NewInquiryFormProps> = ({ isOpen, onClose,
     }
 
     if (email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
       if (!emailRegex.test(email.trim())) {
-        errors.email = 'Enter a valid email address';
+        errors.email = 'Please enter a valid email address.';
       }
     }
 

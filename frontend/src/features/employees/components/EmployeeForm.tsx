@@ -39,6 +39,8 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [loadingPerms, setLoadingPerms] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [leaveFrom, setLeaveFrom] = useState('');
+  const [leaveTo, setLeaveTo] = useState('');
 
   const PAGE_KEYS: PageKey[] = [
     'DASHBOARD',
@@ -79,6 +81,8 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
       setUserRole(initialData.userRole || 'EMPLOYEE');
       setTemporaryPassword('');
       setSendInviteEmail(!(initialData.userId || initialData.loginEnabled));
+      setLeaveFrom(initialData.leaveFrom || '');
+      setLeaveTo(initialData.leaveTo || '');
 
       if (initialData.userId) {
         const loadPerms = async () => {
@@ -113,6 +117,8 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
       setTemporaryPassword('');
       setSendInviteEmail(true);
       setOverrides({});
+      setLeaveFrom('');
+      setLeaveTo('');
     }
     setValidationError(null);
   }, [initialData]);
@@ -129,6 +135,11 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
       setValidationError('Email Address is required.');
       return;
     }
+    const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    if (!emailRegex.test(email.trim())) {
+      setValidationError('Please enter a valid email address.');
+      return;
+    }
     if (!primaryRole.trim()) {
       setValidationError('Primary Role is required.');
       return;
@@ -138,12 +149,31 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
         setValidationError('Login Email is required when login access is enabled.');
         return;
       }
+      const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+      if (!emailRegex.test(loginEmail.trim())) {
+        setValidationError('Please enter a valid email address.');
+        return;
+      }
       if (!sendInviteEmail && !initialData?.userId && !temporaryPassword) {
         setValidationError('Temporary Password is required when invite email is disabled.');
         return;
       }
       if (temporaryPassword && temporaryPassword.length < 6) {
         setValidationError('Password must be at least 6 characters.');
+        return;
+      }
+    }
+    if (status === 'ON_LEAVE') {
+      if (!leaveFrom) {
+        setValidationError('Leave From date is required when status is On Leave.');
+        return;
+      }
+      if (!leaveTo) {
+        setValidationError('Leave To date is required when status is On Leave.');
+        return;
+      }
+      if (new Date(leaveFrom) > new Date(leaveTo)) {
+        setValidationError('Leave From date cannot be after Leave To date.');
         return;
       }
     }
@@ -159,7 +189,9 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
       loginEmail: createLogin ? loginEmail.trim() : undefined,
       userRole: createLogin ? userRole : undefined,
       temporaryPassword: (createLogin && temporaryPassword) ? temporaryPassword : undefined,
-      sendInviteEmail: createLogin ? sendInviteEmail : undefined
+      sendInviteEmail: createLogin ? sendInviteEmail : undefined,
+      leaveFrom: status === 'ON_LEAVE' ? leaveFrom : undefined,
+      leaveTo: status === 'ON_LEAVE' ? leaveTo : undefined
     };
 
     const permissionsPayload = createLogin ? Object.entries(overrides)
@@ -274,6 +306,37 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
             <option value="INACTIVE">Inactive (Suspended)</option>
           </select>
         </div>
+
+        {status === 'ON_LEAVE' && (
+          <>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+                Leave From Date <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="date"
+                required
+                disabled={isSubmitting}
+                value={leaveFrom}
+                onChange={(e) => setLeaveFrom(e.target.value)}
+                className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50 font-mono"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+                Leave To Date <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="date"
+                required
+                disabled={isSubmitting}
+                value={leaveTo}
+                onChange={(e) => setLeaveTo(e.target.value)}
+                className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50 font-mono"
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Create Login Access Section */}

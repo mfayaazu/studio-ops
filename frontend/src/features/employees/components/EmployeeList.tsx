@@ -65,9 +65,16 @@ export const EmployeeList: React.FC<EmployeeListProps> = ({
                 {emp.skills || <span className="text-slate-600 italic">None specified</span>}
               </td>
               <td className="px-6 py-4 text-xs">
-                <span className={`inline-flex items-center gap-1 font-semibold px-2.5 py-0.5 rounded-full border text-[10px] uppercase ${getStatusBadgeClass(emp.status)}`}>
-                  {emp.status}
-                </span>
+                <div className="flex flex-col gap-1">
+                  <span className={`inline-flex items-center gap-1 font-semibold px-2.5 py-0.5 rounded-full border text-[10px] uppercase self-start ${getStatusBadgeClass(emp.status)}`}>
+                    {emp.status}
+                  </span>
+                  {emp.status === 'ON_LEAVE' && emp.leaveFrom && emp.leaveTo && (
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {emp.leaveFrom} to {emp.leaveTo}
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="px-6 py-4 text-xs text-slate-400 text-nowrap">
                 {formatDate(emp.createdAt)}

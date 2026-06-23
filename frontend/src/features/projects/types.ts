@@ -34,6 +34,17 @@ export interface ProjectResponse {
   startDate?: string; // LocalDate as YYYY-MM-DD
   endDate?: string;   // LocalDate as YYYY-MM-DD
   notes?: string;
+  projectSubtype?: string;
+  projectEvents?: string;
+  projectBudget?: number;
+  amountPaid?: number;
+  shootLocation?: string;
+  googleMapsLink?: string;
+  shootDate?: string;
+  shootStartTime?: string;
+  shootEndTime?: string;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'VIP';
+  leadSource?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -52,6 +63,18 @@ export interface ProjectCreateRequest {
   startDate?: string;
   endDate?: string;
   notes?: string;
+  projectSubtype?: string;
+  projectEvents?: string;
+  projectBudget?: number;
+  amountPaid?: number;
+  shootLocation?: string;
+  googleMapsLink?: string;
+  shootDate?: string;
+  shootStartTime?: string;
+  shootEndTime?: string;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'VIP';
+  leadSource?: string;
+  defaultDeliverables?: string[];
 }
 
 export interface ProjectUpdateRequest {
@@ -66,4 +89,15 @@ export interface ProjectUpdateRequest {
   startDate?: string;
   endDate?: string;
   notes?: string;
+  projectSubtype?: string;
+  projectEvents?: string;
+  projectBudget?: number;
+  amountPaid?: number;
+  shootLocation?: string;
+  googleMapsLink?: string;
+  shootDate?: string;
+  shootStartTime?: string;
+  shootEndTime?: string;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'VIP';
+  leadSource?: string;
 }

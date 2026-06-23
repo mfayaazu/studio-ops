@@ -121,7 +121,7 @@ export const DeliverableList: React.FC<DeliverableListProps> = ({
                     {/* Type */}
                     <td className="px-6 py-4">
                       <span className="bg-slate-800 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded border border-slate-700">
-                        {formatDeliverableType(item.deliverableType)}
+                        {item.deliverableType === 'OTHER' && item.customDeliverableType ? item.customDeliverableType : formatDeliverableType(item.deliverableType)}
                       </span>
                     </td>
 

@@ -2,6 +2,7 @@ package com.studioops.employee.dto;
 
 import com.studioops.employee.EmployeeStatus;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 public class EmployeeResponse {
@@ -17,6 +18,9 @@ public class EmployeeResponse {
     private Instant createdAt;
     private Instant updatedAt;
     private UUID studioId;
+
+    private LocalDate leaveFromDate;
+    private LocalDate leaveToDate;
 
     private String loginEmail;
     private String userRole;
@@ -172,5 +176,21 @@ public class EmployeeResponse {
 
     public void setLoginEnabled(boolean loginEnabled) {
         this.loginEnabled = loginEnabled;
+    }
+
+    public LocalDate getLeaveFromDate() {
+        return leaveFromDate;
+    }
+
+    public void setLeaveFromDate(LocalDate leaveFromDate) {
+        this.leaveFromDate = leaveFromDate;
+    }
+
+    public LocalDate getLeaveToDate() {
+        return leaveToDate;
+    }
+
+    public void setLeaveToDate(LocalDate leaveToDate) {
+        this.leaveToDate = leaveToDate;
     }
 }

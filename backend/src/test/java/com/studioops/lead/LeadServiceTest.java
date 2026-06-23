@@ -51,6 +51,8 @@ class LeadServiceTest {
     private EventRepository eventRepository;
     @Mock
     private TenantContext tenantContext;
+    @Mock
+    private com.studioops.project.ProjectService projectService;
 
     @InjectMocks
     private LeadService leadService;
@@ -60,6 +62,14 @@ class LeadServiceTest {
         MockitoAnnotations.openMocks(this);
         when(studioRepository.existsById(any(UUID.class))).thenReturn(true);
         when(tenantContext.getCurrentStudioId()).thenReturn(TenantConstants.DEFAULT_STUDIO_ID);
+        when(projectService.getNextProjectCode(any(UUID.class), anyInt())).thenReturn("FAY-2026-0001");
+        when(projectRepository.saveAndFlush(any(Project.class))).thenAnswer(invocation -> {
+            Project p = invocation.getArgument(0);
+            if (p.getId() == null) {
+                p.setId(UUID.randomUUID());
+            }
+            return p;
+        });
     }
 
     @Test
@@ -354,7 +364,7 @@ class LeadServiceTest {
         // Verify default mappings when request parameters are absent
         verify(projectRepository, times(1)).save(argThat(project -> 
             project.getClientId().equals(existingClientId) &&
-            project.getProjectCode().startsWith("PRJ-") &&
+            project.getProjectCode().startsWith("FAY-") &&
             project.getTitle().equals("Portrait - Jane Doe") &&
             project.getProjectType().equals("Portrait") &&
             project.getBookingStatus().equals(BookingStatus.INQUIRY) &&
@@ -471,7 +481,7 @@ class LeadServiceTest {
             c.setId(UUID.randomUUID());
             return c;
         });
-        when(projectRepository.findByProjectCode("EXISTS")).thenReturn(Optional.of(new Project()));
+        when(projectRepository.findByStudioIdAndProjectCode(TenantConstants.DEFAULT_STUDIO_ID, "EXISTS")).thenReturn(Optional.of(new Project()));
 
         assertThrows(IllegalArgumentException.class, () -> leadService.convertLeadToProject(leadId, request));
     }

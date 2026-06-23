@@ -4,6 +4,7 @@ export type DeliverableType =
   | 'FULL_VIDEO'
   | 'ALBUM_SELECTION'
   | 'ALBUM_DESIGN'
+  | 'ALBUM_PRINT'
   | 'HARD_DISK'
   | 'OTHER';
 
@@ -21,6 +22,7 @@ export interface DeliverableResponse {
   projectId: string;
   name: string;
   deliverableType: DeliverableType;
+  customDeliverableType?: string;
   status: DeliverableStatus;
   referenceUrl?: string;
   dueDate?: string; // LocalDate as YYYY-MM-DD
@@ -34,6 +36,7 @@ export interface DeliverableCreateRequest {
   projectId: string;
   name: string;
   deliverableType: DeliverableType;
+  customDeliverableType?: string;
   status: DeliverableStatus;
   referenceUrl?: string;
   dueDate?: string; // LocalDate as YYYY-MM-DD
@@ -43,6 +46,7 @@ export interface DeliverableUpdateRequest {
   projectId: string;
   name: string;
   deliverableType: DeliverableType;
+  customDeliverableType?: string;
   status: DeliverableStatus;
   referenceUrl?: string;
   dueDate?: string; // LocalDate as YYYY-MM-DD

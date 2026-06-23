@@ -30,6 +30,8 @@ public class DeliverableUpdateRequest {
 
     private LocalDate dueDate;
 
+    private String customDeliverableType;
+
     public DeliverableUpdateRequest() {
     }
 
@@ -105,5 +107,13 @@ public class DeliverableUpdateRequest {
 
     public void setDueDate(LocalDate dueDate) {
         this.dueDate = dueDate;
+    }
+
+    public String getCustomDeliverableType() {
+        return customDeliverableType;
+    }
+
+    public void setCustomDeliverableType(String customDeliverableType) {
+        this.customDeliverableType = customDeliverableType;
     }
 }

@@ -36,6 +36,8 @@ public class ClientService {
             throw new IllegalArgumentException("Studio not found with id: " + studioId);
         }
 
+        validateClientUniqueness(studioId, request.getPhone(), request.getEmail(), null);
+
         Client client = new Client();
         client.setStudioId(studioId);
         client.setFullName(request.getFullName().trim());
@@ -83,6 +85,8 @@ public class ClientService {
         Client client = clientRepository.findByIdAndStudioId(id, tenantContext.getCurrentStudioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + id));
         
+        validateClientUniqueness(tenantContext.getCurrentStudioId(), request.getPhone(), request.getEmail(), id);
+
         client.setFullName(request.getFullName().trim());
         client.setPhone(request.getPhone().trim());
         
@@ -97,6 +101,29 @@ public class ClientService {
         
         Client updated = clientRepository.save(client);
         return ClientMapper.toResponse(updated);
+    }
+
+    private void validateClientUniqueness(UUID studioId, String phone, String email, UUID excludeId) {
+        String normEmail = email != null ? email.trim().toLowerCase() : null;
+        String normPhone = phone != null ? phone.replaceAll("[\\s\\-\\(\\)]", "") : null;
+
+        List<Client> clients = clientRepository.findAllByStudioId(studioId);
+        for (Client c : clients) {
+            if (excludeId != null && c.getId().equals(excludeId)) {
+                continue;
+            }
+            if (normEmail != null && !normEmail.isEmpty() && c.getEmail() != null) {
+                if (c.getEmail().trim().toLowerCase().equals(normEmail)) {
+                    throw new IllegalArgumentException("A client with this email or phone number already exists.");
+                }
+            }
+            if (normPhone != null && !normPhone.isEmpty() && c.getPhone() != null) {
+                String existingNormPhone = c.getPhone().replaceAll("[\\s\\-\\(\\)]", "");
+                if (existingNormPhone.equals(normPhone)) {
+                    throw new IllegalArgumentException("A client with this email or phone number already exists.");
+                }
+            }
+        }
     }
 
     public void deleteClient(UUID id) {

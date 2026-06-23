@@ -19,6 +19,7 @@ const DELIVERABLE_TYPES: { value: DeliverableType; label: string }[] = [
   { value: 'FULL_VIDEO', label: 'Full Video' },
   { value: 'ALBUM_SELECTION', label: 'Album Selection' },
   { value: 'ALBUM_DESIGN', label: 'Album Design' },
+  { value: 'ALBUM_PRINT', label: 'Album Print' },
   { value: 'HARD_DISK', label: 'Hard Disk' },
   { value: 'OTHER', label: 'Other' },
 ];
@@ -48,6 +49,7 @@ export const DeliverableForm: React.FC<DeliverableFormProps> = ({
   const [status, setStatus] = useState<DeliverableStatus>('NOT_STARTED');
   const [referenceUrl, setReferenceUrl] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [customDeliverableType, setCustomDeliverableType] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,6 +60,7 @@ export const DeliverableForm: React.FC<DeliverableFormProps> = ({
       setStatus(initialData.status || 'NOT_STARTED');
       setReferenceUrl(initialData.referenceUrl || '');
       setDueDate(initialData.dueDate || '');
+      setCustomDeliverableType(initialData.customDeliverableType || '');
     } else {
       setProjectId(projects[0]?.id || '');
       setName('');
@@ -65,6 +68,7 @@ export const DeliverableForm: React.FC<DeliverableFormProps> = ({
       setStatus('NOT_STARTED');
       setReferenceUrl('');
       setDueDate('');
+      setCustomDeliverableType('');
     }
     setValidationError(null);
   }, [initialData, projects]);
@@ -81,11 +85,16 @@ export const DeliverableForm: React.FC<DeliverableFormProps> = ({
       setValidationError('Deliverable name is required.');
       return;
     }
+    if (deliverableType === 'OTHER' && !customDeliverableType.trim()) {
+      setValidationError('Specify deliverable type.');
+      return;
+    }
 
     const payload: DeliverableCreateRequest = {
       projectId,
       name: name.trim(),
       deliverableType,
+      customDeliverableType: deliverableType === 'OTHER' ? customDeliverableType.trim() : undefined,
       status,
       referenceUrl: referenceUrl.trim() || undefined,
       dueDate: dueDate || undefined,
@@ -182,6 +191,23 @@ export const DeliverableForm: React.FC<DeliverableFormProps> = ({
             </select>
           </div>
         </div>
+
+        {deliverableType === 'OTHER' && (
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+              Specify deliverable type <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              disabled={isSubmitting}
+              value={customDeliverableType}
+              onChange={(e) => setCustomDeliverableType(e.target.value)}
+              placeholder="e.g. Canvas Print, Wedding Website"
+              className="w-full bg-[#090d16] border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">

@@ -24,6 +24,18 @@ public class ProjectMapper {
         response.setCreatedAt(project.getCreatedAt());
         response.setUpdatedAt(project.getUpdatedAt());
         response.setStudioId(project.getStudioId());
+        
+        response.setProjectSubtype(project.getProjectSubtype());
+        response.setProjectEvents(project.getProjectEvents());
+        response.setProjectBudget(project.getProjectBudget());
+        response.setAmountPaid(project.getAmountPaid());
+        response.setShootLocation(project.getShootLocation());
+        response.setGoogleMapsLink(project.getGoogleMapsLink());
+        response.setShootDate(project.getShootDate());
+        response.setShootStartTime(project.getShootStartTime());
+        response.setShootEndTime(project.getShootEndTime());
+        response.setPriority(project.getPriority());
+        response.setLeadSource(project.getLeadSource());
         return response;
     }
 }

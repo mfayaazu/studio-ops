@@ -36,6 +36,9 @@ public class StudioService {
         String phone = request.getPhone();
         studio.setPhone(phone != null && !phone.trim().isEmpty() ? phone.trim() : null);
 
+        String shortCode = request.getShortCode();
+        studio.setShortCode(shortCode != null && !shortCode.trim().isEmpty() ? shortCode.trim().toUpperCase() : null);
+
         String country = request.getCountry();
         studio.setCountry(country != null && !country.trim().isEmpty() ? country.trim() : null);
 
@@ -94,6 +97,9 @@ public class StudioService {
 
         String phone = request.getPhone();
         studio.setPhone(phone != null && !phone.trim().isEmpty() ? phone.trim() : null);
+
+        String shortCode = request.getShortCode();
+        studio.setShortCode(shortCode != null && !shortCode.trim().isEmpty() ? shortCode.trim().toUpperCase() : null);
 
         String country = request.getCountry();
         studio.setCountry(country != null && !country.trim().isEmpty() ? country.trim() : null);

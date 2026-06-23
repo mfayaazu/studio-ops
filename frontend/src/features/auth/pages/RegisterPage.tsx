@@ -51,6 +51,11 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onBackToLogin }) => 
       setValidationError('Email is required');
       return;
     }
+    const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    if (!emailRegex.test(email.trim())) {
+      setValidationError('Please enter a valid email address.');
+      return;
+    }
     if (!password) {
       setValidationError('Password is required');
       return;

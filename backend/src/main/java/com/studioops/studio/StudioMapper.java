@@ -14,6 +14,7 @@ public class StudioMapper {
         response.setSlug(studio.getSlug());
         response.setBusinessEmail(studio.getBusinessEmail());
         response.setPhone(studio.getPhone());
+        response.setShortCode(studio.getShortCode());
         response.setCountry(studio.getCountry());
         response.setTimezone(studio.getTimezone());
         response.setStatus(studio.getStatus());

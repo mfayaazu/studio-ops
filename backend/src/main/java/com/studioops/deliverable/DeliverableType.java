@@ -6,6 +6,7 @@ public enum DeliverableType {
     FULL_VIDEO,
     ALBUM_SELECTION,
     ALBUM_DESIGN,
+    ALBUM_PRINT,
     HARD_DISK,
     OTHER
 }

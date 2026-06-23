@@ -15,6 +15,7 @@ public class DeliverableMapper {
         deliverable.setAssignedEmployeeId(request.getAssignedEmployeeId());
         deliverable.setReferenceUrl(request.getReferenceUrl());
         deliverable.setDueDate(request.getDueDate());
+        deliverable.setCustomDeliverableType(request.getCustomDeliverableType());
         return deliverable;
     }
 
@@ -32,6 +33,7 @@ public class DeliverableMapper {
         response.setDueDate(entity.getDueDate());
         response.setCreatedAt(entity.getCreatedAt());
         response.setUpdatedAt(entity.getUpdatedAt());
+        response.setCustomDeliverableType(entity.getCustomDeliverableType());
         return response;
     }
 
@@ -45,5 +47,6 @@ public class DeliverableMapper {
         entity.setAssignedEmployeeId(request.getAssignedEmployeeId());
         entity.setReferenceUrl(request.getReferenceUrl());
         entity.setDueDate(request.getDueDate());
+        entity.setCustomDeliverableType(request.getCustomDeliverableType());
     }
 }

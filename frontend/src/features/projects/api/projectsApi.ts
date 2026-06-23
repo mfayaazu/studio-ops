@@ -18,6 +18,10 @@ export const deleteProject = (id: string): Promise<void> => {
   return ApiClient.delete<void>(`/api/projects/${id}`);
 };
 
+export const getNextProjectCode = (year: number): Promise<{ projectCode: string }> => {
+  return ApiClient.get<{ projectCode: string }>(`/api/projects/next-code?year=${year}`);
+};
+
 // Backward compatible object wrapper if referenced elsewhere
 export const projectsApi = {
   list: fetchProjects,
@@ -27,4 +31,6 @@ export const projectsApi = {
   create: createProject,
   update: updateProject,
   delete: deleteProject,
+  getNextProjectCode,
 };
+

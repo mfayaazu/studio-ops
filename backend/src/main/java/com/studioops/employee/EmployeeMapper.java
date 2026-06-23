@@ -18,6 +18,8 @@ public class EmployeeMapper {
         response.setPrimaryRole(employee.getPrimaryRole());
         response.setSkills(employee.getSkills());
         response.setStatus(employee.getStatus());
+        response.setLeaveFromDate(employee.getLeaveFromDate());
+        response.setLeaveToDate(employee.getLeaveToDate());
         response.setCreatedAt(employee.getCreatedAt());
         response.setUpdatedAt(employee.getUpdatedAt());
         response.setStudioId(employee.getStudioId());

@@ -43,6 +43,7 @@ public class LeadService {
     private final ProjectRepository projectRepository;
     private final EventRepository eventRepository;
     private final TenantContext tenantContext;
+    private final com.studioops.project.ProjectService projectService;
 
     public LeadService(
             LeadRepository leadRepository,
@@ -50,13 +51,15 @@ public class LeadService {
             ClientRepository clientRepository,
             ProjectRepository projectRepository,
             EventRepository eventRepository,
-            TenantContext tenantContext) {
+            TenantContext tenantContext,
+            com.studioops.project.ProjectService projectService) {
         this.leadRepository = leadRepository;
         this.studioRepository = studioRepository;
         this.clientRepository = clientRepository;
         this.projectRepository = projectRepository;
         this.eventRepository = eventRepository;
         this.tenantContext = tenantContext;
+        this.projectService = projectService;
     }
 
     public LeadResponse createLead(LeadCreateRequest request) {
@@ -296,24 +299,46 @@ public class LeadService {
         }
 
         // 1. Resolve or Create Client
-        UUID resolvedClientId;
+        UUID resolvedClientId = null;
         if (lead.getClientId() != null) {
             clientRepository.findByIdAndStudioId(lead.getClientId(), lead.getStudioId())
                     .orElseThrow(() -> new IllegalArgumentException("Client not found with id: " + lead.getClientId() + " for studio: " + lead.getStudioId()));
             resolvedClientId = lead.getClientId();
         } else {
-            Client client = new Client();
-            client.setStudioId(lead.getStudioId());
-            client.setFullName(lead.getClientName());
-            // Since Client.phone is required, we use "UNKNOWN" as a temporary fallback if lead.phone is null/empty.
-            String resolvedPhone = (lead.getPhone() != null && !lead.getPhone().trim().isEmpty())
-                    ? lead.getPhone().trim()
-                    : "UNKNOWN";
-            client.setPhone(resolvedPhone);
-            client.setEmail(lead.getEmail() != null ? lead.getEmail().trim() : null);
-            client.setNotes("Created from lead conversion");
-            Client savedClient = clientRepository.save(client);
-            resolvedClientId = savedClient.getId();
+            // Check normalized email or phone for existing client
+            String normEmail = lead.getEmail() != null ? lead.getEmail().trim().toLowerCase() : null;
+            String normPhone = lead.getPhone() != null ? lead.getPhone().replaceAll("[\\s\\-\\(\\)]", "") : null;
+
+            List<Client> studioClients = clientRepository.findAllByStudioId(lead.getStudioId());
+            for (Client c : studioClients) {
+                if (normEmail != null && !normEmail.isEmpty() && c.getEmail() != null) {
+                    if (c.getEmail().trim().toLowerCase().equals(normEmail)) {
+                        resolvedClientId = c.getId();
+                        break;
+                    }
+                }
+                if (normPhone != null && !normPhone.isEmpty() && c.getPhone() != null) {
+                    String existingNormPhone = c.getPhone().replaceAll("[\\s\\-\\(\\)]", "");
+                    if (existingNormPhone.equals(normPhone)) {
+                        resolvedClientId = c.getId();
+                        break;
+                    }
+                }
+            }
+
+            if (resolvedClientId == null) {
+                Client client = new Client();
+                client.setStudioId(lead.getStudioId());
+                client.setFullName(lead.getClientName());
+                String resolvedPhone = (lead.getPhone() != null && !lead.getPhone().trim().isEmpty())
+                        ? lead.getPhone().trim()
+                        : "UNKNOWN";
+                client.setPhone(resolvedPhone);
+                client.setEmail(lead.getEmail() != null ? lead.getEmail().trim() : null);
+                client.setNotes("Created from lead conversion");
+                Client savedClient = clientRepository.save(client);
+                resolvedClientId = savedClient.getId();
+            }
         }
 
         // 2. Create Project
@@ -323,16 +348,40 @@ public class LeadService {
 
         // Resolve Project Code
         String projectCode;
+        Project savedProject = null;
         if (request.getProjectCode() != null && !request.getProjectCode().trim().isEmpty()) {
             projectCode = request.getProjectCode().trim();
+            if (projectRepository.findByStudioIdAndProjectCode(lead.getStudioId(), projectCode).isPresent()) {
+                throw new IllegalArgumentException("Project code already exists: " + projectCode);
+            }
+            project.setProjectCode(projectCode);
+            savedProject = projectRepository.saveAndFlush(project);
         } else {
-            projectCode = "PRJ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+            int year = lead.getEventDate() != null ? lead.getEventDate().getYear() : LocalDate.now().getYear();
+            projectCode = projectService.getNextProjectCode(lead.getStudioId(), year);
+            int retries = 3;
+            String currentCode = projectCode;
+            while (retries > 0) {
+                if (projectRepository.findByStudioIdAndProjectCode(lead.getStudioId(), currentCode).isPresent()) {
+                    int yearVal = lead.getEventDate() != null ? lead.getEventDate().getYear() : LocalDate.now().getYear();
+                    currentCode = projectService.getNextProjectCode(lead.getStudioId(), yearVal);
+                    continue;
+                }
+                project.setProjectCode(currentCode);
+                try {
+                    savedProject = projectRepository.saveAndFlush(project);
+                    break;
+                } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                    retries--;
+                    if (retries == 0) {
+                        throw e;
+                    }
+                    int yearVal = lead.getEventDate() != null ? lead.getEventDate().getYear() : LocalDate.now().getYear();
+                    currentCode = projectService.getNextProjectCode(lead.getStudioId(), yearVal);
+                }
+            }
         }
-        if (projectRepository.findByProjectCode(projectCode).isPresent()) {
-            throw new IllegalArgumentException("Project code already exists: " + projectCode);
-        }
-        project.setProjectCode(projectCode);
-
+        
         // Resolve Title
         String title;
         if (request.getTitle() != null && !request.getTitle().trim().isEmpty()) {
@@ -367,7 +416,7 @@ public class LeadService {
                 ? request.getNotes().trim() 
                 : lead.getNotes());
 
-        Project savedProject = projectRepository.save(project);
+        savedProject = projectRepository.save(project);
 
         // 3. Create Event automatically if eventDate is present and no event already exists
         if (lead.getEventDate() != null) {

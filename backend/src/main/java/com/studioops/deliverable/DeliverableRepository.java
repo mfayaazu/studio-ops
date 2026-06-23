@@ -13,4 +13,5 @@ public interface DeliverableRepository extends JpaRepository<Deliverable, UUID> 
     Optional<Deliverable> findByIdAndStudioId(UUID id, UUID studioId);
     List<Deliverable> findAllByStudioId(UUID studioId);
     List<Deliverable> findByProjectIdAndStudioId(UUID projectId, UUID studioId);
+    boolean existsByProjectIdAndDeliverableType(UUID projectId, DeliverableType deliverableType);
 }

@@ -51,6 +51,14 @@ export const ClientForm: React.FC<ClientFormProps> = ({
       return;
     }
 
+    if (email.trim()) {
+      const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+      if (!emailRegex.test(email.trim())) {
+        setValidationError('Please enter a valid email address.');
+        return;
+      }
+    }
+
     const payload: ClientCreateRequest = {
       fullName: fullName.trim(),
       phone: phone.trim(),

@@ -369,43 +369,43 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
       {/* Backdrop overlay */}
       <div 
         onClick={onClose}
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 transition-opacity duration-300"
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 transition-opacity duration-300"
       />
 
       {/* Drawer Container */}
-      <div className="fixed inset-y-0 right-0 w-full md:max-w-3xl bg-[#0a0f1d] border-l border-slate-800 shadow-2xl z-50 flex flex-col justify-between overflow-hidden">
+      <div className="fixed inset-y-0 right-0 w-full md:max-w-4xl bg-[#090d1a] border-l border-slate-800 shadow-2xl z-50 flex flex-col justify-between overflow-hidden">
         
         {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/40">
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/40">
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 font-mono">
-              Lead Details Drawer
+            <span className="text-xs uppercase font-bold tracking-widest text-indigo-400 font-mono">
+              Lead Details
             </span>
-            <h3 className="text-base font-bold text-white mt-0.5">{lead.clientName}</h3>
+            <h3 className="text-xl font-bold text-white mt-1 leading-snug">{lead.clientName}</h3>
           </div>
           <div className="flex items-center gap-2">
             <button 
               onClick={onClose}
-              className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-slate-400 hover:text-slate-200 transition-all focus:outline-none focus:ring-2 focus:ring-violet-500/50"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-6 scrollbar-thin scrollbar-thumb-slate-800">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin scrollbar-thumb-slate-800">
           
           {/* Simulation Alerts */}
           {simulationLog && (
-            <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-between gap-2 text-indigo-300 text-xs font-mono">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-violet-400 flex-shrink-0 animate-bounce" />
+            <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-between gap-2 text-indigo-300 text-sm font-mono shadow-inner animate-fadeIn">
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="h-4 w-4 text-violet-400 flex-shrink-0 animate-pulse" />
                 <span>{simulationLog}</span>
               </div>
               <button 
                 onClick={() => setSimulationLog(null)} 
-                className="text-[10px] text-slate-500 hover:text-slate-300 uppercase tracking-wider font-semibold"
+                className="text-xs text-slate-400 hover:text-slate-200 uppercase tracking-wider font-bold"
               >
                 Dismiss
               </button>
@@ -414,11 +414,14 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
 
           {/* Error Message */}
           {errorMessage && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center justify-between gap-2 text-rose-300 text-xs font-mono">
-              <span>{errorMessage}</span>
+            <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center justify-between gap-2 text-rose-300 text-sm font-mono shadow-inner animate-fadeIn">
+              <span className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-rose-400 flex-shrink-0" />
+                {errorMessage}
+              </span>
               <button 
                 onClick={() => setErrorMessage(null)} 
-                className="text-[10px] text-slate-500 hover:text-slate-300 uppercase tracking-wider font-semibold"
+                className="text-xs text-slate-400 hover:text-slate-200 uppercase tracking-wider font-bold"
               >
                 Dismiss
               </button>
@@ -426,68 +429,68 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
           )}
 
           {/* Core Info Grid */}
-          <div className="space-y-4">
-            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Lead Info</span>
-            <div className="grid grid-cols-2 gap-4 bg-slate-900/20 border border-slate-850 p-4 rounded-xl">
+          <div className="space-y-3">
+            <span className="text-xs font-bold font-mono uppercase text-slate-400 tracking-wider block border-l-2 border-indigo-500 pl-2">Lead Info</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-slate-900/35 border border-slate-800/80 p-5 rounded-2xl">
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Event Type</span>
-                <span className="text-xs font-bold text-slate-200 mt-1 block truncate">{lead.projectTitle}</span>
+                <span className="text-xs font-mono uppercase text-slate-400 block">Event Type / Title</span>
+                <span className="text-sm font-bold text-slate-100 mt-1 block truncate" title={lead.projectTitle}>{lead.projectTitle}</span>
               </div>
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Commercial Value</span>
-                <span className="text-xs font-bold text-emerald-400 mt-1 block">
-                  {formatCurrencyINR(lead.quotationTotal || 0)}
+                <span className="text-xs font-mono uppercase text-slate-400 block">Commercial Value</span>
+                <span className="text-sm font-bold text-emerald-400 mt-1 block">
+                  {formatCurrencyINR(lead.quotationTotal || lead.estimatedValue || 0)}
                 </span>
               </div>
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Event Date</span>
-                <span className="text-xs font-semibold text-slate-300 mt-1 block flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                <span className="text-xs font-mono uppercase text-slate-400 block">Event Date</span>
+                <span className="text-sm font-semibold text-slate-200 mt-1 block flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4 text-indigo-400" />
                   <span>{lead.eventDate || 'N/A'}</span>
                 </span>
               </div>
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">City</span>
-                <span className="text-xs font-semibold text-slate-300 mt-1 block">{lead.city || 'N/A'}</span>
+                <span className="text-xs font-mono uppercase text-slate-400 block">City</span>
+                <span className="text-sm font-semibold text-slate-200 mt-1 block">{lead.city || 'N/A'}</span>
               </div>
             </div>
           </div>
 
           {/* Contact Details */}
-          <div className="space-y-4">
-            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Contact Info</span>
-            <div className="grid grid-cols-2 gap-4 bg-slate-900/20 border border-slate-850 p-4 rounded-xl">
-              <div className="col-span-2">
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Client Name</span>
-                <span className="text-xs font-bold text-slate-205 mt-1 block">{lead.clientName}</span>
+          <div className="space-y-3">
+            <span className="text-xs font-bold font-mono uppercase text-slate-400 tracking-wider block border-l-2 border-indigo-500 pl-2">Contact Info</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-slate-900/35 border border-slate-800/80 p-5 rounded-2xl">
+              <div className="sm:col-span-2">
+                <span className="text-xs font-mono uppercase text-slate-400 block">Client Name</span>
+                <span className="text-sm font-bold text-slate-100 mt-1 block">{lead.clientName}</span>
               </div>
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Phone</span>
-                <span className="text-xs font-semibold text-slate-300 mt-1 block flex items-center gap-1">
-                  <Phone className="h-3.5 w-3.5 text-slate-500" />
-                  <span>{lead.phone || 'N/A'}</span>
+                <span className="text-xs font-mono uppercase text-slate-400 block">Phone</span>
+                <span className="text-sm font-semibold text-slate-200 mt-1 block flex items-center gap-1.5">
+                  <Phone className="h-4 w-4 text-indigo-400" />
+                  <span className="font-mono">{lead.phone || 'N/A'}</span>
                 </span>
               </div>
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Email</span>
-                <span className="text-xs font-semibold text-slate-300 mt-1 block flex items-center gap-1 truncate">
-                  <Mail className="h-3.5 w-3.5 text-slate-500" />
-                  <span className="truncate">{lead.email || 'N/A'}</span>
+                <span className="text-xs font-mono uppercase text-slate-400 block">Email</span>
+                <span className="text-sm font-semibold text-slate-200 mt-1 block flex items-center gap-1.5 truncate">
+                  <Mail className="h-4 w-4 text-indigo-400" />
+                  <span className="truncate font-mono">{lead.email || 'N/A'}</span>
                 </span>
               </div>
             </div>
           </div>
 
           {/* Pipeline Details */}
-          <div className="space-y-4">
-            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Pipeline status</span>
-            <div className="grid grid-cols-2 gap-4 bg-slate-900/20 border border-slate-850 p-4 rounded-xl">
+          <div className="space-y-3">
+            <span className="text-xs font-bold font-mono uppercase text-slate-400 tracking-wider block border-l-2 border-indigo-500 pl-2">Pipeline status</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-slate-900/35 border border-slate-800/80 p-5 rounded-2xl">
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Current Stage</span>
-                <span className="text-xs font-bold text-violet-400 mt-1 block">{getStageLabel(lead.stage)}</span>
+                <span className="text-xs font-mono uppercase text-slate-400 block">Current Stage</span>
+                <span className="text-sm font-bold text-violet-400 mt-1.5 block">{getStageLabel(lead.stage)}</span>
               </div>
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Lead Priority</span>
+                <span className="text-xs font-mono uppercase text-slate-400 block">Lead Priority</span>
                 <select
                   value={priority}
                   onChange={async (e) => {
@@ -511,7 +514,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                       setErrorMessage(err?.message || 'Failed to update priority');
                     }
                   }}
-                  className="bg-[#0d1222]/60 border border-slate-800 text-slate-300 rounded p-1 text-[11px] focus:ring-1 focus:ring-violet-500 mt-1 block w-full"
+                  className="w-full bg-[#111933] border border-slate-700/80 text-slate-200 rounded-lg py-2 px-3 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 mt-1.5 focus:outline-none transition-colors"
                 >
                   <option value="LOW">LOW</option>
                   <option value="NORMAL">NORMAL</option>
@@ -520,28 +523,28 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                 </select>
               </div>
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Channel Preference</span>
-                <span className="text-xs font-semibold text-slate-350 mt-1 block flex items-center gap-1">
-                  <span className="text-slate-500">{getChannelIcon(lead.channel)}</span>
+                <span className="text-xs font-mono uppercase text-slate-400 block">Channel Preference</span>
+                <span className="text-sm font-semibold text-slate-200 mt-1.5 block flex items-center gap-1.5">
+                  <span className="text-indigo-400">{getChannelIcon(lead.channel)}</span>
                   <span>{lead.channel}</span>
                 </span>
               </div>
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Lead Source</span>
-                <span className="text-xs font-semibold text-slate-300 mt-1 block uppercase font-mono">{lead.leadSource || 'N/A'}</span>
+                <span className="text-xs font-mono uppercase text-slate-400 block">Lead Source</span>
+                <span className="text-sm font-semibold text-slate-200 mt-1.5 block uppercase font-mono">{lead.leadSource || 'N/A'}</span>
               </div>
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Last Contacted</span>
-                <span className="text-xs font-semibold text-slate-300 mt-1 block">{lead.lastContacted || 'N/A'}</span>
+                <span className="text-xs font-mono uppercase text-slate-400 block">Last Contacted</span>
+                <span className="text-sm font-semibold text-slate-200 mt-1.5 block font-mono">{lead.lastContacted || 'N/A'}</span>
               </div>
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Next Follow-up</span>
-                <span className="text-xs font-semibold text-slate-300 mt-1 block">{lead.nextFollowUp || 'N/A'}</span>
+                <span className="text-xs font-mono uppercase text-slate-400 block">Next Follow-up</span>
+                <span className="text-sm font-semibold text-slate-200 mt-1.5 block font-mono">{lead.nextFollowUp || 'N/A'}</span>
               </div>
               {lead.stage === 'LOST' && (
-                <div>
-                  <span className="text-[9px] font-mono uppercase text-rose-500 block">Lost Reason</span>
-                  <span className="text-xs font-bold text-rose-400 mt-1 block uppercase font-mono">{lead.lostReason || 'N/A'}</span>
+                <div className="sm:col-span-2">
+                  <span className="text-xs font-mono uppercase text-rose-400 block">Lost Reason</span>
+                  <span className="text-sm font-bold text-rose-400 mt-1.5 block uppercase font-mono">{lead.lostReason || 'N/A'}</span>
                 </div>
               )}
             </div>
@@ -549,42 +552,42 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
 
           {/* Notes Card */}
           {lead.notes && (
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Internal Lead Notes</span>
-              <div className="bg-[#0f172a]/40 border border-slate-850/60 p-3.5 rounded-xl text-xs text-slate-300 leading-relaxed font-sans">
+            <div className="space-y-3">
+              <span className="text-xs font-bold font-mono uppercase text-slate-400 tracking-wider block border-l-2 border-indigo-500 pl-2">Internal Lead Notes</span>
+              <div className="bg-slate-900/35 border border-slate-800/80 p-5 rounded-2xl text-sm text-slate-200 leading-relaxed font-sans shadow-inner">
                 {lead.notes}
               </div>
             </div>
           )}
           
           {/* Payments & Commercials Section */}
-          <div className="space-y-4">
-            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Payments & Commercials</span>
-            <div className="grid grid-cols-2 gap-4 bg-slate-900/20 border border-slate-850 p-4 rounded-xl">
+          <div className="space-y-3">
+            <span className="text-xs font-bold font-mono uppercase text-slate-400 tracking-wider block border-l-2 border-indigo-500 pl-2">Payments & Commercials</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-slate-900/35 border border-slate-800/80 p-5 rounded-2xl">
               <div>
-                <label className="text-[9px] font-mono uppercase text-slate-500 block">Quotation Total (INR)</label>
+                <label className="text-xs font-mono uppercase text-slate-400 block">Quotation Total (INR)</label>
                 <input
                   type="number"
                   value={quotationTotal}
                   onChange={(e) => setQuotationTotal(Number(e.target.value))}
-                  className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded p-1 text-xs mt-1"
+                  className="w-full bg-[#111933] border border-slate-700/80 text-slate-100 rounded-lg py-2 px-3 text-sm mt-1 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 focus:outline-none transition-colors"
                 />
               </div>
               <div>
-                <label className="text-[9px] font-mono uppercase text-slate-500 block">Amount Paid (INR)</label>
+                <label className="text-xs font-mono uppercase text-slate-400 block">Amount Paid (INR)</label>
                 <input
                   type="number"
                   value={amountPaid}
                   onChange={(e) => setAmountPaid(Number(e.target.value))}
-                  className="w-full bg-[#0d1222]/40 border border-slate-800 text-slate-200 rounded p-1 text-xs mt-1"
+                  className="w-full bg-[#111933] border border-slate-700/80 text-slate-100 rounded-lg py-2 px-3 text-sm mt-1 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 focus:outline-none transition-colors"
                 />
               </div>
               <div>
-                <label className="text-[9px] font-mono uppercase text-slate-500 block">Payment Status</label>
+                <label className="text-xs font-mono uppercase text-slate-400 block">Payment Status</label>
                 <select
                   value={paymentStatus}
                   onChange={(e) => setPaymentStatus(e.target.value as LeadPaymentStatus)}
-                  className="w-full bg-[#0d1222]/60 border border-slate-800 text-slate-350 rounded p-1 text-xs mt-1"
+                  className="w-full bg-[#111933] border border-slate-700/80 text-slate-200 rounded-lg py-2 px-3 text-sm mt-1 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 focus:outline-none transition-colors"
                 >
                   <option value="UNPAID">UNPAID</option>
                   <option value="ADVANCE_PAID">ADVANCE PAID</option>
@@ -594,12 +597,12 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                 </select>
               </div>
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block">Amount Remaining</span>
-                <span className="text-xs font-bold text-amber-400 mt-2 block">
+                <span className="text-xs font-mono uppercase text-slate-400 block">Amount Remaining</span>
+                <span className="text-sm font-bold text-amber-400 mt-2.5 block font-mono">
                   {formatCurrencyINR(quotationTotal - amountPaid)}
                 </span>
               </div>
-              <div className="col-span-2 flex justify-end">
+              <div className="sm:col-span-2 flex justify-end pt-2 border-t border-slate-800/60 mt-1">
                 <button
                   type="button"
                   onClick={async () => {
@@ -630,7 +633,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                       setIsSaving(false);
                     }
                   }}
-                  className="py-1 px-3 bg-violet-600/20 hover:bg-violet-600/35 border border-violet-500/30 text-violet-300 rounded text-xs font-semibold cursor-pointer transition-all"
+                  className="py-2 px-4 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-bold cursor-pointer transition-all shadow-md"
                 >
                   Save Payments
                 </button>
@@ -639,43 +642,43 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
           </div>
 
           {/* Lead Event Segments List */}
-          <div className="space-y-4">
-            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Lead Event Segments ({lead.eventSegments?.length || 0})</span>
-            <div className="space-y-2">
+          <div className="space-y-3">
+            <span className="text-xs font-bold font-mono uppercase text-slate-400 tracking-wider block border-l-2 border-indigo-500 pl-2">Lead Event Segments ({lead.eventSegments?.length || 0})</span>
+            <div className="space-y-3.5">
               {lead.eventSegments && lead.eventSegments.length > 0 ? (
                 lead.eventSegments.map((seg, idx) => (
-                  <div key={idx} className="bg-slate-900/20 border border-slate-850 p-3 rounded-xl text-xs space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-violet-400 font-mono text-[10px] uppercase">{seg.eventType} — {seg.eventName}</span>
+                  <div key={idx} className="bg-slate-900/35 border border-slate-800/80 p-4 rounded-2xl text-xs space-y-2">
+                    <div className="flex justify-between items-center pb-1.5 border-b border-slate-800/50">
+                      <span className="font-bold text-violet-400 font-mono text-xs uppercase">{seg.eventType} — {seg.eventName}</span>
                       {seg.eventDate && (
-                        <span className="text-[10px] text-slate-400 font-mono font-bold flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-slate-500" />
+                        <span className="text-xs text-slate-300 font-mono font-semibold flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-indigo-400" />
                           {seg.eventDate}
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-slate-350 text-[11px]">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-200 text-xs">
                       {seg.startTime && (
                         <div>
-                          <span className="text-[9px] text-slate-500 uppercase font-mono block">Timings</span>
-                          <span>{seg.startTime} {seg.endTime ? `to ${seg.endTime}` : ''}</span>
+                          <span className="text-[10px] text-slate-400 uppercase font-mono block">Timings</span>
+                          <span className="font-semibold">{seg.startTime} {seg.endTime ? `to ${seg.endTime}` : ''}</span>
                         </div>
                       )}
                       {seg.city && (
                         <div>
-                          <span className="text-[9px] text-slate-500 uppercase font-mono block">City / Venue</span>
-                          <span>{seg.city} {seg.venueName ? `(${seg.venueName})` : ''}</span>
+                          <span className="text-[10px] text-slate-400 uppercase font-mono block">City / Venue</span>
+                          <span className="font-semibold">{seg.city} {seg.venueName ? `(${seg.venueName})` : ''}</span>
                         </div>
                       )}
                     </div>
                     {seg.notes && (
-                      <p className="text-slate-400 text-[11px] italic pt-1 border-t border-slate-850/50 mt-1">Notes: {seg.notes}</p>
+                      <p className="text-slate-400 text-xs italic pt-2 border-t border-slate-800/40 mt-1">Notes: {seg.notes}</p>
                     )}
                   </div>
                 ))
               ) : (
-                <div className="bg-[#0f172a]/20 border border-slate-850 p-4 rounded-xl text-center">
-                  <span className="text-xs text-slate-500">No event segments found.</span>
+                <div className="bg-slate-900/20 border border-slate-800/60 p-5 rounded-2xl text-center shadow-inner">
+                  <span className="text-xs text-slate-500 font-semibold">No event segments found.</span>
                 </div>
               )}
             </div>
@@ -683,56 +686,56 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
 
           {/* Quotations Section */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Proposal Estimates</span>
+            <div className="flex items-center justify-between border-b border-slate-800/40 pb-2">
+              <span className="text-xs font-bold font-mono uppercase text-slate-400 tracking-wider block border-l-2 border-indigo-500 pl-2">Proposal Estimates</span>
               {onCreateQuotation && (
                 <button
                   type="button"
                   onClick={() => onCreateQuotation(lead)}
-                  className="text-[10px] font-bold text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1.5 cursor-pointer bg-violet-600/10 hover:bg-violet-600/20 px-3 py-1.5 rounded-lg border border-violet-500/20"
                 >
-                  <Plus className="h-3 w-3" />
+                  <Plus className="h-3.5 w-3.5" />
                   <span>Create Quote</span>
                 </button>
               )}
             </div>
 
             {leadQuotations.length === 0 ? (
-              <div className="bg-[#0f172a]/20 border border-slate-850 p-4 rounded-xl text-center">
-                <span className="text-xs text-slate-500">No quotation created yet for this lead.</span>
+              <div className="bg-slate-900/20 border border-slate-800/60 p-5 rounded-2xl text-center shadow-inner">
+                <span className="text-xs text-slate-500 font-semibold">No quotation created yet for this lead.</span>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {leadQuotations.map((qtn) => (
                   <div
-                    key={qtn.id}
-                    onClick={() => onEditQuotation && onEditQuotation(qtn)}
-                    className="group bg-[#0d1424]/60 hover:bg-[#121b2f] border border-slate-850 hover:border-violet-500/30 rounded-xl p-3.5 flex flex-col gap-2.5 transition-all duration-200 cursor-pointer relative"
+                     key={qtn.id}
+                     onClick={() => onEditQuotation && onEditQuotation(qtn)}
+                     className="group bg-slate-900/35 hover:bg-[#121c33] border border-slate-800/80 hover:border-violet-500/30 rounded-2xl p-4.5 flex flex-col gap-3 transition-all duration-200 cursor-pointer relative"
                   >
                     <div className="absolute top-0 right-0 h-16 w-16 bg-gradient-to-br from-violet-600/5 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-0.5">
-                        <span className="text-[9px] font-bold text-violet-400 font-mono tracking-wider block">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-violet-400 font-mono tracking-widest block uppercase">
                           {qtn.quotationNumber}
                         </span>
-                        <h4 className="text-xs font-semibold text-slate-200 group-hover:text-white line-clamp-1">
+                        <h4 className="text-sm font-bold text-slate-200 group-hover:text-white line-clamp-1">
                           {qtn.title}
                         </h4>
                       </div>
                       <QuotationStatusBadge status={qtn.status} />
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-455 font-mono border-t border-slate-900 pt-2">
-                      <span>{formatCurrencyINR(qtn.totalAmount)}</span>
+                    <div className="flex items-center justify-between text-xs text-slate-300 font-mono border-t border-slate-800/50 pt-2.5 mt-1">
+                      <span className="font-bold">{formatCurrencyINR(qtn.totalAmount)}</span>
                       {qtn.validUntil ? (
-                        <span className="text-slate-500 text-[10px]">Valid: {qtn.validUntil}</span>
+                        <span className="text-slate-400 font-semibold">Valid: {qtn.validUntil}</span>
                       ) : (
-                        <span className="text-slate-650 text-[10px] italic">No validity</span>
+                        <span className="text-slate-500 italic">No validity date</span>
                       )}
                     </div>
                     {qtn.status === 'SENT' && (
-                      <div className="text-[10px] text-amber-405/90 font-mono mt-1 border-t border-slate-900/60 pt-2 flex items-center gap-1">
-                        <AlertCircle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                      <div className="text-[10px] text-amber-400/90 font-mono mt-1 border-t border-slate-800/40 pt-2 flex items-center gap-1.5">
+                        <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
                         <span>Follow-up automation trigger will be connected in AUTO-001.</span>
                       </div>
                     )}
@@ -743,27 +746,27 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
           </div>
 
           {/* Project Conversion & Linkage Block */}
-          <div className="space-y-2.5">
-            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Project Conversion</span>
+          <div className="space-y-3">
+            <span className="text-xs font-bold font-mono uppercase text-slate-400 tracking-wider block border-l-2 border-indigo-500 pl-2">Project Conversion</span>
             
             {lead.projectId ? (
               // Already Converted Info Card
-              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 space-y-2 animate-fadeIn">
-                <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs">
-                  <CheckCircle2 className="h-4 w-4" />
+              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5 space-y-3.5 animate-fadeIn">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
                   <span>Project Linked & Converted</span>
                 </div>
-                <div className="grid grid-cols-1 gap-2.5 mt-2 bg-slate-950/40 p-3 rounded-lg border border-slate-900 text-xs">
+                <div className="grid grid-cols-1 gap-3 bg-slate-950/40 p-4 rounded-xl border border-slate-900 text-xs">
                   <div>
-                    <span className="text-[9px] font-mono uppercase text-slate-500 block">Project ID</span>
-                    <span className="text-slate-300 font-mono select-all block truncate mt-0.5" title="Double click to select all">
+                    <span className="text-[10px] font-mono uppercase text-slate-500 block">Project ID</span>
+                    <span className="text-slate-300 font-mono select-all block truncate mt-1" title="Double click to select all">
                       {lead.projectId}
                     </span>
                   </div>
                   {lead.convertedAt && (
                     <div>
-                      <span className="text-[9px] font-mono uppercase text-slate-500 block">Converted At</span>
-                      <span className="text-slate-400 block mt-0.5">
+                      <span className="text-[10px] font-mono uppercase text-slate-500 block">Converted At</span>
+                      <span className="text-slate-400 block mt-1">
                         {new Date(lead.convertedAt).toLocaleString()}
                       </span>
                     </div>
@@ -772,9 +775,9 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               </div>
             ) : (
               // Not Converted: Show Convert Button/Flow
-              <div className="bg-[#0f172a]/30 border border-slate-850/60 rounded-xl p-4 space-y-3">
+              <div className="bg-slate-900/20 border border-slate-800/60 rounded-2xl p-5 space-y-4 shadow-inner">
                 {hasAcceptedQuotation && (
-                  <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-2.5 rounded-lg text-xs flex items-center gap-2 mb-2 font-medium">
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-3 rounded-lg text-xs flex items-center gap-2.5 mb-1 font-semibold">
                     <Sparkles className="h-4 w-4 text-emerald-400 flex-shrink-0 animate-pulse" />
                     <span>Accepted Quote Found! Ready to convert.</span>
                   </div>
@@ -784,27 +787,27 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                     type="button"
                     disabled={isConverting || isSaving}
                     onClick={() => setIsConfirmingConvert(true)}
-                    className={`w-full py-2.5 px-4 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+                    className={`w-full py-3 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                       hasAcceptedQuotation
                         ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-500/20 text-white shadow-md'
-                        : 'bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 text-violet-300'
+                        : 'bg-violet-600/20 hover:bg-violet-600/35 border border-violet-500/30 text-violet-300'
                     }`}
                   >
                     <FolderPlus className="h-4 w-4" />
                     <span>{hasAcceptedQuotation ? 'Create Project from Accepted Quote' : 'Convert to Project'}</span>
                   </button>
                 ) : (
-                  <div className="space-y-3 animate-fadeIn">
-                    <div className="flex gap-2 items-start text-slate-455 text-xs leading-relaxed">
+                  <div className="space-y-4 animate-fadeIn">
+                    <div className="flex gap-2.5 items-start text-slate-300 text-xs leading-relaxed bg-[#1b101c]/30 border border-amber-500/20 p-3 rounded-lg">
                       <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
                       <p>Convert this lead into a client and project? This will register them in database and transition the stage.</p>
                     </div>
-                    <div className="flex gap-2 justify-end">
+                    <div className="flex gap-2.5 justify-end">
                       <button
                         type="button"
                         disabled={isConverting}
                         onClick={() => setIsConfirmingConvert(false)}
-                        className="py-1.5 px-3 bg-slate-850 hover:bg-slate-800 disabled:opacity-40 text-slate-450 rounded-lg text-xs font-semibold transition-colors"
+                        className="py-2 px-4 bg-slate-800 hover:bg-slate-700/80 disabled:opacity-40 text-slate-300 rounded-lg text-xs font-semibold transition-colors"
                       >
                         Cancel
                       </button>
@@ -812,11 +815,11 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                         type="button"
                         disabled={isConverting}
                         onClick={handleConvertToProject}
-                        className="py-1.5 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-lg text-xs font-semibold transition-all shadow-md flex items-center justify-center gap-1.5"
+                        className="py-2 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5"
                       >
                         {isConverting ? (
                           <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <Loader2 className="h-4 w-4 animate-spin" />
                             <span>Converting...</span>
                           </>
                         ) : (
@@ -832,10 +835,10 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
 
           {/* Bidirectional Stage movement action */}
           <div className="space-y-3">
-            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Update Pipeline Stage</span>
-            <div className="bg-slate-900/20 border border-slate-850 p-4 rounded-xl space-y-3">
+            <span className="text-xs font-bold font-mono uppercase text-slate-400 tracking-wider block border-l-2 border-indigo-500 pl-2">Update Pipeline Stage</span>
+            <div className="bg-slate-900/35 border border-slate-800/80 p-5 rounded-2xl space-y-4">
               <div>
-                <span className="text-[9px] font-mono uppercase text-slate-500 block mb-1.5">Transition Stage</span>
+                <span className="text-[10px] font-mono uppercase text-slate-400 block mb-1.5">Transition Stage</span>
                 <select
                   value={selectedStage}
                   onChange={(e) => {
@@ -851,7 +854,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                       setShowBackwardNotes(false);
                     }
                   }}
-                  className="w-full bg-[#0d1222]/60 border border-slate-800 text-slate-300 rounded p-1.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+                  className="w-full bg-[#111933] border border-slate-700/80 text-slate-200 rounded-lg py-2 px-3 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 focus:outline-none transition-colors"
                 >
                   {FUNNEL_STAGES.map((stg) => (
                     <option key={stg} value={stg}>{getStageLabel(stg)}</option>
@@ -860,23 +863,23 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
               </div>
 
               {showBackwardNotes && (
-                <div className="space-y-1 animate-fadeIn">
-                  <label className="text-[9px] font-mono uppercase text-rose-400 block">Notes / Reason for backward stage transition *</label>
+                <div className="space-y-1.5 animate-fadeIn">
+                  <label className="text-[10px] font-mono uppercase text-rose-400 block">Notes / Reason for backward stage transition *</label>
                   <textarea
                     value={backwardNotes}
                     onChange={(e) => setBackwardNotes(e.target.value)}
                     placeholder="Enter the reason for moving the lead backward..."
                     rows={2}
-                    className="w-full bg-[#0d1222]/40 border border-rose-500/30 text-slate-200 rounded p-2 text-xs focus:ring-1 focus:ring-rose-500 focus:outline-none resize-none"
+                    className="w-full bg-[#111933] border border-rose-500/30 text-slate-100 rounded-lg p-3 text-sm focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 focus:outline-none resize-none"
                   />
                 </div>
               )}
 
               {selectedStage === 'LOST' && (
                 <div className="space-y-1.5 animate-fadeIn">
-                  <label className="text-[9px] font-mono uppercase text-slate-500 block">Lost Reason</label>
+                  <label className="text-[10px] font-mono uppercase text-slate-400 block">Lost Reason</label>
                   <select
-                    className="w-full bg-[#0d1222]/60 border border-slate-800 text-slate-350 rounded p-1.5 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none"
+                    className="w-full bg-[#111933] border border-slate-700/80 text-slate-200 rounded-lg py-2 px-3 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 focus:outline-none transition-colors"
                     id="lost-reason-select"
                   >
                     <option value="PRICE_TOO_HIGH">PRICE TOO HIGH</option>
@@ -889,7 +892,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-1">
+              <div className="flex justify-end gap-2.5 pt-1.5 border-t border-slate-800/60">
                 <button
                   type="button"
                   disabled={isUpdatingStage || (showBackwardNotes && !backwardNotes.trim())}
@@ -915,11 +918,11 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                       setIsUpdatingStage(false);
                     }
                   }}
-                  className="py-1.5 px-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-md"
+                  className="py-2 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-md"
                 >
                   {isUpdatingStage ? (
                     <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       <span>Updating...</span>
                     </>
                   ) : (
@@ -932,38 +935,38 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
 
           {/* Suggested Message Editor Block */}
           {!isTerminal && template && (
-            <div className="border border-slate-850/80 rounded-xl p-4 bg-slate-900/10 space-y-3.5">
-              <div className="flex items-center justify-between border-b border-slate-900 pb-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-mono text-amber-400 uppercase tracking-wide flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
+            <div className="border border-slate-800/80 rounded-2xl p-5 bg-slate-900/35 space-y-4 shadow-inner">
+              <div className="flex items-center justify-between border-b border-slate-800/50 pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold font-mono text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock className="h-4 w-4 text-amber-400" />
                     <span>WhatsApp Draft Message ({template.templateType})</span>
                   </span>
                   {(activeTask?.isDraft || activeTask?.draftMessage) && (
-                    <span className="px-1.5 py-[1px] bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded text-[8px] font-black tracking-wide uppercase shrink-0">
+                    <span className="px-2 py-[2px] bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded text-[9px] font-black tracking-wide uppercase shrink-0">
                       DRAFT SAVED
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] text-slate-500 font-semibold">{lead.nextFollowUp}</span>
+                <span className="text-xs text-slate-400 font-bold font-mono">{lead.nextFollowUp}</span>
               </div>
 
               {/* Textarea and buttons */}
-              <div className="space-y-3">
-                <div className="bg-slate-950 border border-slate-850 p-3 rounded-lg text-xs font-medium flex flex-col space-y-2">
+              <div className="space-y-4">
+                <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl text-xs font-medium flex flex-col space-y-2.5">
                   <div className="flex justify-between items-center">
-                    <span className="text-[9px] font-mono text-slate-500 block uppercase">Draft Message</span>
+                    <span className="text-[10px] font-mono text-slate-400 block uppercase">Draft Message Text</span>
                     {hasUnsavedChanges && (
-                      <span className="text-[10px] text-amber-400 font-semibold italic animate-pulse">Unsaved changes</span>
+                      <span className="text-xs text-amber-400 font-semibold italic animate-pulse">Unsaved changes</span>
                     )}
                   </div>
                   <textarea
                     value={draftText}
                     onChange={(e) => setDraftText(e.target.value)}
-                    className="w-full bg-[#0d1222]/80 border border-slate-800 text-slate-200 rounded p-2 text-xs focus:ring-1 focus:ring-violet-500 focus:outline-none resize-none min-h-[120px] font-sans"
+                    className="w-full bg-[#111933] border border-slate-700/80 text-slate-100 rounded-lg p-3 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 focus:outline-none resize-none min-h-[140px] font-sans leading-relaxed"
                     placeholder="Type message draft here..."
                   />
-                  <div className="flex justify-between items-center gap-2">
+                  <div className="flex justify-between items-center gap-3 pt-2">
                     <button
                       type="button"
                       onClick={async () => {
@@ -992,7 +995,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                         }
                         setDraftText(templateMessage);
                       }}
-                      className="py-1.5 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
+                      className="py-2 px-4 rounded-lg text-xs font-bold text-slate-300 hover:text-slate-100 bg-slate-850 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer"
                     >
                       Reset to Template
                     </button>
@@ -1000,33 +1003,33 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                       type="button"
                       disabled={isSavingDraft || isButtonsDisabled}
                       onClick={handleSaveDraft}
-                      className={`py-1.5 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                      className={`py-2 px-4 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
                         !isButtonsDisabled
                           ? 'bg-violet-600 hover:bg-violet-500 text-white shadow-md'
-                          : 'bg-slate-855 text-slate-600 cursor-not-allowed opacity-50'
+                          : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
                       }`}
                     >
-                      {isSavingDraft ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />}
+                      {isSavingDraft ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
                       <span>Save Draft</span>
                     </button>
                   </div>
                 </div>
 
                 {!canUseTaskActions && (
-                  <div className="text-[10px] text-amber-400 bg-amber-500/5 border border-amber-500/10 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5">
-                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 text-amber-500" />
+                  <div className="text-xs text-amber-400 bg-amber-500/5 border border-amber-500/10 px-3 py-2 rounded-lg flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0 text-amber-500" />
                     <span>No follow-up task exists yet. Save Draft will create one.</span>
                   </div>
                 )}
 
                 {/* Bottom Action buttons */}
-                <div className="flex gap-2 pt-2 border-t border-slate-900">
+                <div className="flex gap-2.5 pt-3 border-t border-slate-800/60">
                   <button
                     onClick={handleSkipFollowUp}
                     disabled={!canUseTaskActions}
-                    className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                    className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${
                       canUseTaskActions
-                        ? 'bg-slate-800 hover:bg-slate-700 text-slate-350 cursor-pointer'
+                        ? 'bg-slate-800 hover:bg-slate-700/80 text-slate-200 border border-slate-700/50 cursor-pointer'
                         : 'bg-slate-850 text-slate-600 cursor-not-allowed opacity-50'
                     }`}
                     title={canUseTaskActions ? "Skip this step" : "No scheduled task linked to this lead"}
@@ -1039,23 +1042,23 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                       <button
                         disabled={!isValidPhoneNumber(lead.phone) || isButtonsDisabled}
                         onClick={handleOpenWhatsApp}
-                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+                        className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                           isValidPhoneNumber(lead.phone) && !isButtonsDisabled
-                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer'
-                            : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-md'
+                            : 'bg-slate-855 text-slate-500 cursor-not-allowed opacity-50'
                         }`}
                         title={isValidPhoneNumber(lead.phone) ? "Open WhatsApp" : "Valid WhatsApp number with country code required."}
                       >
-                        <MessageSquare className="h-3.5 w-3.5" />
+                        <MessageSquare className="h-4 w-4 text-white" />
                         <span>Open WhatsApp</span>
                       </button>
 
                       <button
                         disabled={!isValidPhoneNumber(lead.phone) || isButtonsDisabled || !canUseTaskActions}
                         onClick={handleApproveFollowUp}
-                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1 ${
+                        className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 ${
                           isValidPhoneNumber(lead.phone) && !isButtonsDisabled && canUseTaskActions
-                            ? 'bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-500 hover:to-fuchsia-400 text-white shadow-md cursor-pointer'
+                            ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-md cursor-pointer'
                             : 'bg-slate-850 text-slate-550 cursor-not-allowed opacity-50'
                         }`}
                         title={
@@ -1066,7 +1069,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                               : "Valid WhatsApp number with country code required."
                         }
                       >
-                        <ThumbsUp className="h-3.5 w-3.5" />
+                        <ThumbsUp className="h-4 w-4 text-white" />
                         <span>Mark as Sent</span>
                       </button>
                     </>
@@ -1074,28 +1077,28 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                     <button
                       disabled={isButtonsDisabled || !canUseTaskActions}
                       onClick={handleApproveFollowUp}
-                      className={`flex-1 py-2 px-3 border rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1 ${
+                      className={`flex-1 py-2.5 px-3 border rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                         !isButtonsDisabled && canUseTaskActions
-                          ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400 cursor-pointer'
-                          : 'bg-slate-850 text-slate-550 cursor-not-allowed opacity-50'
+                          ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-400 cursor-pointer shadow-md'
+                          : 'bg-slate-855 text-slate-550 cursor-not-allowed opacity-50'
                       }`}
                     >
-                      <ThumbsUp className="h-3.5 w-3.5" />
+                      <ThumbsUp className="h-4 w-4 text-emerald-400" />
                       <span>Approve & Send</span>
                     </button>
                   )}
                 </div>
 
                 {lead.channel === 'WHATSAPP' && (
-                  <div className="space-y-1.5 mt-1">
+                  <div className="space-y-2 mt-1">
                     {!isValidPhoneNumber(lead.phone) && (
-                      <div className="text-[10px] text-rose-455 bg-rose-500/5 border border-rose-500/10 px-2 py-1 rounded flex items-center gap-1">
-                        <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 text-rose-400" />
+                      <div className="text-xs text-rose-350 bg-rose-500/5 border border-rose-500/10 px-3 py-2 rounded-lg flex items-center gap-2 font-medium">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0 text-rose-400" />
                         <span>Valid WhatsApp number with country code required.</span>
                       </div>
                     )}
-                    <div className="text-[10px] text-emerald-400/90 bg-emerald-500/5 border border-emerald-500/10 px-2 py-1 rounded flex items-center gap-1">
-                      <MessageSquare className="h-3.5 w-3.5 flex-shrink-0 text-emerald-400" />
+                    <div className="text-xs text-emerald-400 bg-emerald-500/5 border border-emerald-500/10 px-3 py-2 rounded-lg flex items-center gap-2 font-medium">
+                      <MessageSquare className="h-4 w-4 flex-shrink-0 text-emerald-400 animate-pulse" />
                       <span>Manual WhatsApp send — open WhatsApp first, then mark as sent.</span>
                     </div>
                   </div>
@@ -1105,19 +1108,20 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
           )}
 
           {/* Audit History Log */}
-          <div className="space-y-3.5">
-            <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Communication & Audit History</span>
-            <div className="space-y-2.5">
+          <div className="space-y-3">
+            <span className="text-xs font-bold font-mono uppercase text-slate-400 tracking-wider block border-l-2 border-indigo-500 pl-2">Communication & Audit History</span>
+            <div className="space-y-4 pl-2">
               {lead.history && lead.history.length > 0 ? (
                 lead.history.map((log, idx) => (
-                  <div key={idx} className="flex gap-3 text-[11px] items-start">
-                    <span className="text-slate-500 font-mono whitespace-nowrap mt-0.5">{log.date}</span>
-                    <div className="flex-1 space-y-0.5">
-                      <p className="text-slate-300 font-medium">{log.event}</p>
-                      <span className={`text-[9px] font-bold uppercase tracking-wider font-mono ${
-                        log.status === 'sent' ? 'text-emerald-400' :
-                        log.status === 'skipped' ? 'text-rose-400' :
-                        'text-slate-500'
+                  <div key={idx} className="flex gap-4 text-xs items-start border-l-2 border-slate-800/80 pl-4 pb-2 relative">
+                    <span className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full bg-slate-700" />
+                    <span className="text-slate-400 font-mono whitespace-nowrap mt-0.5 font-semibold">{log.date}</span>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-slate-200 font-semibold">{log.event}</p>
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-widest font-mono border ${
+                        log.status === 'sent' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                        log.status === 'skipped' ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' :
+                        'bg-slate-800 border-slate-700 text-slate-400'
                       }`}>
                         {log.status}
                       </span>
@@ -1125,8 +1129,8 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                   </div>
                 ))
               ) : (
-                <div className="text-center py-4 border border-dashed border-slate-900 rounded-xl">
-                  <span className="text-[10px] text-slate-600 font-semibold tracking-wide">No history log recorded</span>
+                <div className="text-center py-6 border border-dashed border-slate-800 rounded-2xl bg-slate-900/10">
+                  <span className="text-xs text-slate-500 font-semibold tracking-wide">No history log recorded</span>
                 </div>
               )}
             </div>
@@ -1135,10 +1139,10 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/40 flex justify-end gap-2">
+        <div className="p-5 border-t border-slate-800 bg-slate-900/40 flex justify-end gap-2.5">
           <button 
             onClick={onClose}
-            className="py-2 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition-colors"
+            className="py-2.5 px-5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold transition-all border border-slate-700/50"
           >
             Close Details
           </button>

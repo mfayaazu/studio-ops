@@ -24,6 +24,11 @@ public interface ProjectRepository extends JpaRepository<Project, UUID> {
 
     Optional<Project> findByProjectCode(String projectCode);
 
+    Optional<Project> findByStudioIdAndProjectCode(UUID studioId, String projectCode);
+
+    @Query("SELECT p.projectCode FROM Project p WHERE p.studioId = :studioId AND p.projectCode LIKE :prefixPattern")
+    List<String> findProjectCodesByStudioAndPattern(@Param("studioId") UUID studioId, @Param("prefixPattern") String prefixPattern);
+
     @Query("SELECT p FROM Project p WHERE " +
            "LOWER(p.projectCode) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +

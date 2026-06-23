@@ -27,6 +27,9 @@ public class Deliverable {
     @Column(name = "deliverable_type", nullable = false, length = 100)
     private DeliverableType deliverableType;
 
+    @Column(name = "custom_deliverable_type")
+    private String customDeliverableType;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 100)
     private DeliverableStatus status = DeliverableStatus.NOT_STARTED;
@@ -158,5 +161,13 @@ public class Deliverable {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getCustomDeliverableType() {
+        return customDeliverableType;
+    }
+
+    public void setCustomDeliverableType(String customDeliverableType) {
+        this.customDeliverableType = customDeliverableType;
     }
 }

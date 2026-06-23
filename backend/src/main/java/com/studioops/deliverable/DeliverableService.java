@@ -57,6 +57,10 @@ public class DeliverableService {
                     .orElseThrow(() -> new ResourceNotFoundException("Employee not found in the same studio with id: " + request.getAssignedEmployeeId()));
         }
 
+        if (request.getDeliverableType() == DeliverableType.OTHER && (request.getCustomDeliverableType() == null || request.getCustomDeliverableType().trim().isEmpty())) {
+            throw new IllegalArgumentException("Specify deliverable type.");
+        }
+
         if (request.getPriority() == null) {
             request.setPriority(DeliverablePriority.MEDIUM);
         }
@@ -102,6 +106,10 @@ public class DeliverableService {
         if (request.getAssignedEmployeeId() != null) {
             employeeRepository.findByIdAndStudioId(request.getAssignedEmployeeId(), deliverable.getStudioId())
                     .orElseThrow(() -> new ResourceNotFoundException("Employee not found in the same studio with id: " + request.getAssignedEmployeeId()));
+        }
+
+        if (request.getDeliverableType() == DeliverableType.OTHER && (request.getCustomDeliverableType() == null || request.getCustomDeliverableType().trim().isEmpty())) {
+            throw new IllegalArgumentException("Specify deliverable type.");
         }
 
         DeliverableMapper.updateEntity(deliverable, request);

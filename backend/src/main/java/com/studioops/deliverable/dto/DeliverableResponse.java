@@ -21,6 +21,7 @@ public class DeliverableResponse {
     private LocalDate dueDate;
     private Instant createdAt;
     private Instant updatedAt;
+    private String customDeliverableType;
 
     public DeliverableResponse() {
     }
@@ -119,5 +120,13 @@ public class DeliverableResponse {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getCustomDeliverableType() {
+        return customDeliverableType;
+    }
+
+    public void setCustomDeliverableType(String customDeliverableType) {
+        this.customDeliverableType = customDeliverableType;
     }
 }

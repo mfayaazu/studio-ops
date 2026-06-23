@@ -6,7 +6,7 @@ import com.studioops.lead.LeadPreferredChannel;
 import com.studioops.lead.LeadSource;
 import com.studioops.lead.LeadPriority;
 import com.studioops.lead.LeadPaymentStatus;
-import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -28,7 +28,7 @@ public class LeadCreateRequest {
     @Size(max = 50, message = "phone must be less than 50 characters")
     private String phone;
 
-    @Email(message = "Invalid email format")
+    @Pattern(regexp = "^$|^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", message = "Please enter a valid email address.")
     @Size(max = 255, message = "email must be less than 255 characters")
     private String email;
 

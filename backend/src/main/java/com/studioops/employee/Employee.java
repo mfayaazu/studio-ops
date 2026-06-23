@@ -2,6 +2,7 @@ package com.studioops.employee;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -37,6 +38,12 @@ public class Employee {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
     private EmployeeStatus status;
+
+    @Column(name = "leave_from_date")
+    private LocalDate leaveFromDate;
+
+    @Column(name = "leave_to_date")
+    private LocalDate leaveToDate;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -149,5 +156,21 @@ public class Employee {
 
     public void setStudioId(UUID studioId) {
         this.studioId = studioId;
+    }
+
+    public LocalDate getLeaveFromDate() {
+        return leaveFromDate;
+    }
+
+    public void setLeaveFromDate(LocalDate leaveFromDate) {
+        this.leaveFromDate = leaveFromDate;
+    }
+
+    public LocalDate getLeaveToDate() {
+        return leaveToDate;
+    }
+
+    public void setLeaveToDate(LocalDate leaveToDate) {
+        this.leaveToDate = leaveToDate;
     }
 }

@@ -3,8 +3,11 @@ package com.studioops.project.dto;
 import com.studioops.project.BookingStatus;
 import com.studioops.project.PaymentStatus;
 import com.studioops.project.ProjectStatus;
+import com.studioops.project.ProjectPriority;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 
 public class ProjectResponse {
@@ -23,6 +26,18 @@ public class ProjectResponse {
     private Instant createdAt;
     private Instant updatedAt;
     private UUID studioId;
+
+    private String projectSubtype;
+    private String projectEvents;
+    private BigDecimal projectBudget;
+    private BigDecimal amountPaid;
+    private String shootLocation;
+    private String googleMapsLink;
+    private LocalDate shootDate;
+    private LocalTime shootStartTime;
+    private LocalTime shootEndTime;
+    private ProjectPriority priority;
+    private String leadSource;
 
     public ProjectResponse() {
     }
@@ -186,5 +201,93 @@ public class ProjectResponse {
 
     public void setStudioId(UUID studioId) {
         this.studioId = studioId;
+    }
+
+    public String getProjectSubtype() {
+        return projectSubtype;
+    }
+
+    public void setProjectSubtype(String projectSubtype) {
+        this.projectSubtype = projectSubtype;
+    }
+
+    public String getProjectEvents() {
+        return projectEvents;
+    }
+
+    public void setProjectEvents(String projectEvents) {
+        this.projectEvents = projectEvents;
+    }
+
+    public BigDecimal getProjectBudget() {
+        return projectBudget;
+    }
+
+    public void setProjectBudget(BigDecimal projectBudget) {
+        this.projectBudget = projectBudget;
+    }
+
+    public BigDecimal getAmountPaid() {
+        return amountPaid;
+    }
+
+    public void setAmountPaid(BigDecimal amountPaid) {
+        this.amountPaid = amountPaid;
+    }
+
+    public String getShootLocation() {
+        return shootLocation;
+    }
+
+    public void setShootLocation(String shootLocation) {
+        this.shootLocation = shootLocation;
+    }
+
+    public String getGoogleMapsLink() {
+        return googleMapsLink;
+    }
+
+    public void setGoogleMapsLink(String googleMapsLink) {
+        this.googleMapsLink = googleMapsLink;
+    }
+
+    public LocalDate getShootDate() {
+        return shootDate;
+    }
+
+    public void setShootDate(LocalDate shootDate) {
+        this.shootDate = shootDate;
+    }
+
+    public LocalTime getShootStartTime() {
+        return shootStartTime;
+    }
+
+    public void setShootStartTime(LocalTime shootStartTime) {
+        this.shootStartTime = shootStartTime;
+    }
+
+    public LocalTime getShootEndTime() {
+        return shootEndTime;
+    }
+
+    public void setShootEndTime(LocalTime shootEndTime) {
+        this.shootEndTime = shootEndTime;
+    }
+
+    public ProjectPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(ProjectPriority priority) {
+        this.priority = priority;
+    }
+
+    public String getLeadSource() {
+        return leadSource;
+    }
+
+    public void setLeadSource(String leadSource) {
+        this.leadSource = leadSource;
     }
 }

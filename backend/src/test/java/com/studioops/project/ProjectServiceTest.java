@@ -67,7 +67,7 @@ class ProjectServiceTest {
 
         when(studioRepository.existsById(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(true);
         when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(new Client()));
-        when(projectRepository.findByProjectCode("RSA-2026-0001")).thenReturn(Optional.empty());
+        when(projectRepository.findByStudioIdAndProjectCode(TenantConstants.DEFAULT_STUDIO_ID, "RSA-2026-0001")).thenReturn(Optional.empty());
 
         Project project = new Project();
         project.setId(UUID.randomUUID());
@@ -85,6 +85,7 @@ class ProjectServiceTest {
         project.setNotes(request.getNotes());
 
         when(projectRepository.save(any(Project.class))).thenReturn(project);
+        when(projectRepository.saveAndFlush(any(Project.class))).thenReturn(project);
 
         ProjectResponse response = projectService.createProject(request);
 
@@ -93,7 +94,7 @@ class ProjectServiceTest {
         assertEquals(TenantConstants.DEFAULT_STUDIO_ID, response.getStudioId());
         assertEquals("RSA-2026-0001", response.getProjectCode());
         assertEquals("Corp Portrait", response.getTitle());
-        verify(projectRepository, times(1)).save(any(Project.class));
+        verify(projectRepository, times(1)).saveAndFlush(any(Project.class));
     }
 
     @Test
@@ -109,7 +110,7 @@ class ProjectServiceTest {
 
         when(studioRepository.existsById(customStudioId)).thenReturn(true);
         when(clientRepository.findByIdAndStudioId(clientId, customStudioId)).thenReturn(Optional.of(new Client()));
-        when(projectRepository.findByProjectCode("RSA-2026-0001")).thenReturn(Optional.empty());
+        when(projectRepository.findByStudioIdAndProjectCode(customStudioId, "RSA-2026-0001")).thenReturn(Optional.empty());
 
         Project project = new Project();
         project.setId(UUID.randomUUID());
@@ -127,6 +128,7 @@ class ProjectServiceTest {
         project.setNotes(request.getNotes());
 
         when(projectRepository.save(any(Project.class))).thenReturn(project);
+        when(projectRepository.saveAndFlush(any(Project.class))).thenReturn(project);
 
         ProjectResponse response = projectService.createProject(request);
 
@@ -180,7 +182,7 @@ class ProjectServiceTest {
 
         when(studioRepository.existsById(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(true);
         when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(new Client()));
-        when(projectRepository.findByProjectCode("RSA-2026-0001")).thenReturn(Optional.of(new Project()));
+        when(projectRepository.findByStudioIdAndProjectCode(TenantConstants.DEFAULT_STUDIO_ID, "RSA-2026-0001")).thenReturn(Optional.of(new Project()));
 
         Exception exception = assertThrows(IllegalArgumentException.class, () -> projectService.createProject(request));
         assertTrue(exception.getMessage().contains("Project code already exists"));
@@ -197,7 +199,7 @@ class ProjectServiceTest {
 
         when(studioRepository.existsById(TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(true);
         when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(new Client()));
-        when(projectRepository.findByProjectCode("RSA-2026-0001")).thenReturn(Optional.empty());
+        when(projectRepository.findByStudioIdAndProjectCode(TenantConstants.DEFAULT_STUDIO_ID, "RSA-2026-0001")).thenReturn(Optional.empty());
 
         Exception exception = assertThrows(IllegalArgumentException.class, () -> projectService.createProject(request));
         assertTrue(exception.getMessage().contains("Start date cannot be after end date"));
@@ -248,8 +250,9 @@ class ProjectServiceTest {
 
         when(projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
         when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(new Client()));
-        when(projectRepository.findByProjectCode("RSA-2026-0002")).thenReturn(Optional.empty());
+        when(projectRepository.findByStudioIdAndProjectCode(TenantConstants.DEFAULT_STUDIO_ID, "RSA-2026-0002")).thenReturn(Optional.empty());
         when(projectRepository.save(any(Project.class))).thenReturn(project);
+        when(projectRepository.saveAndFlush(any(Project.class))).thenReturn(project);
 
         ProjectResponse response = projectService.updateProject(id, request);
 
@@ -299,7 +302,7 @@ class ProjectServiceTest {
 
         when(projectRepository.findByIdAndStudioId(id, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(project));
         when(clientRepository.findByIdAndStudioId(clientId, TenantConstants.DEFAULT_STUDIO_ID)).thenReturn(Optional.of(new Client()));
-        when(projectRepository.findByProjectCode("RSA-2026-0002")).thenReturn(Optional.of(anotherProject));
+        when(projectRepository.findByStudioIdAndProjectCode(TenantConstants.DEFAULT_STUDIO_ID, "RSA-2026-0002")).thenReturn(Optional.of(anotherProject));
 
         assertThrows(IllegalArgumentException.class, () -> projectService.updateProject(id, request));
     }

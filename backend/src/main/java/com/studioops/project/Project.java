@@ -1,12 +1,16 @@
 package com.studioops.project;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "project")
+@Table(name = "project", uniqueConstraints = {
+    @UniqueConstraint(name = "uq_project_studio_code", columnNames = {"studio_id", "project_code"})
+})
 public class Project {
 
     @Id
@@ -23,7 +27,7 @@ public class Project {
     @Column(name = "assigned_project_manager_id")
     private UUID assignedProjectManagerId;
 
-    @Column(name = "project_code", nullable = false, unique = true, length = 50)
+    @Column(name = "project_code", nullable = false, length = 50)
     private String projectCode;
 
     @Column(name = "title", nullable = false, length = 255)
@@ -49,6 +53,40 @@ public class Project {
 
     @Column(name = "end_date")
     private LocalDate endDate;
+
+    @Column(name = "project_subtype")
+    private String projectSubtype;
+
+    @Column(name = "project_events", length = 1000)
+    private String projectEvents;
+
+    @Column(name = "project_budget")
+    private BigDecimal projectBudget;
+
+    @Column(name = "amount_paid")
+    private BigDecimal amountPaid;
+
+    @Column(name = "shoot_location", length = 500)
+    private String shootLocation;
+
+    @Column(name = "google_maps_link", length = 1000)
+    private String googleMapsLink;
+
+    @Column(name = "shoot_date")
+    private LocalDate shootDate;
+
+    @Column(name = "shoot_start_time")
+    private LocalTime shootStartTime;
+
+    @Column(name = "shoot_end_time")
+    private LocalTime shootEndTime;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority", length = 50)
+    private ProjectPriority priority = ProjectPriority.MEDIUM;
+
+    @Column(name = "lead_source")
+    private String leadSource;
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
@@ -191,5 +229,93 @@ public class Project {
 
     public void setStudioId(UUID studioId) {
         this.studioId = studioId;
+    }
+
+    public String getProjectSubtype() {
+        return projectSubtype;
+    }
+
+    public void setProjectSubtype(String projectSubtype) {
+        this.projectSubtype = projectSubtype;
+    }
+
+    public String getProjectEvents() {
+        return projectEvents;
+    }
+
+    public void setProjectEvents(String projectEvents) {
+        this.projectEvents = projectEvents;
+    }
+
+    public BigDecimal getProjectBudget() {
+        return projectBudget;
+    }
+
+    public void setProjectBudget(BigDecimal projectBudget) {
+        this.projectBudget = projectBudget;
+    }
+
+    public BigDecimal getAmountPaid() {
+        return amountPaid;
+    }
+
+    public void setAmountPaid(BigDecimal amountPaid) {
+        this.amountPaid = amountPaid;
+    }
+
+    public String getShootLocation() {
+        return shootLocation;
+    }
+
+    public void setShootLocation(String shootLocation) {
+        this.shootLocation = shootLocation;
+    }
+
+    public String getGoogleMapsLink() {
+        return googleMapsLink;
+    }
+
+    public void setGoogleMapsLink(String googleMapsLink) {
+        this.googleMapsLink = googleMapsLink;
+    }
+
+    public LocalDate getShootDate() {
+        return shootDate;
+    }
+
+    public void setShootDate(LocalDate shootDate) {
+        this.shootDate = shootDate;
+    }
+
+    public LocalTime getShootStartTime() {
+        return shootStartTime;
+    }
+
+    public void setShootStartTime(LocalTime shootStartTime) {
+        this.shootStartTime = shootStartTime;
+    }
+
+    public LocalTime getShootEndTime() {
+        return shootEndTime;
+    }
+
+    public void setShootEndTime(LocalTime shootEndTime) {
+        this.shootEndTime = shootEndTime;
+    }
+
+    public ProjectPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(ProjectPriority priority) {
+        this.priority = priority;
+    }
+
+    public String getLeadSource() {
+        return leadSource;
+    }
+
+    public void setLeadSource(String leadSource) {
+        this.leadSource = leadSource;
     }
 }

@@ -13,6 +13,7 @@ public class StudioResponse {
     private String slug;
     private String businessEmail;
     private String phone;
+    private String shortCode;
     private String country;
     private String timezone;
     private StudioStatus status;
@@ -133,5 +134,13 @@ public class StudioResponse {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getShortCode() {
+        return shortCode;
+    }
+
+    public void setShortCode(String shortCode) {
+        this.shortCode = shortCode;
     }
 }

@@ -13,6 +13,9 @@ public interface ClientRepository extends JpaRepository<Client, UUID> {
 
     List<Client> findAllByStudioId(UUID studioId);
 
+    @Query("SELECT c FROM Client c WHERE c.studioId = :studioId AND LOWER(TRIM(c.email)) = LOWER(TRIM(:email))")
+    List<Client> findByStudioIdAndEmailIgnoreCase(@Param("studioId") UUID studioId, @Param("email") String email);
+
     @Query("SELECT c FROM Client c WHERE c.studioId = :studioId AND (" +
            "LOWER(c.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(c.phone) LIKE LOWER(CONCAT('%', :search, '%')) OR " +

@@ -1,7 +1,7 @@
 package com.studioops.client.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
@@ -15,7 +15,7 @@ public class ClientCreateRequest {
     @Size(max = 50, message = "phone must not exceed 50 characters")
     private String phone;
 
-    @Email(message = "Invalid email format")
+    @Pattern(regexp = "^$|^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", message = "Please enter a valid email address.")
     @Size(max = 255, message = "email must not exceed 255 characters")
     private String email;
 

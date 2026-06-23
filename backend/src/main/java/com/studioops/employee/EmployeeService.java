@@ -86,6 +86,20 @@ public class EmployeeService {
         }
         employee.setStatus(status);
 
+        if (status == EmployeeStatus.ON_LEAVE) {
+            if (request.getLeaveFromDate() == null || request.getLeaveToDate() == null) {
+                throw new IllegalArgumentException("Leave From Date and Leave To Date are required when status is On Leave");
+            }
+            if (request.getLeaveFromDate().isAfter(request.getLeaveToDate())) {
+                throw new IllegalArgumentException("Leave From Date cannot be after Leave To Date");
+            }
+            employee.setLeaveFromDate(request.getLeaveFromDate());
+            employee.setLeaveToDate(request.getLeaveToDate());
+        } else {
+            employee.setLeaveFromDate(null);
+            employee.setLeaveToDate(null);
+        }
+
         // Create login if requested
         String warning = null;
         if (request.getCreateLogin() != null && request.getCreateLogin()) {
@@ -203,6 +217,20 @@ public class EmployeeService {
             status = EmployeeStatus.ACTIVE;
         }
         employee.setStatus(status);
+
+        if (status == EmployeeStatus.ON_LEAVE) {
+            if (request.getLeaveFromDate() == null || request.getLeaveToDate() == null) {
+                throw new IllegalArgumentException("Leave From Date and Leave To Date are required when status is On Leave");
+            }
+            if (request.getLeaveFromDate().isAfter(request.getLeaveToDate())) {
+                throw new IllegalArgumentException("Leave From Date cannot be after Leave To Date");
+            }
+            employee.setLeaveFromDate(request.getLeaveFromDate());
+            employee.setLeaveToDate(request.getLeaveToDate());
+        } else {
+            employee.setLeaveFromDate(null);
+            employee.setLeaveToDate(null);
+        }
 
         // Create or update login if requested
         String warning = null;

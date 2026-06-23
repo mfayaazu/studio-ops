@@ -1,9 +1,10 @@
 package com.studioops.employee.dto;
 
 import com.studioops.employee.EmployeeStatus;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
 import java.util.UUID;
 
 public class EmployeeUpdateRequest {
@@ -15,7 +16,7 @@ public class EmployeeUpdateRequest {
     private String fullName;
 
     @NotBlank(message = "email is required")
-    @Email(message = "Invalid email format")
+    @Pattern(regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", message = "Please enter a valid email address.")
     @Size(max = 255, message = "email must not exceed 255 characters")
     private String email;
 
@@ -29,6 +30,9 @@ public class EmployeeUpdateRequest {
     private String skills;
 
     private EmployeeStatus status;
+
+    private LocalDate leaveFromDate;
+    private LocalDate leaveToDate;
 
     private Boolean createLogin;
     private String loginEmail;
@@ -144,5 +148,21 @@ public class EmployeeUpdateRequest {
 
     public void setSendInviteEmail(Boolean sendInviteEmail) {
         this.sendInviteEmail = sendInviteEmail;
+    }
+
+    public LocalDate getLeaveFromDate() {
+        return leaveFromDate;
+    }
+
+    public void setLeaveFromDate(LocalDate leaveFromDate) {
+        this.leaveFromDate = leaveFromDate;
+    }
+
+    public LocalDate getLeaveToDate() {
+        return leaveToDate;
+    }
+
+    public void setLeaveToDate(LocalDate leaveToDate) {
+        this.leaveToDate = leaveToDate;
     }
 }

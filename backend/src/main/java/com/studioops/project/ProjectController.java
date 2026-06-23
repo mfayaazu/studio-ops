@@ -28,6 +28,12 @@ public class ProjectController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @GetMapping("/next-code")
+    public ResponseEntity<java.util.Map<String, String>> getNextProjectCode(@RequestParam("year") int year) {
+        String nextCode = projectService.getNextProjectCode(year);
+        return ResponseEntity.ok(java.util.Map.of("projectCode", nextCode));
+    }
+
     @GetMapping
     public ResponseEntity<List<ProjectResponse>> listProjects(
             @RequestParam(value = "search", required = false) String search) {

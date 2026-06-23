@@ -164,7 +164,7 @@ export const DeliverableBoard: React.FC<DeliverableBoardProps> = ({
                           </span>
                         )}
                         <span className="bg-slate-800/80 text-slate-300 text-[9px] font-semibold px-2 py-0.5 rounded border border-slate-800/50">
-                          {formatDeliverableType(item.deliverableType)}
+                          {item.deliverableType === 'OTHER' && item.customDeliverableType ? item.customDeliverableType : formatDeliverableType(item.deliverableType)}
                         </span>
                         {priority && (
                           <span className={`px-1.5 py-0.5 rounded-full border text-[8px] font-extrabold tracking-wide uppercase flex-shrink-0 ${getPriorityColorClass(priority)}`}>
