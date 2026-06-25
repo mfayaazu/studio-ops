@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Lead, LeadStage, FollowUpStep } from '../types';
+import type { Lead, LeadStage, FollowUpStep, LeadPipelineStage } from '../types';
 import { PipelineColumn } from './PipelineColumn';
 
 interface FollowUpPipelineBoardProps {
@@ -7,13 +7,15 @@ interface FollowUpPipelineBoardProps {
   steps?: FollowUpStep[];
   isCompact?: boolean;
   onLeadClick?: (leadId: string) => void;
+  onMoveStage?: (leadId: string, targetStage: LeadPipelineStage) => Promise<void>;
 }
 
 export const FollowUpPipelineBoard: React.FC<FollowUpPipelineBoardProps> = ({ 
   leads, 
   steps = [], 
   isCompact = false, 
-  onLeadClick 
+  onLeadClick,
+  onMoveStage
 }) => {
   const stages: LeadStage[] = [
     'NEW_LEAD',
@@ -50,6 +52,7 @@ export const FollowUpPipelineBoard: React.FC<FollowUpPipelineBoardProps> = ({
               steps={steps}
               isCompact={isCompact}
               onLeadClick={onLeadClick}
+              onMoveStage={onMoveStage}
             />
           );
         })}
@@ -57,3 +60,4 @@ export const FollowUpPipelineBoard: React.FC<FollowUpPipelineBoardProps> = ({
     </div>
   );
 };
+

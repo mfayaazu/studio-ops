@@ -175,10 +175,24 @@ export const ProjectsPage: React.FC = () => {
         {loading ? (
           <div className="p-8 text-center text-slate-500 font-mono animate-pulse">Loading projects pipeline...</div>
         ) : projects.length === 0 ? (
-          <div className="p-12 text-center">
-            <Briefcase className="h-10 w-10 text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-400 text-sm">No projects found</p>
-            <p className="text-slate-500 text-xs mt-1">Try refining search parameters or create a new project folder</p>
+          <div className="p-12 text-center space-y-4">
+            <Briefcase className="h-10 w-10 text-slate-600 mx-auto mb-1" />
+            <div className="space-y-1">
+              <p className="text-slate-350 text-sm font-semibold">
+                {searchTerm ? 'No bookings matched your search' : 'Create your first project to track shoots, team assignments, budget, and deliverables.'}
+              </p>
+              <p className="text-slate-500 text-xs">
+                {searchTerm ? 'Try refining search parameters' : 'Manage your photography studio contracts, client data, and assignments in one place'}
+              </p>
+            </div>
+            {!searchTerm && isEditable && (
+              <button
+                onClick={openCreateModal}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-xs font-semibold py-2 px-5 rounded-lg transition-all cursor-pointer shadow-md shadow-violet-500/10"
+              >
+                Create Project
+              </button>
+            )}
           </div>
         ) : (
           <ProjectList

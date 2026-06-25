@@ -34,16 +34,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse 
 
   const navItems = [
     { id: 'dashboard' as AppRoute, label: 'Dashboard', icon: Activity },
-    { id: 'clients' as AppRoute, label: 'Clients', icon: Users },
-    { id: 'projects' as AppRoute, label: 'Projects', icon: Briefcase },
-    { id: 'employees' as AppRoute, label: 'Employees', icon: ClipboardList },
+    { id: 'follow-up-center' as AppRoute, label: 'Inquiries / Follow-ups', icon: MessageSquare },
+    { id: 'projects' as AppRoute, label: 'Bookings', icon: Briefcase },
     { id: 'events' as AppRoute, label: 'Events Calendar', icon: Calendar },
+    { id: 'deliverables' as AppRoute, label: 'Delivery Items', icon: Layers },
+    { id: 'post-production' as AppRoute, label: 'Post-Production', icon: LayoutGrid },
+    { id: 'employees' as AppRoute, label: 'Team Members', icon: ClipboardList },
     { id: 'availability' as AppRoute, label: 'Availability', icon: Clock },
-    { id: 'deliverables' as AppRoute, label: 'Deliverables', icon: Layers },
-    { id: 'backups' as AppRoute, label: 'Backup Center', icon: Database },
-    { id: 'follow-up-center' as AppRoute, label: 'Follow-up Center', icon: MessageSquare },
-    { id: 'post-production' as AppRoute, label: 'Post Production', icon: LayoutGrid },
+    { id: 'clients' as AppRoute, label: 'Clients', icon: Users },
     { id: 'quotations' as AppRoute, label: 'Quotations', icon: FileText },
+    { id: 'backups' as AppRoute, label: 'Backup Tracker', icon: Database },
   ];
 
   const allowedNavItems = navItems.filter(item => canAccessRoute(user?.role || 'EMPLOYEE', item.id, permissions));

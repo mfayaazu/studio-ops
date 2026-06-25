@@ -412,6 +412,16 @@ public class LeadService {
         project.setStartDate(lead.getEventDate());
         project.setEndDate(lead.getEventDate());
         
+        // Carry over lead details
+        if (lead.getLeadSource() != null) {
+            project.setLeadSource(lead.getLeadSource().name());
+        }
+        project.setProjectBudget(lead.getQuotationTotal());
+        project.setAmountPaid(lead.getAmountPaid());
+        if (lead.getCity() != null) {
+            project.setShootLocation(lead.getCity().trim());
+        }
+
         project.setNotes(request.getNotes() != null && !request.getNotes().trim().isEmpty() 
                 ? request.getNotes().trim() 
                 : lead.getNotes());

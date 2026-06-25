@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import type { PostProductionTask, PostProductionSubtask } from '../types';
+import type { PostProductionTask, PostProductionSubtask, PostProductionTaskStatus } from '../types';
 import { postproductionApi } from '../api/postproductionApi';
 import type { Employee } from '../../employees/types';
-import { getPriorityColorClass, getTaskTypeLabel } from './PostProductionTaskDrawer';
+import { getPriorityColorClass, getTaskTypeLabel, getStatusLabel } from './PostProductionTaskDrawer';
 import { Clock, User, Calendar, CheckSquare, Package, Loader2 } from 'lucide-react';
 import { formatHoursRatio } from '../../../lib/formatters';
 
@@ -92,6 +92,33 @@ export const PostProductionTaskCard: React.FC<PostProductionTaskCardProps> = ({
     }
   };
 
+  const handleStatusChange = async (newStatus: PostProductionTaskStatus) => {
+    setIsUpdating(true);
+
+    const payload = {
+      title: task.title,
+      description: task.description || null,
+      taskType: task.taskType,
+      priority: task.priority,
+      status: newStatus,
+      assignedEmployeeId: task.assignedEmployeeId || null,
+      dueDate: task.dueDate || null,
+      estimatedHours: task.estimatedHours != null ? task.estimatedHours : null,
+      actualHours: task.actualHours != null ? task.actualHours : null,
+      sortOrder: task.sortOrder
+    };
+
+    try {
+      await postproductionApi.updateTask(task.id, payload);
+      onTaskUpdated?.();
+    } catch (err: any) {
+      console.error('Failed to update task status:', err);
+      alert(err?.message || 'Failed to update stage. Reverting.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   // Subtask progress calculations
   const totalSubtasks = subtasks.length;
   const completedSubtasks = subtasks.filter((s) => s.status === 'DONE').length;
@@ -135,27 +162,42 @@ export const PostProductionTaskCard: React.FC<PostProductionTaskCardProps> = ({
 
         <div 
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center justify-between border-t border-slate-800/30 pt-1 mt-1 gap-1 text-[8px]"
+          className="flex flex-col border-t border-slate-800/30 pt-1.5 mt-1 gap-1 text-[8px]"
         >
-          <div className="relative inline-block w-24">
+          <div className="flex items-center justify-between gap-1 w-full">
+            <div className="relative inline-block w-20">
+              <select
+                value={localEmployeeId}
+                onChange={(e) => handleAssigneeChange(e.target.value)}
+                disabled={isUpdating}
+                className="bg-transparent hover:bg-slate-900 border-none rounded py-0.2 px-1 text-[8px] text-slate-400 font-semibold outline-none cursor-pointer w-full truncate"
+              >
+                <option value="" className="bg-slate-950">Unassigned</option>
+                {employees.map(emp => (
+                  <option key={emp.id} value={emp.id} className="bg-slate-900">{emp.fullName}</option>
+                ))}
+              </select>
+            </div>
+            
+            {!loading && totalSubtasks > 0 && (
+              <span className="text-slate-550 font-mono shrink-0">
+                ✓ {completedSubtasks}/{totalSubtasks}
+              </span>
+            )}
+          </div>
+
+          <div className="relative inline-block w-full">
             <select
-              value={localEmployeeId}
-              onChange={(e) => handleAssigneeChange(e.target.value)}
+              value={task.status}
+              onChange={(e) => handleStatusChange(e.target.value as PostProductionTaskStatus)}
               disabled={isUpdating}
-              className="bg-transparent hover:bg-slate-900 border-none rounded py-0.2 px-1 text-[8px] text-slate-400 font-semibold outline-none cursor-pointer w-full"
+              className="bg-transparent hover:bg-slate-900 border-none rounded py-0.2 px-1 text-[8px] text-slate-450 font-bold outline-none cursor-pointer w-full truncate"
             >
-              <option value="" className="bg-slate-950">Unassigned</option>
-              {employees.map(emp => (
-                <option key={emp.id} value={emp.id} className="bg-slate-900">{emp.fullName}</option>
+              {(['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'CHANGES_REQUESTED', 'DONE', 'BLOCKED'] as PostProductionTaskStatus[]).map(s => (
+                <option key={s} value={s} className="bg-slate-900">Stage: {getStatusLabel(s)}</option>
               ))}
             </select>
           </div>
-          
-          {!loading && totalSubtasks > 0 && (
-            <span className="text-slate-550 font-mono shrink-0">
-              ✓ {completedSubtasks}/{totalSubtasks}
-            </span>
-          )}
         </div>
       </div>
     );
@@ -236,13 +278,13 @@ export const PostProductionTaskCard: React.FC<PostProductionTaskCardProps> = ({
         </div>
       )}
 
-      {/* Assignee Footer with Card-Level Dropdown */}
+      {/* Assignee & Status Footer with Card-Level Dropdowns */}
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="flex items-center gap-1.5 border-t border-slate-800/40 pt-2 text-[9px] text-slate-400 font-semibold"
+        className="grid grid-cols-2 gap-2 border-t border-slate-800/40 pt-2.5 text-[9px] text-slate-400 font-semibold relative"
       >
-        <User className="h-3 w-3 text-slate-500 flex-shrink-0" />
-        <div className="relative inline-block w-full">
+        <div className="flex items-center gap-1 min-w-0">
+          <User className="h-3 w-3 text-slate-500 flex-shrink-0" />
           <select
             draggable="false"
             onDragStart={(e) => {
@@ -252,20 +294,40 @@ export const PostProductionTaskCard: React.FC<PostProductionTaskCardProps> = ({
             value={localEmployeeId}
             onChange={(e) => handleAssigneeChange(e.target.value)}
             disabled={isUpdating}
-            className="bg-[#0f172a]/60 border border-slate-850 hover:border-slate-700/80 focus:border-violet-500/80 rounded px-1.5 py-0.5 text-[9px] text-slate-300 font-semibold outline-none transition-colors cursor-pointer w-full disabled:opacity-50"
+            className="bg-[#0f172a]/60 border border-slate-850 hover:border-slate-700/80 focus:border-violet-500/80 rounded px-1 py-0.5 text-[9px] text-slate-300 font-semibold outline-none transition-colors cursor-pointer w-full disabled:opacity-50 truncate"
           >
             <option value="">Unassigned</option>
             {employees.map(emp => (
               <option key={emp.id} value={emp.id}>{emp.fullName}</option>
             ))}
           </select>
-          {isUpdating && (
-            <div className="absolute right-6 top-1 flex items-center gap-1 text-[8px] text-violet-400 font-bold font-mono animate-pulse">
-              <Loader2 className="h-2.5 w-2.5 animate-spin" />
-              <span>Saving...</span>
-            </div>
-          )}
         </div>
+
+        <div className="flex items-center gap-1 min-w-0">
+          <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider shrink-0">Stage</span>
+          <select
+            draggable="false"
+            onDragStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            value={task.status}
+            onChange={(e) => handleStatusChange(e.target.value as PostProductionTaskStatus)}
+            disabled={isUpdating}
+            className="bg-[#0f172a]/60 border border-slate-850 hover:border-slate-700/80 focus:border-violet-500/80 rounded px-1 py-0.5 text-[9px] text-slate-300 font-semibold outline-none transition-colors cursor-pointer w-full disabled:opacity-50 truncate"
+          >
+            {(['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'CHANGES_REQUESTED', 'DONE', 'BLOCKED'] as PostProductionTaskStatus[]).map(s => (
+              <option key={s} value={s}>{getStatusLabel(s)}</option>
+            ))}
+          </select>
+        </div>
+
+        {isUpdating && (
+          <div className="absolute right-0 -top-3 flex items-center gap-1 text-[8px] text-violet-400 font-bold font-mono animate-pulse bg-[#0f172a] px-1 rounded border border-slate-800">
+            <Loader2 className="h-2 w-2 animate-spin" />
+            <span>Saving...</span>
+          </div>
+        )}
       </div>
     </div>
   );

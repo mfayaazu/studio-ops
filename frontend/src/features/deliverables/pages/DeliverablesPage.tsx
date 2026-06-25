@@ -182,6 +182,23 @@ export const DeliverablesPage: React.FC = () => {
         <div className="p-12 text-center text-slate-500 font-mono animate-pulse">
           Loading deliverables & metrics...
         </div>
+      ) : deliverables.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl space-y-4">
+          <LayoutGrid className="h-10 w-10 text-slate-650" />
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-slate-200">No Delivery Items Found</h3>
+            <p className="text-xs text-slate-455 max-w-md leading-relaxed">
+              Delivery items help you track photos, videos, albums, teasers, and final delivery.
+            </p>
+          </div>
+          <button
+            onClick={openCreateModal}
+            disabled={projects.length === 0}
+            className="py-2.5 px-5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-md disabled:opacity-50"
+          >
+            Add Delivery Item
+          </button>
+        </div>
       ) : (
         <>
           {/* Summary Panel */}

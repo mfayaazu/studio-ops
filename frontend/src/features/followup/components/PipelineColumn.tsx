@@ -1,5 +1,5 @@
-import React from 'react';
-import type { Lead, LeadStage, FollowUpStep } from '../types';
+import React, { useState } from 'react';
+import type { Lead, LeadStage, FollowUpStep, LeadPipelineStage } from '../types';
 import { LeadCard } from './LeadCard';
 import { formatCurrencyINR } from '../../../lib/formatters';
 
@@ -9,6 +9,7 @@ interface PipelineColumnProps {
   steps?: FollowUpStep[];
   isCompact?: boolean;
   onLeadClick?: (leadId: string) => void;
+  onMoveStage?: (leadId: string, targetStage: LeadPipelineStage) => Promise<void>;
 }
 
 export const PipelineColumn: React.FC<PipelineColumnProps> = ({ 
@@ -16,8 +17,29 @@ export const PipelineColumn: React.FC<PipelineColumnProps> = ({
   leads, 
   steps = [], 
   isCompact = false, 
-  onLeadClick 
+  onLeadClick,
+  onMoveStage
 }) => {
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const leadId = e.dataTransfer.getData('text/plain');
+    if (leadId && onMoveStage) {
+      onMoveStage(leadId, stage as LeadPipelineStage);
+    }
+  };
+
   const getStageLabel = (stage: LeadStage) => {
     switch (stage) {
       case 'NEW_LEAD':
@@ -63,7 +85,16 @@ export const PipelineColumn: React.FC<PipelineColumnProps> = ({
   const totalValue = leads.reduce((sum, lead) => sum + (lead.quotationTotal || lead.estimatedValue || 0), 0);
 
   return (
-    <div className={`flex flex-col w-64 bg-[#090f1e]/40 border border-slate-800/80 rounded-xl p-2 space-y-2 max-h-[76vh] ${getStageHeaderColor(stage)}`}>
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`flex flex-col w-64 border rounded-xl p-2 space-y-2 max-h-[76vh] transition-all duration-200 ${
+        isDragOver
+          ? 'bg-slate-900/90 border-dashed border-violet-500/50 shadow-inner scale-[1.01]'
+          : 'bg-[#090f1e]/40 border-slate-800/80'
+      } ${getStageHeaderColor(stage)}`}
+    >
       {/* Column Header */}
       <div className="flex items-center justify-between pb-1 border-b border-slate-800/30">
         <div>
@@ -93,6 +124,7 @@ export const PipelineColumn: React.FC<PipelineColumnProps> = ({
               steps={steps}
               isCompact={isCompact}
               onClick={() => onLeadClick && onLeadClick(lead.id)}
+              onMoveStage={onMoveStage}
             />
           ))
         )}
@@ -100,3 +132,4 @@ export const PipelineColumn: React.FC<PipelineColumnProps> = ({
     </div>
   );
 };
+

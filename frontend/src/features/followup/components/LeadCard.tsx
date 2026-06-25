@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Lead, FollowUpStep, LeadPriority } from '../types';
+import type { Lead, FollowUpStep, LeadPriority, LeadPipelineStage } from '../types';
 import { Mail, MessageSquare, Phone, Smartphone, Clock } from 'lucide-react';
 import { formatCurrencyINR } from '../../../lib/formatters';
 
@@ -8,6 +8,7 @@ interface LeadCardProps {
   steps?: FollowUpStep[];
   isCompact?: boolean;
   onClick?: () => void;
+  onMoveStage?: (leadId: string, targetStage: LeadPipelineStage) => Promise<void>;
 }
 
 export const getCalculatedUrgency = (lead: Lead, steps: FollowUpStep[] = []): LeadPriority => {
@@ -39,7 +40,7 @@ export const getCalculatedUrgency = (lead: Lead, steps: FollowUpStep[] = []): Le
   return 'LOW';
 };
 
-export const LeadCard: React.FC<LeadCardProps> = ({ lead, steps = [], isCompact = false, onClick }) => {
+export const LeadCard: React.FC<LeadCardProps> = ({ lead, steps = [], isCompact = false, onClick, onMoveStage }) => {
   const urgency = getCalculatedUrgency(lead, steps);
 
   const getPriorityColor = (priority: LeadPriority) => {
@@ -133,7 +134,11 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, steps = [], isCompact 
     return (
       <div
         onClick={onClick}
-        className="bg-[#0f172a]/95 hover:bg-[#121c35] border border-slate-850 hover:border-slate-700/80 rounded-lg p-2 transition-all duration-200 shadow-sm group cursor-pointer select-none space-y-1"
+        draggable="true"
+        onDragStart={(e) => {
+          e.dataTransfer.setData('text/plain', lead.id);
+        }}
+        className="bg-[#0f172a]/95 hover:bg-[#121c35] border border-slate-850 hover:border-slate-700/80 rounded-lg p-2 transition-all duration-200 shadow-sm group cursor-grab active:cursor-grabbing select-none space-y-1"
       >
         <div className="flex items-center justify-between gap-1">
           <h4 className="font-bold text-slate-200 text-[10px] group-hover:text-violet-400 transition-colors truncate">
@@ -160,14 +165,38 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, steps = [], isCompact 
           </span>
         </div>
 
-        <div className="flex items-center justify-between text-[8px] text-slate-400 border-t border-slate-800/30 pt-1 mt-1">
-          <div className="flex items-center gap-1 text-slate-400">
-            {getChannelIcon(lead.channel)}
-            <span className="truncate">{lead.channel.replace('MANUAL_CALL', 'CALL')}</span>
+        <div 
+          onClick={(e) => e.stopPropagation()}
+          className="flex flex-col border-t border-slate-800/30 pt-1 mt-1 gap-1 text-[8px]"
+        >
+          <div className="flex items-center justify-between text-[8px] text-slate-400">
+            <div className="flex items-center gap-1 text-slate-400">
+              {getChannelIcon(lead.channel)}
+              <span className="truncate">{lead.channel.replace('MANUAL_CALL', 'CALL')}</span>
+            </div>
+            <span className={`px-1 py-[1px] rounded border text-[7px] font-bold shrink-0 ${getUrgencyColor(urgency)}`}>
+              {getUrgencyText(urgency)}
+            </span>
           </div>
-          <span className={`px-1 py-[1px] rounded border text-[7px] font-bold shrink-0 ${getUrgencyColor(urgency)}`}>
-            {getUrgencyText(urgency)}
-          </span>
+
+          <select
+            draggable="false"
+            onDragStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            value={lead.stage}
+            onChange={(e) => onMoveStage?.(lead.id, e.target.value as LeadPipelineStage)}
+            className="bg-transparent hover:bg-slate-900 border-none rounded py-0.2 px-1 text-[8px] text-slate-450 font-bold outline-none cursor-pointer w-full truncate"
+          >
+            <option value="NEW_LEAD" className="bg-slate-900">Stage: New Inquiry</option>
+            <option value="QUOTE_SENT" className="bg-slate-900">Stage: Quote Sent</option>
+            <option value="WARM" className="bg-slate-900">Stage: Warm Lead</option>
+            <option value="NEGOTIATION" className="bg-slate-900">Stage: Negotiation</option>
+            <option value="FOLLOW_UP_PENDING" className="bg-slate-900">Stage: Follow-up Pending</option>
+            <option value="CONFIRMED" className="bg-slate-900">Stage: Confirmed</option>
+            <option value="LOST" className="bg-slate-900">Stage: Lost</option>
+          </select>
         </div>
       </div>
     );
@@ -177,7 +206,11 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, steps = [], isCompact 
   return (
     <div
       onClick={onClick}
-      className="bg-[#0f172a]/95 hover:bg-[#121c35] border border-slate-850 hover:border-slate-700/80 rounded-lg p-2.5 transition-all duration-200 shadow-md group cursor-pointer select-none space-y-2"
+      draggable="true"
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', lead.id);
+      }}
+      className="bg-[#0f172a]/95 hover:bg-[#121c35] border border-slate-850 hover:border-slate-700/80 rounded-lg p-2.5 transition-all duration-200 shadow-md group cursor-grab active:cursor-grabbing select-none space-y-2"
     >
       <div className="flex items-start justify-between gap-1.5">
         <div className="min-w-0 flex-1">
@@ -218,6 +251,32 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, steps = [], isCompact 
           {lead.stage !== 'CONFIRMED' && lead.stage !== 'LOST' && <Clock className="h-2 w-2" />}
           <span>{getUrgencyText(urgency)}</span>
         </div>
+      </div>
+
+      {/* Fallback Stage Selector Row */}
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="flex items-center gap-1.5 border-t border-slate-800/40 pt-2 text-[9px] text-slate-400 font-semibold"
+      >
+        <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider shrink-0">Stage</span>
+        <select
+          draggable="false"
+          onDragStart={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          value={lead.stage}
+          onChange={(e) => onMoveStage?.(lead.id, e.target.value as LeadPipelineStage)}
+          className="bg-[#0f172a]/60 border border-slate-850 hover:border-slate-700/80 focus:border-violet-500/80 rounded px-1.5 py-0.5 text-[9px] text-slate-300 font-semibold outline-none transition-colors cursor-pointer w-full truncate"
+        >
+          <option value="NEW_LEAD">New Inquiry</option>
+          <option value="QUOTE_SENT">Quote Sent</option>
+          <option value="WARM">Warm Lead</option>
+          <option value="NEGOTIATION">Negotiation</option>
+          <option value="FOLLOW_UP_PENDING">Follow-up Pending</option>
+          <option value="CONFIRMED">Confirmed</option>
+          <option value="LOST">Lost</option>
+        </select>
       </div>
     </div>
   );

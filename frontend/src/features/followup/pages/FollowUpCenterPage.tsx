@@ -1027,16 +1027,16 @@ export const FollowUpCenterPage: React.FC = () => {
                 <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-[#0b1222]/30 border border-slate-800/40 rounded-2xl space-y-4">
                   <MessageSquare className="h-10 w-10 text-slate-650" />
                   <div className="space-y-1">
-                    <h3 className="text-sm font-semibold text-slate-200">No Leads Found</h3>
-                    <p className="text-xs text-slate-450 max-w-sm leading-relaxed">
-                      No leads yet. Register your first lead to start the WhatsApp follow-up workflow.
+                    <h3 className="text-sm font-semibold text-slate-200">No Inquiries Found</h3>
+                    <p className="text-xs text-slate-455 max-w-sm leading-relaxed">
+                      Add new inquiries from Instagram, WhatsApp, referrals, or website leads.
                     </p>
                   </div>
                   <button
                     onClick={() => setIsInquiryFormOpen(true)}
                     className="py-2 px-4 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-md"
                   >
-                    Register First Lead
+                    Add Inquiry
                   </button>
                 </div>
               ) : (
@@ -1046,6 +1046,7 @@ export const FollowUpCenterPage: React.FC = () => {
                     steps={steps}
                     isCompact={isCompact}
                     onLeadClick={(leadId) => setSelectedLeadId(leadId)} 
+                    onMoveStage={handleMoveLeadStage}
                   />
                 ) : (
                   <div className="bg-[#0b1222]/50 border border-slate-800/60 rounded-xl p-2 shadow-xl overflow-x-auto">

@@ -249,6 +249,10 @@ class LeadServiceTest {
         lead.setEventType("Wedding");
         lead.setEventDate(LocalDate.of(2026, 10, 15));
         lead.setNotes("First lead note");
+        lead.setLeadSource(LeadSource.INSTAGRAM);
+        lead.setQuotationTotal(new java.math.BigDecimal("15000"));
+        lead.setAmountPaid(new java.math.BigDecimal("5000"));
+        lead.setCity("Mumbai");
 
         LeadConvertToProjectRequest request = new LeadConvertToProjectRequest(
                 "CODE123", "Custom Project Title", "Wedding Photography",
@@ -306,6 +310,10 @@ class LeadServiceTest {
             project.getStatus().equals(ProjectStatus.CONFIRMED) &&
             project.getStartDate().equals(LocalDate.of(2026, 10, 15)) &&
             project.getEndDate().equals(LocalDate.of(2026, 10, 15)) &&
+            project.getLeadSource().equals("INSTAGRAM") &&
+            project.getProjectBudget().compareTo(new java.math.BigDecimal("15000")) == 0 &&
+            project.getAmountPaid().compareTo(new java.math.BigDecimal("5000")) == 0 &&
+            project.getShootLocation().equals("Mumbai") &&
             project.getNotes().equals("Project note")
         ));
 
@@ -319,7 +327,7 @@ class LeadServiceTest {
             event.getStartTime().equals(java.time.LocalTime.of(9, 0)) &&
             event.getEndTime().equals(java.time.LocalTime.of(18, 0)) &&
             event.getVenueName().equals("TBD") &&
-            event.getCity().equals("TBD") &&
+            event.getCity().equals("Mumbai") &&
             event.getAddress().equals("TBD") &&
             event.getStatus().equals(EventStatus.SCHEDULED)
         ));

@@ -381,3 +381,19 @@ body {
 }
 
 /* TODO: Complete full migration from raw hexadecimal background utility classes to CSS variable definitions on all component files */
+
+/* Mobile Drag and Drop Touch Styles */
+[draggable="true"] {
+  -webkit-user-drag: element;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y; /* Allows natural scrolling, hold-to-drag initiates moving */
+}
+
+/* Draggable handle or card styles during drag state */
+.dnd-drag-image {
+  opacity: 0.8 !important;
+  transform: scale(0.96);
+  pointer-events: none;
+}
+
