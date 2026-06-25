@@ -98,8 +98,8 @@ export const ProjectsPage: React.FC = () => {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-heading font-bold text-white tracking-wide">Project Workspace</h2>
-          <p className="text-slate-400 text-xs mt-1">Track creative photo/video contracts, payments, and workflow pipelines</p>
+          <h2 className="text-2xl font-heading font-bold text-white tracking-wide">Bookings</h2>
+          <p className="text-slate-400 text-xs mt-1">Manage shoots, events, budgets, team assignments, and delivery items.</p>
         </div>
         
         {isEditable && (
@@ -109,7 +109,7 @@ export const ProjectsPage: React.FC = () => {
             className="flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-medium text-sm px-4 py-2.5 rounded-lg shadow-lg hover:shadow-violet-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             <Plus className="h-4 w-4" />
-            <span>New Project</span>
+            <span>Create Booking</span>
           </button>
         )}
       </div>

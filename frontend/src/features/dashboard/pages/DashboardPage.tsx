@@ -5,6 +5,8 @@ import { eventsApi } from '../../events/api/eventsApi';
 import { projectsApi } from '../../projects/api/projectsApi';
 import { deliverablesApi } from '../../deliverables/api/deliverablesApi';
 import { backupsApi } from '../../backups/api/backupsApi';
+import { fetchLeads } from '../../followup/api/followupApi';
+import { fetchEmployees } from '../../employees/api/employeesApi';
 import { useRouter } from '../../../app/router';
 
 import type { DashboardSummaryResponse } from '../types';
@@ -12,8 +14,9 @@ import type { EventResponse } from '../../events/types';
 import type { Project } from '../../projects/types';
 import type { Deliverable } from '../../deliverables/types';
 import type { BackupRecord } from '../../backups/types';
+import type { LeadResponse } from '../../followup/types';
+import type { Employee } from '../../employees/types';
 
-import { DashboardStatsCards } from '../components/DashboardStatsCards';
 import { TodayEventsPanel } from '../components/TodayEventsPanel';
 import { UpcomingEventsPanel } from '../components/UpcomingEventsPanel';
 import { DeliverablesOverview } from '../components/DeliverablesOverview';
@@ -21,7 +24,8 @@ import { BackupRiskPanel } from '../components/BackupRiskPanel';
 import { ConflictWarningsPanel } from '../components/ConflictWarningsPanel';
 import { QuickActionsPanel } from '../components/QuickActionsPanel';
 
-import { ShieldAlert, Sparkles } from 'lucide-react';
+import { ShieldAlert, Sparkles, MessageSquare, CalendarRange, Banknote, UserX, Layers, ArrowRight, ClipboardCheck } from 'lucide-react';
+import { formatCurrencyINR } from '../../../lib/formatters';
 
 const defaultSummary: DashboardSummaryResponse = {
   stats: {
@@ -73,8 +77,22 @@ export const DashboardPage: React.FC = () => {
     staleTime: 60000,
   });
 
-  const loading = loadingSummary || loadingEvents || loadingProjects || loadingDeliverables || loadingBackups;
-  const error = isErrorSummary || isErrorEvents || isErrorProjects || isErrorDeliverables || isErrorBackups;
+  // Leads query (staleTime 30s)
+  const { data: rawLeads = [], isLoading: loadingLeads, isError: isErrorLeads } = useQuery<LeadResponse[]>({
+    queryKey: ['leads'],
+    queryFn: () => fetchLeads(),
+    staleTime: 30000,
+  });
+
+  // Employees query (staleTime 60s)
+  const { data: employees = [], isLoading: loadingEmployees, isError: isErrorEmployees } = useQuery<Employee[]>({
+    queryKey: ['employees'],
+    queryFn: () => fetchEmployees(),
+    staleTime: 60000,
+  });
+
+  const loading = loadingSummary || loadingEvents || loadingProjects || loadingDeliverables || loadingBackups || loadingLeads || loadingEmployees;
+  const error = isErrorSummary || isErrorEvents || isErrorProjects || isErrorDeliverables || isErrorBackups || isErrorLeads || isErrorEmployees;
 
   const handleRetry = () => {
     queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
@@ -82,6 +100,8 @@ export const DashboardPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['projects'] });
     queryClient.invalidateQueries({ queryKey: ['deliverables'] });
     queryClient.invalidateQueries({ queryKey: ['backups'] });
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
+    queryClient.invalidateQueries({ queryKey: ['employees'] });
   };
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -91,18 +111,57 @@ export const DashboardPage: React.FC = () => {
     .filter((e) => e.eventDate > todayStr)
     .sort((a, b) => a.eventDate.localeCompare(b.eventDate) || a.startTime.localeCompare(b.startTime));
   
-  // Calculate dynamic stats
-  const activeProjectsCount = projects.filter(
-    (p) => p.status !== 'CANCELLED' && p.status !== 'ARCHIVED'
+  // 1. New Inquiries count
+  const newInquiriesCount = rawLeads.filter(
+    (l) => l.pipelineStage === 'NEW_LEAD' || l.pipelineStage === 'QUOTE_SENT'
   ).length;
 
-  const totalUpcomingEvents = events.filter(
-    (e) => e.eventDate >= todayStr && e.status === 'SCHEDULED'
-  ).length;
+  // 2. Follow-ups Due count (today or overdue)
+  const todayZero = new Date();
+  todayZero.setHours(0, 0, 0, 0);
+  const followupsDueCount = rawLeads.filter((l) => {
+    if (l.pipelineStage === 'CONFIRMED' || l.pipelineStage === 'LOST') return false;
+    if (!l.nextFollowUpAt) return false;
+    const nextDate = new Date(l.nextFollowUpAt);
+    nextDate.setHours(0, 0, 0, 0);
+    return nextDate.getTime() <= todayZero.getTime();
+  }).length;
 
+  // 3. Bookings This Week count
+  const { startOfWeek, endOfWeek } = (() => {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+    const start = new Date(today.setDate(diff));
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    return { startOfWeek: start, endOfWeek: end };
+  })();
+  const bookingsThisWeekCount = projects.filter((p) => {
+    if (!p.startDate) return false;
+    const projectDate = new Date(p.startDate);
+    projectDate.setHours(0, 0, 0, 0);
+    return projectDate.getTime() >= startOfWeek.getTime() && projectDate.getTime() <= endOfWeek.getTime();
+  }).length;
+
+  // 4. Pending Delivery Items count
   const pendingDeliverablesCount = deliverables.filter(
     (d) => d.status !== 'COMPLETED' && d.status !== 'DELIVERED'
   ).length;
+
+  // 5. Payments Pending sum
+  const totalPaymentsPending = projects.reduce((sum, p) => {
+    if (p.status === 'CANCELLED') return sum;
+    const budget = p.projectBudget || 0;
+    const paid = p.amountPaid || 0;
+    const pending = budget - paid;
+    return pending > 0 ? sum + pending : sum;
+  }, 0);
+
+  // 6. Team On Leave count
+  const teamOnLeaveCount = employees.filter((emp) => emp.status === 'ON_LEAVE').length;
 
   // Backup issues calculations
   const failedBackups = backups.filter((b) => b.status === 'FAILED').length;
@@ -179,8 +238,8 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Stats Row Skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {[...Array(5)].map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
             <div key={i} className="h-28 bg-[#0d1424] border border-slate-800/80 rounded-xl p-5"></div>
           ))}
         </div>
@@ -222,15 +281,151 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Cards Row */}
-      <DashboardStatsCards
-        totalProjects={activeProjectsCount}
-        upcomingEventsCount={totalUpcomingEvents}
-        pendingDeliverablesCount={pendingDeliverablesCount}
-        backupIssuesCount={backupIssuesCount}
-        conflictWarningsCount={conflictWarningsCount}
-        onNavigate={navigateTo}
-      />
+      {/* Today / Needs Attention Section */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-white font-bold text-base tracking-wide flex items-center gap-2">
+            Today / Needs Attention
+          </h3>
+          <p className="text-slate-500 text-xs mt-0.5">
+            Key operational tasks and studio metrics that require action.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {/* Card 1: New Inquiries */}
+          <div className="flex flex-col justify-between p-5 bg-[#0d1424] border border-slate-800/80 rounded-xl shadow-lg relative overflow-hidden group">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">New Inquiries</span>
+                <p className="text-[10px] text-slate-500 font-medium">People who recently contacted your studio.</p>
+              </div>
+              <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <MessageSquare className="h-4.5 w-4.5" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-baseline justify-between">
+              <h3 className="text-3xl font-extrabold text-white tracking-tight">{newInquiriesCount}</h3>
+              <button 
+                onClick={() => navigateTo('follow-up-center')}
+                className="text-[10px] font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors cursor-pointer group-hover:translate-x-0.5 transform duration-200"
+              >
+                View Inquiries <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* Card 2: Follow-ups Due */}
+          <div className="flex flex-col justify-between p-5 bg-[#0d1424] border border-slate-800/80 rounded-xl shadow-lg relative overflow-hidden group">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Follow-ups Due</span>
+                <p className="text-[10px] text-slate-500 font-medium">Clients you should call or message today.</p>
+              </div>
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <ClipboardCheck className="h-4.5 w-4.5" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-baseline justify-between">
+              <h3 className="text-3xl font-extrabold text-white tracking-tight">{followupsDueCount}</h3>
+              <button 
+                onClick={() => navigateTo('follow-up-center')}
+                className="text-[10px] font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors cursor-pointer group-hover:translate-x-0.5 transform duration-200"
+              >
+                View Follow-ups <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* Card 3: Bookings This Week */}
+          <div className="flex flex-col justify-between p-5 bg-[#0d1424] border border-slate-800/80 rounded-xl shadow-lg relative overflow-hidden group">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Bookings This Week</span>
+                <p className="text-[10px] text-slate-500 font-medium">Upcoming shoots and scheduled events.</p>
+              </div>
+              <div className="p-2 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                <CalendarRange className="h-4.5 w-4.5" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-baseline justify-between">
+              <h3 className="text-3xl font-extrabold text-white tracking-tight">{bookingsThisWeekCount}</h3>
+              <button 
+                onClick={() => navigateTo('projects')}
+                className="text-[10px] font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1 transition-colors cursor-pointer group-hover:translate-x-0.5 transform duration-200"
+              >
+                View Bookings <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* Card 4: Pending Delivery Items */}
+          <div className="flex flex-col justify-between p-5 bg-[#0d1424] border border-slate-800/80 rounded-xl shadow-lg relative overflow-hidden group">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Pending Delivery Items</span>
+                <p className="text-[10px] text-slate-500 font-medium">Photos, videos, albums, or files still pending.</p>
+              </div>
+              <div className="p-2 rounded-lg bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                <Layers className="h-4.5 w-4.5" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-baseline justify-between">
+              <h3 className="text-3xl font-extrabold text-white tracking-tight">{pendingDeliverablesCount}</h3>
+              <button 
+                onClick={() => navigateTo('deliverables')}
+                className="text-[10px] font-semibold text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors cursor-pointer group-hover:translate-x-0.5 transform duration-200"
+              >
+                View Delivery Items <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* Card 5: Payments Pending */}
+          <div className="flex flex-col justify-between p-5 bg-[#0d1424] border border-slate-800/80 rounded-xl shadow-lg relative overflow-hidden group">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Payments Pending</span>
+                <p className="text-[10px] text-slate-500 font-medium">Amount still to be collected from shoots.</p>
+              </div>
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <Banknote className="h-4.5 w-4.5" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-baseline justify-between">
+              <h3 className="text-xl font-extrabold text-white tracking-tight">{formatCurrencyINR(totalPaymentsPending)}</h3>
+              <button 
+                onClick={() => navigateTo('projects')}
+                className="text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors cursor-pointer group-hover:translate-x-0.5 transform duration-200"
+              >
+                View Bookings <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* Card 6: Team On Leave */}
+          <div className="flex flex-col justify-between p-5 bg-[#0d1424] border border-slate-800/80 rounded-xl shadow-lg relative overflow-hidden group">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Team On Leave</span>
+                <p className="text-[10px] text-slate-500 font-medium">People unavailable for event assignments.</p>
+              </div>
+              <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                <UserX className="h-4.5 w-4.5" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-baseline justify-between">
+              <h3 className="text-3xl font-extrabold text-white tracking-tight">{teamOnLeaveCount}</h3>
+              <button 
+                onClick={() => navigateTo('employees')}
+                className="text-[10px] font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-colors cursor-pointer group-hover:translate-x-0.5 transform duration-200"
+              >
+                View Team Members <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Schedule & Ops Split Grid */}
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
